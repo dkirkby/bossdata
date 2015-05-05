@@ -3,7 +3,8 @@
 import bossdata
 
 def main():
-    print('hello, world!')
+    finder = bossdata.Finder()
+    print(finder.get_plate_path(6641))
 
 if __name__ == '__main__':
     main()

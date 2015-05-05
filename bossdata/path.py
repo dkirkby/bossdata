@@ -53,4 +53,4 @@ class Finder(object):
         if plate < 0:
             raise ValueError('Invalid Invalid plate number ({}) must be > 0.'.format(plate))
 
-        return os.path.join(self.redux_base,plate)
+        return os.path.join(self.redux_base,str(plate))
