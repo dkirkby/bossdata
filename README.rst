@@ -9,7 +9,7 @@ bossdata
         :target: https://pypi.python.org/pypi/bossdata
 
 
-Tools to access SDSS BOSS data.
+Tools to access and work with SDSS BOSS data from http://dr12.sdss3.org.
 
 * Free software: MIT license
 * Documentation: https://bossdata.readthedocs.org.

@@ -9,11 +9,12 @@ Welcome to bossdata's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    readme
    installation
    usage
+   scripts
    contributing
    authors
    history
