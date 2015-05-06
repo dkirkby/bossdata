@@ -4,7 +4,7 @@ import bossdata
 
 def main():
     finder = bossdata.Finder()
-    print(finder.get_plate_path(6641))
+    print(finder.get_spec_path(6641,56383,10))
 
 if __name__ == '__main__':
     main()

@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Brief description.
-
-A more detailed description goes here...
+"""Generate paths to BOSS data files.
 """
 
 from __future__ import division,print_function
@@ -39,7 +37,10 @@ class Finder(object):
     def get_plate_path(self,plate):
         """Get the path to the specified plate.
 
-        This method only performs minimal plates that the requested plate number is valid.
+        The returned path contains files that include all targets on the plate. Use the
+        ::meth:`get_spec_path` method for the path of a single spectrum file.
+
+        This method only performs minimal checks that the requested plate number is valid.
 
         Args:
             plate(int): Plate number, which must be positive.
@@ -51,6 +52,39 @@ class Finder(object):
             ValueError: Invalid plate number must be > 0.
         """
         if plate < 0:
-            raise ValueError('Invalid Invalid plate number ({}) must be > 0.'.format(plate))
+            raise ValueError('Invalid plate number ({}) must be > 0.'.format(plate))
 
         return os.path.join(self.redux_base,str(plate))
+
+    def get_spec_path(self,plate,mjd,fiber):
+        """Get the location of the spectrum file for the specified observation.
+
+        The DR12 data model for the returned files is at
+        http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/spectra/PLATE4/spec.html.
+        Each file is approximately 1.5Mb in size.
+
+        Use the ::meth:`get_plate_path` method for the path to files that include all targets
+        on a plate.
+
+        This method only performs minimal checks that the requested plate-mjd-fiber are valid.
+
+        Args:
+            plate(int): Plate number, which must be positive.
+            mjd(int): Modified Julian date of the observation, which must be > 3500.
+            fiber(int): Fiber number of the target on this plate, which must be in the range 1-1000.
+
+        Returns:
+            str: Full path to the spectrum file for the specified observation.
+
+        Raises:
+            ValueError: Invalid plate number must be > 0.
+        """
+        if plate < 0:
+            raise ValueError('Invalid plate number ({}) must be > 0.'.format(plate))
+        if mjd <= 3500:
+            raise ValueError('Invalid mjd ({}) must be >= 3500.'.format(mjd))
+        if fiber < 1 or fiber > 1000:
+            raise ValueError('Invalid fiber ({}) must be 1-1000.'.format(fiber))
+
+        name = 'spec-{plate:4d}-{mjd:5d}-{fiber:04d}.fits'.format(plate=plate,mjd=mjd,fiber=fiber)
+        return os.path.join(self.redux_base,'spectra',str(plate),name)
