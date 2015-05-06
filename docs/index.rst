@@ -9,7 +9,7 @@ Welcome to bossdata's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    readme
    installation
@@ -19,10 +19,10 @@ Contents:
    authors
    history
 
-Indices and tables
-==================
+Modules API Reference
+---------------------
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. toctree::
+   :maxdepth: 3
 
+   src/bossdata
