@@ -363,7 +363,7 @@ def linkcode_resolve(domain, info):
     else:
         linespec = ""
 
-    fn = relpath(fn, start=dirname(descwl.__file__))
+    fn = relpath(fn, start=dirname(bossdata.__file__))
 
     # Could use version,release declared above here but for now we
     # just link to the latest code on the master branch.
