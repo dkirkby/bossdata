@@ -9,8 +9,8 @@ bossdata
         :target: https://pypi.python.org/pypi/bossdata
 
 .. image:: https://readthedocs.org/projects/bossdata/badge/?version=latest
-:target: https://readthedocs.org/projects/bossdata/?badge=latest
-:alt: Documentation Status
+        :target: https://readthedocs.org/projects/bossdata/?badge=latest
+        :alt: Documentation Status
 
 Tools to access and work with SDSS BOSS data from http://dr12.sdss3.org.
 
