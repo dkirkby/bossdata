@@ -38,7 +38,7 @@ class Finder(object):
         """Get the path to the specified plate.
 
         The returned path contains files that include all targets on the plate. Use the
-        ::meth:`get_spec_path` method for the path of a single spectrum file.
+        :meth:`get_spec_path` method for the path of a single spectrum file.
 
         This method only performs minimal checks that the requested plate number is valid.
 
@@ -63,7 +63,7 @@ class Finder(object):
         http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/spectra/PLATE4/spec.html.
         Each file is approximately 1.5Mb in size.
 
-        Use the ::meth:`get_plate_path` method for the path to files that include all targets
+        Use the :meth:`get_plate_path` method for the path to files that include all targets
         on a plate.
 
         This method only performs minimal checks that the requested plate-mjd-fiber are valid.
