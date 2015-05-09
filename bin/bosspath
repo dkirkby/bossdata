@@ -6,6 +6,7 @@ import bossdata.remote
 def main():
     finder = bossdata.path.Finder()
     path = finder.get_spec_path(6641,56383,10)
+    #path = finder.get_sp_all_path()
     mgr = bossdata.remote.Manager()
     mgr.download(path,'test.fits')
 

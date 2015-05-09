@@ -57,18 +57,31 @@ class Finder(object):
 
         return os.path.join(self.redux_base,str(plate))
 
-    def get_sp_all_path(self):
+    def get_sp_all_path(self,lite = True):
         """Get the location of the metadata summary file.
+
+        The data model of the full (non-lite) file is at
+        http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/spAll.html
+        As of DR12, the full file size is about 10Gb and the lite file is about 115Mb.
+
+        Args:
+            lite(bool): Specifies the "lite" version which contains all rows but only the
+                most commonly used subset of columns. The lite version is a compressed (.gz)
+                text data file, while the full version is a FITS file.
         """
-        name = 'spAll-{}.dat.gz'.format(self.redux_version)
+        if lite:
+            name = 'spAll-{}.dat.gz'.format(self.redux_version)
+        else:
+            name = 'spAll-{}.fits'.format(self.redux_version)
         return os.path.join(self.redux_base,name)
 
-    def get_spec_path(self,plate,mjd,fiber):
+    def get_spec_path(self,plate,mjd,fiber,lite = True):
         """Get the location of the spectrum file for the specified observation.
 
         The DR12 data model for the returned files is at
-        http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/spectra/PLATE4/spec.html.
-        Each file is approximately 1.5Mb in size.
+        http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/spectra/PLATE4/spec.html
+        but only HDUs 0-3 are included in the (default) lite format.
+        Each lite (full) file is approximately 0.2Mb (1.7Mb) in size.
 
         Use the :meth:`get_plate_path` method for the path to files that include all targets
         on a plate.
@@ -79,6 +92,8 @@ class Finder(object):
             plate(int): Plate number, which must be positive.
             mjd(int): Modified Julian date of the observation, which must be > 3500.
             fiber(int): Fiber number of the target on this plate, which must be in the range 1-1000.
+            lite(bool): Specifies the "lite" version which contains only HDUs 0-3, no so per-exposure
+                data is included.
 
         Returns:
             str: Full path to the spectrum file for the specified observation.
@@ -93,5 +108,8 @@ class Finder(object):
         if fiber < 1 or fiber > 1000:
             raise ValueError('Invalid fiber ({}) must be 1-1000.'.format(fiber))
 
+        path = 'spectra'
+        if lite:
+            path = os.path.join(path,'lite')
         name = 'spec-{plate:4d}-{mjd:5d}-{fiber:04d}.fits'.format(plate=plate,mjd=mjd,fiber=fiber)
-        return os.path.join(self.redux_base,'spectra',str(plate),name)
+        return os.path.join(self.redux_base,path,str(plate),name)

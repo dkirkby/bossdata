@@ -7,6 +7,7 @@ from __future__ import division,print_function
 
 import os
 import os.path
+import stat
 
 import requests
 
@@ -41,7 +42,7 @@ class Manager(object):
 
         Downloads are streamed so that the memory requirements are independent of the file size.
 
-        TODO: automatic decompression, optional progress feedback, check for enough disk space.
+        TODO: optional progress feedback, check for enough disk space.
 
         Args:
             remote_path(str): The full path to the remote file relative to the remote server root.
@@ -74,6 +75,17 @@ class Manager(object):
         parent_path = os.path.dirname(local_path)
         if not os.path.exists(parent_path):
             os.makedirs(parent_path)
+
+        # Check that there is enough free space, if possible.
+        file_size = request.headers.get('content-length',None)
+        if file_size is not None:
+            file_size = int(file_size)
+            Mb = 1<<20
+            stat = os.statvfs(parent_path)
+            free_space = stat.f_bavail*stat.f_frsize
+            if file_size + 1*Mb > free_space:
+                raise RuntimeError('File size ({:.1f}Mb) exceeds free space for {}.'.format(
+                    file_size/(1.0*Mb),local_path))
 
         # Stream the request response binary content into the local file.
         with open(local_path,'wb') as f:
