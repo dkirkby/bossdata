@@ -27,6 +27,7 @@ class Finder(object):
             sas_root = os.getenv('BOSS_SAS_ROOT')
         if sas_root is None:
             raise RuntimeError('No SAS root specified: try setting $BOSS_SAS_ROOT.')
+
         if redux_version is None:
             redux_version = os.getenv('BOSS_REDUX_VERSION',None)
         if redux_version is None:

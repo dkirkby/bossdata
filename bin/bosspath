@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import division,print_function
+
 import bossdata.path
 import bossdata.remote
 
@@ -8,7 +10,8 @@ def main():
     path = finder.get_spec_path(6641,56383,10)
     #path = finder.get_sp_all_path()
     mgr = bossdata.remote.Manager()
-    mgr.download(path,'test.fits')
+    local_path = mgr.get(path)
+    print('File available at {}'.format(local_path))
 
 if __name__ == '__main__':
     main()

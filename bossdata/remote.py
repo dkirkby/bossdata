@@ -19,7 +19,7 @@ class Manager(object):
     mirror using the BOSS_LOCAL_ROOT environment variable.
 
     Args:
-        base_url(str): Base URL of all BOSS data files.
+        base_url(str): Base URL of all BOSS data files. A trailing / on the URL is optional.
         local_root(str): Local path to use as the root of the locally mirrored file
             hierarchy. If this arg is None, then the value of the BOSS_LOCAL_ROOT environment
             variable, if any, will be used instead.  If a value is provided, it should identify
@@ -30,7 +30,7 @@ class Manager(object):
     """
     def __init__(self,base_url = 'http://dr12.sdss3.org',local_root = None):
 
-        self.base_url = base_url
+        self.base_url = base_url.rstrip('/')
         self.local_root = local_root
         if self.local_root is None:
             self.local_root = os.getenv('BOSS_LOCAL_ROOT')
@@ -42,13 +42,12 @@ class Manager(object):
 
         Downloads are streamed so that the memory requirements are independent of the file size.
 
-        TODO: optional progress feedback, check for enough disk space.
+        TODO: optional progress feedback.
 
         Args:
-            remote_path(str): The full path to the remote file relative to the remote server root.
-            local_path(str): The (absolute or relative) path of the local file to write. When no
-                local_path is provided, the default behavior is to mirror the remote file hierarchy
-                under the local_root, creating new directories as needed.
+            remote_path(str): The full path to the remote file relative to the remote server root,
+                which should normally be obtained using :class:`bossdata.path` methods.
+            local_path(str): The (absolute or relative) path of the local file to write.
             chunk_size(int): Size of data chunks to use for the streaming download. Larger sizes
                 will potentially download faster but also require more memory.
 
@@ -56,33 +55,31 @@ class Manager(object):
             str: Absolute local path of the downloaded file.
 
         Raises:
-            RuntimeError: no local_path provided and no local_root specified when this Manager
-                was created.
+            ValueError: local_path directory does not exist.
         """
+        if not local_path:
+            raise ValueError('Missing required argument local_path.')
+        local_path = os.path.abspath(local_path)
+
+        # Check that the local path points to an existing directory.
+        if not os.path.isdir(os.path.dirname(local_path)):
+            raise ValueError('local_path directory does not exist: {}.'.format(
+                os.path.dirname(local_path)))
+
         # Prepare the HTTP request. For details on the timeout parameter see
         # http://docs.python-requests.org/en/latest/user/advanced/#timeouts
-        request = requests.get(self.base_url + remote_path,stream = True,timeout = (3.05, 27))
-
-        # Mirror the remote directory layout under the local root by default.
-        if local_path is None and self.local_root is not None:
-            local_path = os.path.join(self.local_root,remote_path)
-
-        if local_path is None:
-            raise RuntimeError('Cannot mirror without a local root (try setting BOSS_LOCAL_ROOT).')
-
-        # Create local directories as needed.
-        local_path = os.path.abspath(local_path)
-        parent_path = os.path.dirname(local_path)
-        if not os.path.exists(parent_path):
-            os.makedirs(parent_path)
+        url = self.base_url + '/' + remote_path.lstrip('/')
+        print('URL',url)
+        request = requests.get(url,stream = True,timeout = (3.05, 27))
 
         # Check that there is enough free space, if possible.
         file_size = request.headers.get('content-length',None)
         if file_size is not None:
             file_size = int(file_size)
-            Mb = 1<<20
+            parent_path = os.path.dirname(local_path)
             stat = os.statvfs(parent_path)
             free_space = stat.f_bavail*stat.f_frsize
+            Mb = 1<<20
             if file_size + 1*Mb > free_space:
                 raise RuntimeError('File size ({:.1f}Mb) exceeds free space for {}.'.format(
                     file_size/(1.0*Mb),local_path))
@@ -93,3 +90,33 @@ class Manager(object):
                 f.write(chunk)
 
         return local_path
+
+    def get(self,remote_path):
+        """Get a local file that mirrors a remote file, downloading the file if necessary.
+
+        Args:
+            remote_path(str): The full path to the remote file relative to the remote server root,
+                which should normally be obtained using :class:`bossdata.path` methods.
+
+        Returns:
+            str: Absolute local path of the local file that mirrors the remote file.
+
+        Raises:
+            RuntimeError: No local_root specified when this manager was created.
+        """
+        if self.local_root is None:
+            raise RuntimeError('No local root specified (try setting BOSS_LOCAL_ROOT).')
+
+        local_path = os.path.join(self.local_root,remote_path.lstrip('/'))
+        print('local path',local_path)
+        if os.path.isfile(local_path):
+            return local_path
+
+        # If we get here, the file is not available locally so try to download it now.
+        # Create local directories as needed.
+        local_path = os.path.abspath(local_path)
+        parent_path = os.path.dirname(local_path)
+        print('parent path:',parent_path)
+        if not os.path.exists(parent_path):
+            os.makedirs(parent_path)
+        return self.download(remote_path,local_path)
