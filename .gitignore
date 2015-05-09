@@ -43,3 +43,6 @@ docs/_build
 
 # IPython notebooks
 .ipynb_checkpoints
+
+# Data files
+*.fits
