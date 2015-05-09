@@ -32,6 +32,7 @@ class Finder(object):
         if redux_version is None:
             raise RuntimeError('No redux version specifed: try setting $BOSS_REDUX_VERSION.')
 
+        self.redux_version = redux_version
         self.redux_base = os.path.join(sas_root,'boss','spectro','redux',redux_version)
 
     def get_plate_path(self,plate):
@@ -55,6 +56,12 @@ class Finder(object):
             raise ValueError('Invalid plate number ({}) must be > 0.'.format(plate))
 
         return os.path.join(self.redux_base,str(plate))
+
+    def get_sp_all_path(self):
+        """Get the location of the metadata summary file.
+        """
+        name = 'spAll-{}.dat.gz'.format(self.redux_version)
+        return os.path.join(self.redux_base,name)
 
     def get_spec_path(self,plate,mjd,fiber):
         """Get the location of the spectrum file for the specified observation.

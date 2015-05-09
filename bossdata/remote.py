@@ -15,29 +15,24 @@ class Manager(object):
 
     The default mapping from remote to local filenames is to mirror the remote file hierarchy
     on the local disk.  The normal mode of operation is to establish the local root for the
-    mirror using the BOSSDATA_ROOT environment variable.
+    mirror using the BOSS_LOCAL_ROOT environment variable.
 
     Args:
-        release(str): Tag describing the release to download from, which determines the
-            base URL of all BOSS data files. Currently only 'DR12' is supported.
+        base_url(str): Base URL of all BOSS data files.
         local_root(str): Local path to use as the root of the locally mirrored file
-            hierarchy. If this arg is None, then the value of the BOSSDATA_ROOT environment
+            hierarchy. If this arg is None, then the value of the BOSS_LOCAL_ROOT environment
             variable, if any, will be used instead.  If a value is provided, it should identify
             an existing writeable directory.
 
     Raises:
         RuntimeError: No such directory local_root.
     """
-    def __init__(self,release = 'DR12',local_root = None):
+    def __init__(self,base_url = 'http://dr12.sdss3.org',local_root = None):
 
-        if release == 'DR12':
-            self.url_prefix = 'http://dr12.sdss3.org'
-        else:
-            raise ValueError('Invalid release {}.'.format(source))
-
+        self.base_url = base_url
         self.local_root = local_root
         if self.local_root is None:
-            self.local_root = os.getenv('BOSSDATA_ROOT')
+            self.local_root = os.getenv('BOSS_LOCAL_ROOT')
         if self.local_root is not None and not os.path.isdir(self.local_root):
             raise RuntimeError('Cannot use non-existent path {} as local root.'.format(self.local_root))
 
@@ -63,15 +58,16 @@ class Manager(object):
             RuntimeError: no local_path provided and no local_root specified when this Manager
                 was created.
         """
-        # Prepare the HTTP request.
-        request = requests.get(self.url_prefix + remote_path,stream = True)
+        # Prepare the HTTP request. For details on the timeout parameter see
+        # http://docs.python-requests.org/en/latest/user/advanced/#timeouts
+        request = requests.get(self.base_url + remote_path,stream = True,timeout = (3.05, 27))
 
         # Mirror the remote directory layout under the local root by default.
         if local_path is None and self.local_root is not None:
             local_path = os.path.join(self.local_root,remote_path)
 
         if local_path is None:
-            raise RuntimeError('Cannot mirror without a local root (try setting BOSSDATA_ROOT).')
+            raise RuntimeError('Cannot mirror without a local root (try setting BOSS_LOCAL_ROOT).')
 
         # Create local directories as needed.
         local_path = os.path.abspath(local_path)
