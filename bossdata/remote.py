@@ -8,8 +8,11 @@ from __future__ import division,print_function
 import os
 import os.path
 import stat
+import math
 
 import requests
+
+from progressbar import ProgressBar,Percentage,Bar,FileTransferSpeed
 
 class Manager(object):
     """Manage downloads of BOSS data via HTTP.
@@ -37,12 +40,10 @@ class Manager(object):
         if self.local_root is not None and not os.path.isdir(self.local_root):
             raise RuntimeError('Cannot use non-existent path {} as local root.'.format(self.local_root))
 
-    def download(self,remote_path,local_path = None,chunk_size = 4096):
+    def download(self,remote_path,local_path,chunk_size = 4096,progress_min_size = 10):
         """Download a single BOSS data file.
 
         Downloads are streamed so that the memory requirements are independent of the file size.
-
-        TODO: optional progress feedback.
 
         Args:
             remote_path(str): The full path to the remote file relative to the remote server root,
@@ -50,6 +51,8 @@ class Manager(object):
             local_path(str): The (absolute or relative) path of the local file to write.
             chunk_size(int): Size of data chunks to use for the streaming download. Larger sizes
                 will potentially download faster but also require more memory.
+            progress_min_size(int): Display a text progress bar for any downloads whose size
+                in Mb exceeds this value.
 
         Returns:
             str: Absolute local path of the downloaded file.
@@ -73,6 +76,7 @@ class Manager(object):
         request = requests.get(url,stream = True,timeout = (3.05, 27))
 
         # Check that there is enough free space, if possible.
+        progress_bar = None
         file_size = request.headers.get('content-length',None)
         if file_size is not None:
             file_size = int(file_size)
@@ -83,11 +87,22 @@ class Manager(object):
             if file_size + 1*Mb > free_space:
                 raise RuntimeError('File size ({:.1f}Mb) exceeds free space for {}.'.format(
                     file_size/(1.0*Mb),local_path))
+            if file_size > progress_min_size*Mb:
+                label = os.path.basename(local_path)
+                progress_bar = ProgressBar(
+                    widgets = [label,' ',Percentage(),Bar(),' ',FileTransferSpeed()],
+                    maxval = math.ceil(file_size/chunk_size)).start()
 
         # Stream the request response binary content into the local file.
+        progress = 0
         with open(local_path,'wb') as f:
             for chunk in request.iter_content(chunk_size = chunk_size):
                 f.write(chunk)
+                if progress_bar:
+                    progress += 1
+                    progress_bar.update(progress)
+        if progress_bar:
+            progress_bar.finish()
 
         return local_path
 

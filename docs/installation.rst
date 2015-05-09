@@ -4,15 +4,12 @@ Installation
 
 At the command line::
 
-    $ easy_install bossdata
+    % pip install bossdata
 
-Or, if you have virtualenvwrapper installed::
+Requirements
+------------
 
-    $ mkvirtualenv bossdata
-    $ pip install bossdata
+The following additional pacakges are used by bossdata and should be installed automatically by pip, if necessary:
 
-TODO:
-
- * Why only use `pip` with virtualenv?
- * Describe `conda` equivalent to `mkvirtualenv` installation
- * Are `bin` targets installed with the current setup?
+ * requests
+ * progressbar
