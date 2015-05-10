@@ -38,7 +38,7 @@ Write Documentation
 
 bossdata could always use more documentation, whether as part of the
 official bossdata docs, in docstrings, or even on the web in blog posts,
-articles, and such.  We use the sphinx napolean extension to support google and numpy-style docstrings (http://sphinx-doc.org/latest/ext/napoleon.html).
+articles, and such.  We use the `sphinx napolean extension<http://sphinx-doc.org/latest/ext/napoleon.html>`_ and write google-style docstrings.
 
 Submit Feedback
 ~~~~~~~~~~~~~~~

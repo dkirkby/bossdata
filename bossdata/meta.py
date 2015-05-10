@@ -12,6 +12,8 @@ import sqlite3
 import astropy.table
 import numpy as np
 
+from progressbar import ProgressBar,Percentage,Bar
+
 import bossdata.path
 import bossdata.remote
 
@@ -57,7 +59,7 @@ def create_meta_lite(sp_all_path,db_path,verbose = True):
     """
     # Read the database into memory.
     if verbose:
-        print('Reading...')
+        print('Initializing the lite database...')
     with gzip.open(sp_all_path,mode = 'r') as f:
         table = astropy.table.Table.read(f,format = 'ascii')
 
@@ -70,11 +72,16 @@ def create_meta_lite(sp_all_path,db_path,verbose = True):
     # Insert rows into the database.
     sql = 'INSERT INTO meta VALUES ({})'.format(','.join('?'*len(table.colnames)))
     if verbose:
-        print('Writing...')
-    for row in table:
+        progress_bar = ProgressBar(widgets = ['Writing',' ',Percentage(),Bar()],
+            maxval = len(table)).start()
+    for i,row in enumerate(table):
         cursor.execute(sql,row)
+        if verbose:
+            progress_bar.update(i+1)
     connection.commit()
     connection.close()
+    if verbose:
+        progress_bar.finish()
 
 sql_type_map = {
     'INTEGER': np.integer,
