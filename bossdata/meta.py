@@ -18,6 +18,9 @@ import bossdata.remote
 def sql_create_table(table_name,recarray_dtype):
     """Prepare an SQL statement to create a database corresponding a numpy recarray data type.
 
+    Assumes (but does not check) that columns named PLATE,MJD and FIBER are included and
+    creates a composite primary index on these columns.
+
     Args:
         table_name(str): Name to give the new table.
         recarray_dtype: Numpy recarray data type that defines the columns to create.
@@ -39,9 +42,12 @@ def sql_create_table(table_name,recarray_dtype):
         else:
             raise ValueError('Cannot map data type {} of {} to SQL.'.format(dtype,name))
         columns.append('`{name}` {type}'.format(name = name,type = sql_type))
-    return 'create table `{name}` ({columns})'.format(name = table_name,columns = ','.join(columns))
+    # Add a composite primary key on (plate,mjd,fiber).
+    columns.append('PRIMARY KEY (PLATE,MJD,FIBER)')
+    # Put the pieces together into the final SQL.
+    return 'CREATE TABLE `{name}` ({columns})'.format(name = table_name,columns = ','.join(columns))
 
-def create_meta_lite(sp_all_path,db_path):
+def create_meta_lite(sp_all_path,db_path,verbose = True):
     """Create the "lite" meta database from a locally mirrored spAll file.
 
     Args:
@@ -50,16 +56,21 @@ def create_meta_lite(sp_all_path,db_path):
         db_path(str): Local path where the corresponding sqlite3 database will be written.
     """
     # Read the database into memory.
+    if verbose:
+        print('Reading...')
     with gzip.open(sp_all_path,mode = 'r') as f:
         table = astropy.table.Table.read(f,format = 'ascii')
+
     # Create a new database file.
     sql = sql_create_table('meta',table.dtype)
-    print(sql)
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
     cursor.execute(sql)
+
+    # Insert rows into the database.
     sql = 'INSERT INTO meta VALUES ({})'.format(','.join('?'*len(table.colnames)))
-    print(sql)
+    if verbose:
+        print('Writing...')
     for row in table:
         cursor.execute(sql,row)
     connection.commit()
@@ -117,7 +128,7 @@ class Database(object):
             self.column_dtypes.append(sql_type_map[dtype])
 
     def prepare_columns(self,column_names):
-        """Validate colunn names and prepare a type dictionary.
+        """Validate column names and lookup their types.
 
         Args:
             column_names(str): Comma-separated list of column names or the special value '*' to
