@@ -86,12 +86,19 @@ class Database(object):
     """Initialize a searchable database of BOSS observation metadata.
 
     Args:
-        finder(bossdata.path.Finder): Object used to find the names of BOSS data files.
-        mirror(bossdata.remote.Manager): Object used to interact with the local mirror of BOSS data.
+        finder(bossdata.path.Finder): Object used to find the names of BOSS data files. If not
+            specified, the default Finder constructor is used.
+        mirror(bossdata.remote.Manager): Object used to interact with the local mirror of BOSS
+            data. If not specified, the default Manager constructor is used.
         lite(bool): Use the "lite" metadata format, which is considerably faster but only
             provides a subset of the most commonly accessed fields.
     """
-    def __init__(self,finder,mirror,lite=True):
+    def __init__(self,finder = None,mirror = None,lite = True):
+
+        if finder is None:
+            finder = bossdata.path.Finder()
+        if mirror is None:
+            mirror = bossdata.remote.Manager()
 
         # Get the local name of the metadata source file and the corresponding SQL database name.
         remote_path = finder.get_sp_all_path(lite = lite)
@@ -172,6 +179,9 @@ class Database(object):
             what(str): Comma separated list of column names to return or '*' to return all columns.
             where(str): SQL selection clause or None for no filtering. Reserved column names such
                 as PRIMARY must be `escaped` in this clause.
+
+        Raises:
+            sqlite3.OperationalError: failed to execute query.
         """
         # Prepare the SQL select statement we will use.
         names,dtypes = self.prepare_columns(what)
@@ -200,7 +210,11 @@ class Database(object):
 
         Returns:
             :class:`astropy.table.Table`: Table of results with column names matching those in
-                the database, and column types inferred automatically.
+                the database, and column types inferred automatically. Returns None if no rows
+                are selected.
+
+        Raises:
+            RuntimeError: failed to execute query.
         """
         # Prepare the SQL select statement we will use.
         names,dtypes = self.prepare_columns(what)
@@ -212,8 +226,14 @@ class Database(object):
             sql += ' LIMIT {:d}'.format(max_rows)
 
         # Execute the query and fetch all of the result into memory.
-        self.cursor.execute(sql)
-        rows = self.cursor.fetchall()
+        try:
+            self.cursor.execute(sql)
+            rows = self.cursor.fetchall()
+        except sqlite3.OperationalError,e:
+            raise RuntimeError('Database error: {}'.format(e.args[0]))
+
+        if len(rows) == 0:
+            return None
 
         # Return a table of the results, letting astropy.table.Table infer the columns types
         # from the data itself.
