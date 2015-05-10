@@ -72,7 +72,6 @@ class Manager(object):
         # Prepare the HTTP request. For details on the timeout parameter see
         # http://docs.python-requests.org/en/latest/user/advanced/#timeouts
         url = self.base_url + '/' + remote_path.lstrip('/')
-        print('URL',url)
         request = requests.get(url,stream = True,timeout = (3.05, 27))
 
         # Check that there is enough free space, if possible.
@@ -106,8 +105,11 @@ class Manager(object):
 
         return local_path
 
-    def get(self,remote_path):
-        """Get a local file that mirrors a remote file, downloading the file if necessary.
+    def local_path(self,remote_path):
+        """Get the local path corresponding to a remote path.
+
+        Does not check that the file or its parent directory exists. Use :met:`get` to
+        ensure that the file exists, downloading it if necessary.
 
         Args:
             remote_path(str): The full path to the remote file relative to the remote server root,
@@ -121,17 +123,25 @@ class Manager(object):
         """
         if self.local_root is None:
             raise RuntimeError('No local root specified (try setting BOSS_LOCAL_ROOT).')
+        return os.path.abspath(os.path.join(self.local_root,remote_path.lstrip('/')))
 
-        local_path = os.path.join(self.local_root,remote_path.lstrip('/'))
-        print('local path',local_path)
+    def get(self,remote_path):
+        """Get a local file that mirrors a remote file, downloading the file if necessary.
+
+        Args:
+            remote_path(str): The full path to the remote file relative to the remote server root,
+                which should normally be obtained using :class:`bossdata.path` methods.
+
+        Returns:
+            str: Absolute local path of the local file that mirrors the remote file.
+        """
+        local_path = self.local_path(remote_path)
         if os.path.isfile(local_path):
             return local_path
 
         # If we get here, the file is not available locally so try to download it now.
         # Create local directories as needed.
-        local_path = os.path.abspath(local_path)
         parent_path = os.path.dirname(local_path)
-        print('parent path:',parent_path)
         if not os.path.exists(parent_path):
             os.makedirs(parent_path)
         return self.download(remote_path,local_path)

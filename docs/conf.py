@@ -37,8 +37,10 @@ class Mock(MagicMock):
 # List all packages here that we import but that ReadTheDocs can safely ignore.
 # When a submodule is used, its parents also need to be listed here.
 MOCK_MODULES = [
-#    'scipy',
-#    'scipy.minimize',
+    'requests',
+    'progressbar',
+    'astropy',
+    'astropy.table',
 ]
 if on_rtd:
     sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)

@@ -7,6 +7,7 @@ Submodules
 .. toctree::
     bossdata.path
     bossdata.remote
+    bossdata.meta
 
 Module contents
 ---------------
