@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Executable script bossquery.
+"""Query the meta data for BOSS observations.
 """
 
 from __future__ import division,print_function
@@ -21,18 +21,25 @@ def main():
         help = 'List of comma-separated columns to return from the query.')
     parser.add_argument('--where', type = str, default = 'OBJTYPE="QSO"', metavar = 'SEL',
         help = 'Selections to restrict the query results.')
+    parser.add_argument('--max-rows', type = int, default = 1000, metavar = 'N',
+        help = 'Maximum number of query result rows to process.')
     parser.add_argument('--print', action = 'store_true',
         help = 'Print the query results.')
     parser.add_argument('--save', type = str, default = None, metavar = 'FILE',
         help = 'Save results to the specified file, whose extension determines the format.')
+    parser.add_argument('--no-clobber', action = 'store_true',
+        help = 'Do not overwrite any existing save file with the same name.')
     args = parser.parse_args()
 
     try:
         meta_db = bossdata.meta.Database(lite = not args.full)
-        table = meta_db.select_all(args.what,args.where)
+        table = meta_db.select_all(args.what,args.where,max_rows = args.max_rows)
     except (RuntimeError,ValueError),e:
         print(e)
         return -1
+
+    if args.verbose:
+        print('Query returned {:d} rows.'.format(len(table)))
 
     if table is None:
         print('No rows found for this query.')
@@ -47,7 +54,9 @@ def main():
              table.write(args.save,format = 'ascii')
         else:
             try:
-                table.write(args.save)
+                table.write(args.save,overwrite = not args.no_clobber)
+                if args.verbose:
+                    print('Results saved to {}.'.format(args.save))
             except Exception,e:
                 print('Results could not be saved to {}.'.format(args.save))
                 print(e)

@@ -1,0 +1,74 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""Fetch BOSS data files containing the spectra of specified observations and mirror them locally.
+"""
+
+from __future__ import division,print_function
+
+import argparse
+import os.path
+
+from progressbar import ProgressBar,Percentage,Bar
+
+import astropy.table
+
+import bossdata.path
+import bossdata.remote
+
+def main():
+    # Initialize and parse command-line arguments.
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--verbose', action = 'store_true',
+        help = 'Provide verbose output.')
+    parser.add_argument('observations',type = str,default = None,metavar = 'FILE',
+        help = 'File containing PLATE,MJD,FIBER columns that specify the observations to fetch.')
+    parser.add_argument('--full', action = 'store_true',
+        help = 'Fetch the full version of each spectrum data file.')
+    args = parser.parse_args()
+
+    # Read the list of observations to fetch.
+    root,ext = os.path.splitext(args.observations)
+    if ext in ('.dat','.txt'):
+        format = 'ascii'
+    else:
+        format = None
+    table = astropy.table.Table.read(args.observations,format = format)
+    num_obs = len(table)
+
+    if args.verbose:
+        print('Fetching {:d} observations...'.format(num_obs))
+        progress_bar = ProgressBar(widgets = [Percentage(),Bar()],maxval = num_obs).start()
+        num_bytes = 0
+
+    finder = bossdata.path.Finder()
+    mirror = bossdata.remote.Manager()
+
+    # Fetch each observation serially.
+    num_fetched = 0
+    try:
+        for i,row in enumerate(table):
+            try:
+                remote_path = finder.get_spec_path(
+                    plate = row['PLATE'],mjd = row['MJD'],fiber = row['FIBER'],lite = not args.full)
+                local_path = mirror.get(remote_path)
+                num_fetched += 1
+            except RuntimeError,e:
+                print('Skipping file with download error: {}.'.format(remote_path))
+            if args.verbose:
+                progress_bar.update(i+1)
+                num_bytes += os.path.getsize(local_path)
+        if args.verbose:
+            progress_bar.finish()
+    except KeyboardInterrupt:
+        print('Stopping after keyboard interrupt.')
+
+    if args.verbose:
+        print('Processed {:.1f} Mb of data files for {:d} observations.'.format(
+            num_bytes/float(1<<20),num_fetched))
+
+    if num_fetched != num_obs:
+        print('WARNING: {:d} of {:d} observations were not fetched.'.format(
+            num_obs-num_fetched,num_obs),'Re-run the command after any problems are fixed.')
+
+if __name__ == '__main__':
+    main()

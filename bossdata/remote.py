@@ -22,23 +22,31 @@ class Manager(object):
     mirror using the BOSS_LOCAL_ROOT environment variable.
 
     Args:
-        base_url(str): Base URL of all BOSS data files. A trailing / on the URL is optional.
+        data_url(str): Base URL of all BOSS data files. A trailing / on the URL is optional. If
+            this arg is None, then the value of the BOSS_DATA_URL environment variable we be
+            used instead.
         local_root(str): Local path to use as the root of the locally mirrored file
             hierarchy. If this arg is None, then the value of the BOSS_LOCAL_ROOT environment
             variable, if any, will be used instead.  If a value is provided, it should identify
             an existing writeable directory.
 
     Raises:
-        RuntimeError: No such directory local_root.
+        ValueError: No such directory local_root or missing data_url.
     """
-    def __init__(self,base_url = 'http://dr12.sdss3.org',local_root = None):
+    def __init__(self,data_url = None,local_root = None):
 
-        self.base_url = base_url.rstrip('/')
+        self.data_url = data_url
+        if self.data_url is None:
+            self.data_url = os.getenv('BOSS_DATA_URL')
+        if self.data_url is None:
+            raise ValueError('No data URL specified (try setting BOSS_DATA_URL).')
+        self.data_url = self.data_url.rstrip('/')
+
         self.local_root = local_root
         if self.local_root is None:
             self.local_root = os.getenv('BOSS_LOCAL_ROOT')
         if self.local_root is not None and not os.path.isdir(self.local_root):
-            raise RuntimeError('Cannot use non-existent path {} as local root.'.format(self.local_root))
+            raise ValueError('Cannot use non-existent path {} as local root.'.format(self.local_root))
 
     def download(self,remote_path,local_path,chunk_size = 4096,progress_min_size = 10):
         """Download a single BOSS data file.
@@ -71,7 +79,7 @@ class Manager(object):
 
         # Prepare the HTTP request. For details on the timeout parameter see
         # http://docs.python-requests.org/en/latest/user/advanced/#timeouts
-        url = self.base_url + '/' + remote_path.lstrip('/')
+        url = self.data_url + '/' + remote_path.lstrip('/')
         request = requests.get(url,stream = True,timeout = (3.05, 27))
 
         # Check that there is enough free space, if possible.
@@ -92,14 +100,16 @@ class Manager(object):
                     widgets = [label,' ',Percentage(),Bar(),' ',FileTransferSpeed()],
                     maxval = math.ceil(file_size/chunk_size)).start()
 
-        # Stream the request response binary content into the local file.
+        # Stream the request response binary content into a temporary file.
         progress = 0
-        with open(local_path,'wb') as f:
+        with open(local_path + '.downloading','wb') as f:
             for chunk in request.iter_content(chunk_size = chunk_size):
                 f.write(chunk)
                 if progress_bar:
                     progress += 1
                     progress_bar.update(progress)
+        # Move the temporary file to its permanent location.
+        os.rename(local_path + '.downloading',local_path)
         if progress_bar:
             progress_bar.finish()
 
