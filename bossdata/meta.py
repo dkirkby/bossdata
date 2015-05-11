@@ -31,7 +31,7 @@ def sql_create_table(table_name,recarray_dtype,renaming_rules = { },primary_key 
             No index is created if this argument is None.
 
     Returns:
-        str: SQL statement that can be executed to create the database.
+        str: Executable SQL statement to create the database.
 
     Raises:
         ValueError: Cannot map data type to SQL.
@@ -81,7 +81,8 @@ def create_meta_lite(sp_all_path,db_path,verbose = True):
         table = astropy.table.Table.read(f,format = 'ascii')
 
     # Create a new database file.
-    sql = sql_create_table('meta',table.dtype,primary_key = '(PLATE,MJD,FIBER)')
+    rules = { 'MODELFLUX{}'.format(i):'MODELFLUX_{}'.format(i) for i in range(5) }
+    sql = sql_create_table('meta',table.dtype,renaming_rules = rules,primary_key = '(PLATE,MJD,FIBER)')
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
     cursor.execute(sql)
