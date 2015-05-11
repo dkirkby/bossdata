@@ -69,6 +69,9 @@ def create_meta_lite(sp_all_path,db_path,verbose = True):
 
     The created database has a composite primary index on the (PLATE,MJD,FIBER) columns.
 
+    The DR12 spAll lite file is ~115Mb and converts to a ~470Mb SQL database file. The conversion
+    takes about 24 minutes on a laptop.
+
     Args:
         sp_all_path(str): Absolute local path of the "lite" spAll file, which is expected to be
             a gzipped ASCII data file.
