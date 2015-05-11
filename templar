@@ -20,6 +20,8 @@ def main():
         help = 'Create a new executable script file.')
     parser.add_argument('--module', type = str, default = None, metavar = 'NAME',
         help = 'Create a new {} module file.'.format(package_name))
+    parser.add_argument('--depenency', type = str, default = None, metavar = 'NAME',
+        help = 'Create a new package dependency.')
     args = parser.parse_args()
 
     env = Environment(loader = FileSystemLoader('.templates'))
@@ -47,6 +49,8 @@ def main():
                 print('    {}.{}'.format(package_name,args.module))
                 in_toc = False
             print(line,end='')
+        print('Next steps:')
+        print(' - Add unit tests')
 
     if args.script:
         output_name = 'bin/{}'.format(args.script)
@@ -58,6 +62,15 @@ def main():
             print('Setting the executable permission bit.')
         file_stat = os.stat(output_name)
         os.chmod(output_name,file_stat.st_mode | stat.S_IEXEC)
+        print('Next steps:')
+        print(' - Add documentation to bin/scripts.rst')
+        print(' - Add entry_point to console_scripts in setup.py')
+
+    if args.dependency:
+        print('Next steps:')
+        print(' - Update requirements.txt')
+        print(' - Update MOCK_MODULES in docs/conf.py')
+        print(' - Add to dependency list in docs/installation.rst')
 
 if __name__ == '__main__':
     main()

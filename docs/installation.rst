@@ -9,7 +9,9 @@ At the command line::
 Requirements
 ------------
 
-The following additional pacakges are used by bossdata and should be installed automatically by pip, if necessary:
+The following additional pacakges are used by bossdata and will be installed automatically by pip, if necessary:
 
  * requests
  * progressbar
+ * astropy
+ * fitsio

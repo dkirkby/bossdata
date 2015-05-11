@@ -9,23 +9,26 @@ import os.path
 import gzip
 import sqlite3
 
-import astropy.table
 import numpy as np
+import astropy.table
+import fitsio
 
 from progressbar import ProgressBar,Percentage,Bar
 
 import bossdata.path
 import bossdata.remote
 
-def sql_create_table(table_name,recarray_dtype):
-    """Prepare an SQL statement to create a database corresponding a numpy recarray data type.
-
-    Assumes (but does not check) that columns named PLATE,MJD and FIBER are included and
-    creates a composite primary index on these columns.
+def sql_create_table(table_name,recarray_dtype,renaming_rules = { },primary_key = None):
+    """Prepare an SQL statement to create a database for a numpy structured array.
 
     Args:
         table_name(str): Name to give the new table.
-        recarray_dtype: Numpy recarray data type that defines the columns to create.
+        recarray_dtype: Numpy structured array data type that defines the columns to create.
+        renaming_rules(dict): Dictionary of rules for renaming columns. There are no explicit
+            checks that these rules do not create duplicate column names or that all rules
+            are applied.
+        primary_key(str): Column name(s) to use as the primary key, after apply renaming rules.
+            No index is created if this argument is None.
 
     Returns:
         str: SQL statement that can be executed to create the database.
@@ -34,7 +37,12 @@ def sql_create_table(table_name,recarray_dtype):
         ValueError: Cannot map data type to SQL.
     """
     columns = [ ]
-    for (name,dtype) in recarray_dtype.descr:
+    for column_dtype in recarray_dtype.descr:
+        name,dtype = column_dtype[:2]
+        # Rename this column if requested.
+        if name in renaming_rules:
+            name = renaming_rules[name]
+        # Map this column's data type to one of the sqlite3 types.
         if np.issubdtype(dtype,np.integer):
             sql_type = 'INTEGER'
         elif np.issubdtype(dtype,np.float):
@@ -43,14 +51,23 @@ def sql_create_table(table_name,recarray_dtype):
             sql_type = 'TEXT'
         else:
             raise ValueError('Cannot map data type {} of {} to SQL.'.format(dtype,name))
-        columns.append('`{name}` {type}'.format(name = name,type = sql_type))
+        if len(column_dtype) == 2:
+            columns.append('`{name}` {type}'.format(name = name,type = sql_type))
+        else:
+            # Handle sub-array columns.
+            array_shape = column_dtype[2]
+            raise RuntimeError('Sub-array columns not supported yet.')
+
     # Add a composite primary key on (plate,mjd,fiber).
-    columns.append('PRIMARY KEY (PLATE,MJD,FIBER)')
+    if primary_key:
+        columns.append('PRIMARY KEY {}'.format(primary_key))
     # Put the pieces together into the final SQL.
     return 'CREATE TABLE `{name}` ({columns})'.format(name = table_name,columns = ','.join(columns))
 
 def create_meta_lite(sp_all_path,db_path,verbose = True):
     """Create the "lite" meta database from a locally mirrored spAll file.
+
+    The created database has a composite primary index on the (PLATE,MJD,FIBER) columns.
 
     Args:
         sp_all_path(str): Absolute local path of the "lite" spAll file, which is expected to be
@@ -64,7 +81,7 @@ def create_meta_lite(sp_all_path,db_path,verbose = True):
         table = astropy.table.Table.read(f,format = 'ascii')
 
     # Create a new database file.
-    sql = sql_create_table('meta',table.dtype)
+    sql = sql_create_table('meta',table.dtype,primary_key = '(PLATE,MJD,FIBER)')
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
     cursor.execute(sql)
@@ -82,6 +99,35 @@ def create_meta_lite(sp_all_path,db_path,verbose = True):
     connection.close()
     if verbose:
         progress_bar.finish()
+
+def create_meta_full(sp_all_path,db_path,verbose = True):
+    """Create the "full" meta database from a locally mirrored spAll file.
+
+    The created database renames FIBERID to FIBER and has a composite primary index on the
+    (PLATE,MJD,FIBER) columns.
+
+    Args:
+        sp_all_path(str): Absolute local path of the "full" spAll file, which is expected to be
+            a FITS file conforming to the spAll data model.
+        db_path(str): Local path where the corresponding sqlite3 database will be written.
+    """
+    if verbose:
+        print('Initializing the full database...')
+
+    # Open the FITs file.
+    with fitsio.FITS(sp_all_path) as hdulist:
+        print('Creating the table')
+        table = hdulist[1].read()
+        print('Full table contains {} rows.'.format(len(table)))
+
+        # Create a new database file.
+        sql = sql_create_table('meta',table.dtype,renaming_rules = {'FIBERID':'FIBER'},
+            primary_key = '(PLATE,MJD,FIBER)')
+        connection = sqlite3.connect(db_path)
+        cursor = connection.cursor()
+        print('Creating new db...')
+        cursor.execute(sql)
+        print('Created new db')
 
 sql_type_map = {
     'INTEGER': np.integer,
@@ -123,7 +169,7 @@ class Database(object):
             if lite:
                 create_meta_lite(local_path,db_path)
             else:
-                raise RuntimeError('Creation of full meta db not supported yet.')
+                create_meta_full(local_path,db_path)
 
         # Connect to the database.
         self.connection = sqlite3.connect(db_path)
@@ -140,6 +186,10 @@ class Database(object):
             index,name,dtype = column_def[:3]
             self.column_names.append(str(name))
             self.column_dtypes.append(sql_type_map[dtype])
+
+        # Look up and save the number of rows in the database.
+        self.cursor.execute('SELECT COUNT(*) FROM meta')
+        self.num_rows = self.cursor.fetchone()[0]
 
     def prepare_columns(self,column_names):
         """Validate column names and lookup their types.

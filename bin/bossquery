@@ -39,6 +39,7 @@ def main():
         return -1
 
     if args.verbose:
+        print('Database contains {:d} rows.'.format(meta_db.num_rows))
         print('Query returned {:d} rows.'.format(len(table)))
 
     if table is None:
