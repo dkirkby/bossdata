@@ -3,14 +3,14 @@ Executable scripts
 
 Before running any scripts, you will normally need to establish your local configuration with some environment variables:
 
-* BOSS_DATA_ROOT: The top-level directory where all downloaded data files will be locally mirrored. Make sure there is enough space here for the files you plan to use locally. You might want to exclude this directory from your backups since it can get large and can be easily recreated.
+* BOSS_LOCAL_ROOT: The top-level directory where all downloaded data files will be locally mirrored. Make sure there is enough space here for the files you plan to use locally. You might want to exclude this directory from your backups since it can get large and can be easily recreated.
 * BOSS_DATA_URL: The top-level URL for downloading BOSS data. This should normally be `http://dr12.sdss3.org` for publicly accessible data.
 * BOSS_SAS_ROOT: This identifies the data release that you want to work with. This should normally be /sas/dr12, which corresponds to the final BOSS Data Release 12.
 * BOSS_REDUX_VERSION: This is the pipeline reconstruction version that you want to work with. This should normally be either v5_7_0, which corresponds to the final processing of all BOSS data, or v5_7_2 for SEQUELS data.
 
 As a sanity check of your configuration::
 
-    ls -l $BOSS_DATA_ROOT
+    ls -l $BOSS_LOCAL_ROOT
 
 should list an existing directory where you have write access (and plenty of free space), and::
 
@@ -18,7 +18,7 @@ should list an existing directory where you have write access (and plenty of fre
 
 should print a valid URL that displays a directory listing in any browser, without requiring any authentication. For bash users, the following lines added to your `~/.bashrc` file should be a good starting point::
 
-    export BOSS_DATA_ROOT=...some suitable local path...
+    export BOSS_LOCAL_ROOT=...some suitable local path...
     export BOSS_DATA_URL=http://dr12.sdss3.org
     export BOSS_SAS_ROOT=/sas/dr12
     export BOSS_REDUX_VERSION=v5_7_0
@@ -47,9 +47,9 @@ Fetch BOSS data files containing the spectra of specified observations and mirro
 
     bossfetch --verbose qso.dat
 
-Fetched files will be placed under `$BOSS_DATA_ROOT` with paths that exactly match the URLs they are downloaded from with the prefix substitution::
+Fetched files will be placed under `$BOSS_LOCAL_ROOT` with paths that exactly match the URLs they are downloaded from with the prefix substitution::
 
-    $BOSS_DATA_URL => $BOSS_DATA_ROOT
+    $BOSS_DATA_URL => $BOSS_LOCAL_ROOT
 
 For example, with the default configuration given above, the file at::
 
@@ -57,7 +57,7 @@ For example, with the default configuration given above, the file at::
 
 would be downloaded to::
 
-    $BOSS_DATA_ROOT/sas/dr12/boss/spectro/redux/v5_7_0/spectra/lite/3586/spec-3586-55181-0190.fits
+    $BOSS_LOCAL_ROOT/sas/dr12/boss/spectro/redux/v5_7_0/spectra/lite/3586/spec-3586-55181-0190.fits
 
 By default, the "lite" format of each spectrum data file is downloaded, which is sufficient for many purposes and signficantly (about 8x) smaller. The "lite" format contains HDUs 0-3 of the `full spectrum data file <http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/spectra/PLATE4/spec.html>`_ and does not include the spectra of individual exposures.  To download the full files instead, use the `--full` option. Both types of files can co-exist in your local mirror.
 
