@@ -8,11 +8,7 @@ Before running any scripts, you will normally need to establish your local confi
 * BOSS_SAS_ROOT: This identifies the data release that you want to work with. This should normally be /sas/dr12, which corresponds to the final BOSS Data Release 12.
 * BOSS_REDUX_VERSION: This is the pipeline reconstruction version that you want to work with. This should normally be either v5_7_0, which corresponds to the final processing of all BOSS data, or v5_7_2 for SEQUELS data.
 
-As a sanity check of your configuration::
-
-    ls -l $BOSS_LOCAL_ROOT
-
-should list an existing directory where you have write access (and plenty of free space), and::
+As a sanity check of your configuration, the following shell command::
 
     echo $BOSS_DATA_URL/$BOSS_SAS_ROOT/boss/spectro/redux/$BOSS_REDUX_VERSION/
 
