@@ -21,6 +21,11 @@ import bossdata.remote
 def sql_create_table(table_name,recarray_dtype,renaming_rules = { },primary_key = None):
     """Prepare an SQL statement to create a database for a numpy structured array.
 
+    Any columns in the structured array data type that are themselves arrays will be
+    unrolled to a list of scalar columns with names `COLNAME_I` for element [i] of a 1D array
+    and `COLNAME_I_J` for element [i,j] of a 2D array, etc, with indices I,J,... starting
+    from zero.
+
     Args:
         table_name(str): Name to give the new table.
         recarray_dtype: Numpy structured array data type that defines the columns to create.
@@ -31,7 +36,8 @@ def sql_create_table(table_name,recarray_dtype,renaming_rules = { },primary_key 
             No index is created if this argument is None.
 
     Returns:
-        str: Executable SQL statement to create the database.
+        tuple: Tuple (sql,num_cols) where sql is an executable SQL statement to create the
+            database and num_cols is the number of columns created.
 
     Raises:
         ValueError: Cannot map data type to SQL.
@@ -56,18 +62,29 @@ def sql_create_table(table_name,recarray_dtype,renaming_rules = { },primary_key 
         else:
             # Handle sub-array columns.
             array_shape = column_dtype[2]
-            raise RuntimeError('Sub-array columns not supported yet.')
+            array_ndim = len(array_shape)
+            array_size = np.prod(array_shape)
+            indices = np.unravel_index(np.arange(array_size),array_shape)
+            for i in range(array_size):
+                element_name = name
+                for j in range(array_ndim):
+                    element_name += '_{:d}'.format(indices[j][i])
+                columns.append('`{name}` {type}'.format(name = element_name,type = sql_type))
+    num_cols = len(columns)
 
     # Add a composite primary key on (plate,mjd,fiber).
     if primary_key:
         columns.append('PRIMARY KEY {}'.format(primary_key))
     # Put the pieces together into the final SQL.
-    return 'CREATE TABLE `{name}` ({columns})'.format(name = table_name,columns = ','.join(columns))
+    sql = 'CREATE TABLE `{name}` ({columns})'.format(name = table_name,columns = ','.join(columns))
+    return sql,num_cols
 
 def create_meta_lite(sp_all_path,db_path,verbose = True):
     """Create the "lite" meta database from a locally mirrored spAll file.
 
-    The created database has a composite primary index on the (PLATE,MJD,FIBER) columns.
+    The created database has a composite primary index on the (PLATE,MJD,FIBER) columns and
+    the input columns MODELFLUX0..4 are renamed MODELFLUX_0..4 to be consistent with their
+    names in the full database after sub-array un-rolling.
 
     The DR12 spAll lite file is ~115Mb and converts to a ~470Mb SQL database file. The conversion
     takes about 24 minutes on a laptop.
@@ -85,13 +102,14 @@ def create_meta_lite(sp_all_path,db_path,verbose = True):
 
     # Create a new database file.
     rules = { 'MODELFLUX{}'.format(i):'MODELFLUX_{}'.format(i) for i in range(5) }
-    sql = sql_create_table('meta',table.dtype,renaming_rules = rules,primary_key = '(PLATE,MJD,FIBER)')
+    sql,num_cols = sql_create_table('meta',table.dtype,
+        renaming_rules = rules,primary_key = '(PLATE,MJD,FIBER)')
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
     cursor.execute(sql)
 
     # Insert rows into the database.
-    sql = 'INSERT INTO meta VALUES ({})'.format(','.join('?'*len(table.colnames)))
+    sql = 'INSERT INTO meta VALUES ({})'.format(','.join('?'*num_cols))
     if verbose:
         progress_bar = ProgressBar(widgets = ['Writing',' ',Percentage(),Bar()],
             maxval = len(table)).start()
@@ -108,7 +126,8 @@ def create_meta_full(sp_all_path,db_path,verbose = True):
     """Create the "full" meta database from a locally mirrored spAll file.
 
     The created database renames FIBERID to FIBER and has a composite primary index on the
-    (PLATE,MJD,FIBER) columns.
+    (PLATE,MJD,FIBER) columns. Sub-array columns are also unrolled: see
+    :func:`sql_create_table` for details.
 
     Args:
         sp_all_path(str): Absolute local path of the "full" spAll file, which is expected to be
@@ -120,18 +139,40 @@ def create_meta_full(sp_all_path,db_path,verbose = True):
 
     # Open the FITs file.
     with fitsio.FITS(sp_all_path) as hdulist:
-        print('Creating the table')
+        # This just reads the headers but still takes 15-20 seconds.
+        # The equivalent operation with astropy.io.fits takes 15-20 minutes!
         table = hdulist[1].read()
-        print('Full table contains {} rows.'.format(len(table)))
 
         # Create a new database file.
-        sql = sql_create_table('meta',table.dtype,renaming_rules = {'FIBERID':'FIBER'},
-            primary_key = '(PLATE,MJD,FIBER)')
+        sql,num_cols = sql_create_table('meta',table.dtype,
+            renaming_rules = {'FIBERID':'FIBER'},primary_key = '(PLATE,MJD,FIBER)')
         connection = sqlite3.connect(db_path)
         cursor = connection.cursor()
-        print('Creating new db...')
         cursor.execute(sql)
-        print('Created new db')
+
+    # Insert rows into the database.
+    sql = 'INSERT INTO meta VALUES ({})'.format(','.join('?'*num_cols))
+    if verbose:
+        progress_bar = ProgressBar(widgets = ['Writing',' ',Percentage(),Bar()],
+            maxval = len(table)).start()
+    for i,row in enumerate(table):
+        # Unroll columns with sub-arrays into a flat list to match the flat SQL schema,
+        # and convert numpy types to the native python types required by sqlite3.
+        values = [ ]
+        for j,column_data in enumerate(row):
+            if column_data.dtype.kind == 'S':
+                values.append(column_data.rstrip())
+            elif isinstance(column_data,np.ndarray):
+                values.extend(column_data.flatten().tolist())
+            else:
+                values.append(column_data.item())
+        cursor.execute(sql,values)
+        if verbose:
+            progress_bar.update(i+1)
+    connection.commit()
+    connection.close()
+    if verbose:
+        progress_bar.finish()
 
 sql_type_map = {
     'INTEGER': np.integer,
