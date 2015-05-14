@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+""" Plot a single BOSS spectrum.
+"""
+
+from __future__ import division,print_function
+
+import argparse
+
+import matplotlib.pyplot as plt
+
+import bossdata.path
+import bossdata.remote
+import bossdata.spec
+
+def main():
+    # Initialize and parse command-line arguments.
+    parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter,
+        description = 'Plot a single BOSS spectrum.')
+    parser.add_argument('--verbose', action = 'store_true',
+        help = 'Provide verbose output.')
+    parser.add_argument('--plate',type = int, default = 6641, metavar = 'PLATE',
+        help = 'Plate number of spectrum to plot.')
+    parser.add_argument('--mjd',type = int, default = 56383, metavar = 'MJD',
+        help = 'Modified Julian date of plate observation to use.')
+    parser.add_argument('--fiber',type = int,default = 30, metavar = 'FIBER',
+        help = 'Fiber number identifying the spectrum of the requested PLATE-MJD to plot.')
+    parser.add_argument('--save-plot', type = str, default = None, metavar = 'FILE',
+        help = 'File name to save the generated plot to.')
+    parser.add_argument('--no-display', action = 'store_true',
+        help = 'Do not display the image on screen (useful for batch processing).')
+    args = parser.parse_args()
+
+    finder = bossdata.path.Finder()
+    remote_path = finder.get_spec_path(plate = args.plate,mjd = args.mjd,fiber = args.fiber,lite = True)
+
+    mirror = bossdata.remote.Manager()
+    local_path = mirror.get(remote_path)
+
+    specfile = bossdata.spec.SpecFile(local_path)
+    wlen = specfile.get_wavelength()
+    flux = specfile.get_flux()
+    ivar = specfile.get_ivar()
+
+    figure = plt.figure(figsize=(12,8))
+    left_axis = plt.gca()
+    figure.set_facecolor('white')
+    plt.xlabel('Wavelength (Angstrom)')
+    left_axis.set_ylabel('Flux (1e-17 erg/s/cm**2)')
+    #left_axis.set_ylim(-5,5)
+    right_axis = left_axis.twinx()
+    right_axis.set_ylabel('Dispersion')
+    #right_axis.set_ylim(-0.02,1)
+
+    left_axis.plot(wlen,flux)
+    plt.xlim(wlen[0],wlen[-1])
+
+    if args.save_plot:
+        figure.savefig(args.save_plot)
+    if not args.no_display:
+        plt.show()
+    plt.close()
+
+if __name__ == '__main__':
+    main()

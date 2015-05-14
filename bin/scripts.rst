@@ -66,3 +66,12 @@ By default, the "lite" format of each spectrum data file is downloaded, which is
 The `--verbose` option displays a progress bar showing the fraction of files already locally available. Any files that were previously fetched will not be downloaded again so it is safe and efficient to run `bossfetch` for overlapping lists of observations.  Note that the progress bar may appear to update unevenly if some files are already mirrored and others need to be downloaded.
 
 Each data file download is streamed to a temporary files with `.downloading` appended to their name then renamed to remove this extension after the download completes normally. If a download is interrupted or fails for some reason, the partially downloaded file will remain in the local mirror.  Re-running a `bossfetch` command will automatically re-download any partially downloaded file.
+
+.. _bossplot:
+
+bossplot
+--------
+
+Plot the spectrum of a single BOSS observation, identified by its PLATE, MJD of the observation, and the FIBER that was assigned to the target whose spectrum you want to plot.
+
+This script uses the `matplotlib` python library, which is not required for the `bossdata` package and therefore not automatically installed.
