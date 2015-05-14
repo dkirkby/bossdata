@@ -20,8 +20,10 @@ def main():
         help = 'Create a new executable script file.')
     parser.add_argument('--module', type = str, default = None, metavar = 'NAME',
         help = 'Create a new {} module file.'.format(package_name))
-    parser.add_argument('--depenency', type = str, default = None, metavar = 'NAME',
+    parser.add_argument('--dependency', type = str, default = None, metavar = 'NAME',
         help = 'Create a new package dependency.')
+    parser.add_argument('--brief', type = str, default = 'A brief description goes here.',
+        help = 'Brief one line description of a new script or module.')
     args = parser.parse_args()
 
     env = Environment(loader = FileSystemLoader('.templates'))
@@ -31,12 +33,14 @@ def main():
         output_name = '{}/{}.py'.format(package_name,args.module)
         if args.verbose:
             print('Writing {}.'.format(output_name))
-        env.get_template('module.py').stream(package = package_name,module = args.module).dump(output_name)
+        env.get_template('module.py').stream(
+            package = package_name,module = args.module,brief = args.brief).dump(output_name)
         # Add the new module into the API docs.
         output_name = 'docs/src/{}.{}.rst'.format(package_name,args.module)
         if args.verbose:
             print('Writing {}.'.format(output_name))
-        env.get_template('module.rst').stream(package = package_name,module = args.module).dump(output_name)
+        env.get_template('module.rst').stream(
+            package = package_name,module = args.module,brief = args.brief).dump(output_name)
         # Append the new module documentation to the API docs.
         api_docs = 'docs/src/{}.rst'.format(package_name)
         if args.verbose:
@@ -56,7 +60,8 @@ def main():
         output_name = 'bin/{}'.format(args.script)
         if args.verbose:
             print('Writing {}.'.format(output_name))
-        env.get_template('script.py').stream(name = args.script).dump(output_name)
+        env.get_template('script.py').stream(
+            name = args.script,brief = args.brief).dump(output_name)
         # Add the execute permission bit
         if args.verbose:
             print('Setting the executable permission bit.')

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Module {{ package }}.{{ module }}
+""" {{ brief }}
 """
 
 from __future__ import division,print_function
