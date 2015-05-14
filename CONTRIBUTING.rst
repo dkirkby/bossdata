@@ -25,7 +25,7 @@ Fix Bugs
 ~~~~~~~~
 
 Look through the GitHub issues for bugs. Anything tagged with "bug"
-is open to whoever wants to implement it.
+is open to whoever wants to fix it.
 
 Implement Features
 ~~~~~~~~~~~~~~~~~~
@@ -38,7 +38,15 @@ Write Documentation
 
 bossdata could always use more documentation, whether as part of the
 official bossdata docs, in docstrings, or even on the web in blog posts,
-articles, and such.  We use the `sphinx napolean extension<http://sphinx-doc.org/latest/ext/napoleon.html>`_ and write google-style docstrings.
+articles, and such.  We use the `sphinx napolean extension <http://sphinx-doc.org/latest/ext/napoleon.html>`_ and write google-style docstrings. Some helpful tips:
+
+* Use ```text <http://url>`_`` to embed external links (don't forget the space!)
+* Add ``.. _scriptname:`` before the heading for new scripts in `bin/scripts.rst`.  You can refer to these from other markup as ``:ref:`scriptname```.
+* Refer to another markup document `otherdoc.rst` as ``:doc:`otherdoc```.
+* Add cross references to locally defined API entities using:
+ * classes ``:class:`bossdata.module.class```
+ * methods ``:meth:`bosdata.module.class.method```
+ * functions ``:func:`bossdata.module.func```
 
 Submit Feedback
 ~~~~~~~~~~~~~~~

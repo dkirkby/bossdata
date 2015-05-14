@@ -118,7 +118,7 @@ class Manager(object):
     def local_path(self,remote_path):
         """Get the local path corresponding to a remote path.
 
-        Does not check that the file or its parent directory exists. Use :met:`get` to
+        Does not check that the file or its parent directory exists. Use :meth:`get` to
         ensure that the file exists, downloading it if necessary.
 
         Args:

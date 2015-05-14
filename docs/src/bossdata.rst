@@ -8,6 +8,7 @@ Submodules
     bossdata.path
     bossdata.remote
     bossdata.meta
+    bossdata.spec
 
 Module contents
 ---------------

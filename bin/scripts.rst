@@ -23,6 +23,8 @@ For complete documentation on the command-line options of any script use the `--
 
     bossquery --help
 
+.. _bossquery:
+
 bossquery
 ---------
 
@@ -37,6 +39,8 @@ This command uses an sqlite3 database of metadata that will be created if necess
 The columns in the lite database are a subset of those in the full database but the values are not numerically identical between them because they are truncated in the text file used to generate the lite database. However, the level of these truncation errors should be insigificant for any science applications.
 
 There are some minor inconsistencies between the data models of the lite and full versions of the meta data provided by BOSS.  In particular, the lite format uses the name `FIBER` while the full version uses `FIBERID`. We resolve this by consistently using the shorter form `FIBER` in both SQL databases.  Also, the full format includes columns that are themselves arrays. One of these, `MODELFUX(5)`, is included in the lite format using names `MODELFLUX0...MODELFUX4`. We normalize the mapping of array columns to scalar SQL columns using the syntax `COLNAME_I` for element [i] of a 1D array and `COLNAME_I_J` for element [i,j] of a 2D array, with indices starting from zero. This means, for example, that `MODELFLUX(5)` values are consistently named `MODELFLUX_0...MODELFLUX_4` in both SQL databases.
+
+.. _bossfetch:
 
 bossfetch
 ---------
