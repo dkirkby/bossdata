@@ -44,8 +44,8 @@ articles, and such.  We use the `sphinx napolean extension <http://sphinx-doc.or
 * Add ``.. _scriptname:`` before the heading for new scripts in `bin/scripts.rst`.  You can refer to these from other markup as ``:ref:`scriptname```.
 * Refer to another markup document `otherdoc.rst` as ``:doc:`otherdoc```.
 * Add cross references to locally defined API entities using:
- * classes ``:class:`bossdata.module.class```
- * methods ``:meth:`bosdata.module.class.method```
+ * classes ``:class:`bossdata.module.Class```
+ * methods ``:meth:`bosdata.module.Class.method```
  * functions ``:func:`bossdata.module.func```
 
 Submit Feedback

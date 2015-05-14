@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-""" {{ brief }}.
+""" {{ brief }}
 """
 
 from __future__ import division,print_function
