@@ -7,6 +7,7 @@ from __future__ import division,print_function
 
 import argparse
 
+import numpy as np
 import matplotlib.pyplot as plt
 
 import bossdata.path
@@ -29,6 +30,8 @@ def main():
         help = 'File name to save the generated plot to.')
     parser.add_argument('--no-display', action = 'store_true',
         help = 'Do not display the image on screen (useful for batch processing).')
+    parser.add_argument('--no-ivar', action = 'store_true',
+        help = 'Show the estimated flux only, without any indication of the estimated flux errors.')
     args = parser.parse_args()
 
     finder = bossdata.path.Finder()
@@ -41,19 +44,24 @@ def main():
     wlen = specfile.get_wavelength()
     flux = specfile.get_flux()
     ivar = specfile.get_ivar()
+    mask = (ivar > 0)
 
     figure = plt.figure(figsize=(12,8))
     left_axis = plt.gca()
     figure.set_facecolor('white')
     plt.xlabel('Wavelength (Angstrom)')
     left_axis.set_ylabel('Flux (1e-17 erg/s/cm**2)')
-    #left_axis.set_ylim(-5,5)
     right_axis = left_axis.twinx()
-    right_axis.set_ylabel('Dispersion')
-    #right_axis.set_ylim(-0.02,1)
-
-    left_axis.plot(wlen,flux)
+    right_axis.set_ylabel('Dispersion (Angstrom)')
     plt.xlim(wlen[0],wlen[-1])
+
+    if not args.no_ivar:
+        dflux = np.zeros_like(flux)
+        dflux[mask] = ivar[mask]**-0.5
+        left_axis.fill_between(wlen[mask],flux[mask]-dflux[mask],flux[mask]+dflux[mask],
+            color = 'red',alpha = 0.2)
+    else:
+        left_axis.scatter(wlen[mask],flux[mask],color = 'red',marker = '.',s = 0.1)
 
     if args.save_plot:
         figure.savefig(args.save_plot)

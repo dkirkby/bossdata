@@ -19,7 +19,7 @@ class SpecFile(object):
     attribute to detect which version an object represents.
 
     This class is only intended for reading the BOSS spec file format, so generic
-    operations on spectroscopic data (redshifting, etc) are deliberately not included here.
+    operations on spectroscopic data (redshifting, etc) are intentionally not included here.
 
     Args:
         path(str): Local path of the spec FITS file to use.  This should normally be obtained
@@ -88,6 +88,7 @@ class SpecFile(object):
         """Get the flux inverse variances for this spectrum.
 
         When ivar is non-zero, the corresponding flux standard deviation is ivar**-0.5.
+        The special value ivar=0 is used to indicate that no flux information is available.
 
         Args:
             exposure_index(int): Individual exposure to use. Uses the co-added spectrum when
