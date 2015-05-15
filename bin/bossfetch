@@ -31,10 +31,10 @@ def main():
     # Read the list of observations to fetch.
     root,ext = os.path.splitext(args.observations)
     if ext in ('.dat','.txt'):
-        format = 'ascii'
+        input_format = 'ascii'
     else:
-        format = None
-    table = astropy.table.Table.read(args.observations,format = format)
+        input_format = None
+    table = astropy.table.Table.read(args.observations,format=input_format)
     num_obs = len(table)
 
     if args.verbose:
