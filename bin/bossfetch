@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# Licensed under a MIT style license - see LICENSE.rst
+
 """Fetch BOSS data files containing the spectra of specified observations and mirror them locally.
 """
 

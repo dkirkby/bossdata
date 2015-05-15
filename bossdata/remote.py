@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# Licensed under a MIT style license - see LICENSE.rst
 
 """Download BOSS data files from a remote server.
 """

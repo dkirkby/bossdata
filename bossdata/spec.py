@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# Licensed under a MIT style license - see LICENSE.rst
 
 """ Access spectroscopic data for a single BOSS target.
 """
