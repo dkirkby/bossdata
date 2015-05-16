@@ -9,6 +9,7 @@ Submodules
     bossdata.remote
     bossdata.meta
     bossdata.spec
+    bossdata.bits
 
 Module contents
 ---------------
