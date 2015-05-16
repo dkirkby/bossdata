@@ -44,6 +44,7 @@ articles, and such.  We use the `sphinx napolean extension <http://sphinx-doc.or
 * Add ``.. _scriptname:`` before the heading for new scripts in `bin/scripts.rst`.  You can refer to these from other markup as ``:ref:`scriptname```.
 * Refer to another markup document `otherdoc.rst` as ``:doc:`otherdoc```.
 * Add cross references to locally defined API entities using:
+
  * classes ``:class:`bossdata.module.Class```
  * methods ``:meth:`bosdata.module.Class.method```
  * functions ``:func:`bossdata.module.func```
@@ -89,6 +90,10 @@ Ready to contribute? Here's how to set up `bossdata` for local development.
     $ tox
 
    To get flake8 and tox, just pip install them into your virtualenv.
+
+   Run tests with::
+
+    py.test --doctest-modules --verbose bossdata
 
 6. Commit your changes and push your branch to GitHub::
 
