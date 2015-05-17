@@ -10,6 +10,7 @@ from __future__ import division,print_function
 import argparse
 
 import numpy as np
+import numpy.ma
 import matplotlib.pyplot as plt
 
 import bossdata.path
@@ -32,8 +33,10 @@ def main():
         help = 'File name to save the generated plot to.')
     parser.add_argument('--no-display', action = 'store_true',
         help = 'Do not display the image on screen (useful for batch processing).')
-    parser.add_argument('--no-ivar', action = 'store_true',
-        help = 'Show the estimated flux only, without any indication of the estimated flux errors.')
+    parser.add_argument('--scatter', action = 'store_true',
+        help = 'Show scatter of flux instead of a flux error band.')
+    parser.add_argument('--show-mask', action = 'store_true',
+        help = 'Indicate pixels with invalid data using vertical lines.')
     args = parser.parse_args()
 
     finder = bossdata.path.Finder()
@@ -43,27 +46,36 @@ def main():
     local_path = mirror.get(remote_path)
 
     specfile = bossdata.spec.SpecFile(local_path)
-    wlen = specfile.get_wavelength()
-    flux = specfile.get_flux()
-    ivar = specfile.get_ivar()
-    mask = (ivar > 0)
+    data = specfile.get_valid_data()
+    wlen,flux,dflux = data['wavelength'][:],data['flux'][:],data['dflux'][:]
+    if args.verbose:
+        print('{0} of {1} pixels have invalid data.'.format(
+            np.count_nonzero(data.mask),len(data)))
 
     figure = plt.figure(figsize=(12,8))
     left_axis = plt.gca()
     figure.set_facecolor('white')
     plt.xlabel('Wavelength (Angstrom)')
     left_axis.set_ylabel('Flux (1e-17 erg/s/cm**2)')
-    right_axis = left_axis.twinx()
-    right_axis.set_ylabel('Dispersion (Angstrom)')
-    plt.xlim(wlen[0],wlen[-1])
+    plt.xlim(np.ma.min(wlen),np.ma.max(wlen))
+    #right_axis = left_axis.twinx()
+    #right_axis.set_ylabel('Dispersion (Angstrom)')
 
-    if not args.no_ivar:
-        dflux = np.zeros_like(flux)
-        dflux[mask] = ivar[mask]**-0.5
-        left_axis.fill_between(wlen[mask],flux[mask]-dflux[mask],flux[mask]+dflux[mask],
-            color = 'red',alpha = 0.2)
+    if args.scatter:
+        left_axis.scatter(wlen,flux,color='red',marker='.',s=0.1)
     else:
-        left_axis.scatter(wlen[mask],flux[mask],color = 'red',marker = '.',s = 0.1)
+        left_axis.fill_between(wlen,flux-dflux,flux+dflux,color='red',alpha=0.2)
+
+    num_masked = len(data.mask)
+    if args.show_mask and num_masked > 0:
+        x_mask = [ ]
+        y_mask = [ ]
+        ymin,ymax = left_axis.get_ylim()
+        bad_pixels = np.where(data.mask)
+        for x in data.data['wavelength'][bad_pixels]:
+            x_mask.extend([x,x,None])
+            y_mask.extend([ymin,ymax,None])
+        plt.plot(x_mask,y_mask,'-',color='lightgray')
 
     if args.save_plot:
         figure.savefig(args.save_plot)

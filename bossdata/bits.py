@@ -3,9 +3,10 @@
 
 """Define bit masks used in BOSS data and support symbolic operations on masks.
 
-The authoritative definition of BOSS bit masks is
+The SDSS bitmasks are documented at http://www.sdss3.org/dr10/algorithms/bitmasks.php.
+The authoritative definition of the bit masks is the file
 http://www.sdss3.org/svn/repo/idlutils/trunk/data/sdss/sdssMaskbits.par. A copy
-of this file is included in the package top-level directory and was used to
+of this file is included in this package's top-level directory and was used to
 automatically generate the bitmask definitions in this file with the
 :func:`extract_sdss_bitmasks` function.
 """

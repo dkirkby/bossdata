@@ -7,8 +7,11 @@
 from __future__ import division,print_function
 
 import numpy as np
+import numpy.ma
 
 import fitsio
+
+from bossdata.bits import SPPIXMASK
 
 class SpecFile(object):
     """ A BOSS spec file containing summary data for a single target.
@@ -30,10 +33,9 @@ class SpecFile(object):
     """
     def __init__(self,path):
         self.hdulist = fitsio.FITS(path,mode = fitsio.READONLY)
-        # Check for non-lite HDUs
         self.lite = (len(self.hdulist) == 4)
 
-    def get_spectrum_hdu(self,exposure_index = None):
+    def get_spectrum_hdu(self,exposure_index=None):
         """Get the HDU containing a specified spectrum.
 
         Args:
@@ -56,47 +58,54 @@ class SpecFile(object):
             raise ValueError('Invalid exposure index {0:d}. Valid range is 0-{1:d}.'.format(
                 exposure_index,len(self.hdulist)-4))
 
-    def get_wavelength(self,exposure_index = None):
-        """Get the wavelength grid of this spectrum.
+    def get_valid_data(self,exposure_index=None,pixel_quality_mask=None):
+        """Get the valid for a specified exposure or the combined coadd.
 
-        Use :meth:`get_flux` and :meth:`get_ivar` to get the flux measurements associated
-        with this grid.
+        You will probably find yourself using this idiom often::
 
-        Args:
-            exposure_index(int): Individual exposure to use. Uses the co-added spectrum when
-                this is None.
-
-        Returns:
-            numpy.ndarray: Array of increasing wavelength values in Angstroms.
-        """
-        log10_wavelength = self.get_spectrum_hdu(exposure_index)['loglam'][:]
-        return np.power(10.0,log10_wavelength)
-
-    def get_flux(self,exposure_index = None):
-        """Get the flux values for this spectrum.
+            data = spec.get_valid_data(...)
+            wlen,flux,dflux = data['wavelength'][:],data['flux'][:],data['dflux'][:]
 
         Args:
             exposure_index(int): Individual exposure to use. Uses the co-added spectrum when
                 this is None.
+            pixel_quality_mask(int): An integer value interpreted as a bit pattern using the
+                bits defined in :attr:`bossdata.bits.SPPIXMASK` (see also
+                http://www.sdss3.org/dr10/algorithms/bitmask_sppixmask.php). Any bits set in
+                this mask are considered harmless and the corresponding spectrum pixels are
+                assumed to contain valid data. When accessing the coadded spectrum, this mask
+                is applied to the AND of the masks for each individual exposure. No mask is
+                applied if this value is None.
 
         Returns:
-            numpy.ndarray: Array of flux values in 1e-17 ergs/s/cm2/Angstrom, corresponding to
-                the wavelengths returned by :meth:`get_wavelength`.
+            numpy.ma.MaskedArray: Masked array of per-pixel records. Pixels with no valid data
+                are included but masked. The record for each pixel has three named fields:
+                wavelength in Angstroms, flux and dflux in 1e-17 ergs/s/cm2/Angstrom. Wavelength
+                values are strictly increasing and dflux is calculated as ivar**-0.5 for pixels
+                with valid data.
         """
-        return self.get_spectrum_hdu(exposure_index)['flux'][:]
+        hdu = self.get_spectrum_hdu(exposure_index)
 
-    def get_ivar(self,exposure_index = None):
-        """Get the flux inverse variances for this spectrum.
+        if exposure_index is None:
+            pixel_bits = hdu['and_mask'][:]
+        else:
+            pixel_bits = hdu['mask'][:]
+        if pixel_quality_mask is not None:
+            clear_allowed = np.bitwise_not(np.uint32(pixel_quality_mask))
+            pixel_bits = np.bitwise_and(pixel_bits,clear_allowed)
+        num_pixels = len(pixel_bits)
 
-        When ivar is non-zero, the corresponding flux standard deviation is ivar**-0.5.
-        The special value ivar=0 is used to indicate that no flux information is available.
+        # Identify the pixels with valid data.
+        ivar = hdu['ivar'][:]
+        bad_pixels = (pixel_bits != 0) | (ivar <= 0.0)
+        good_pixels = ~bad_pixels
 
-        Args:
-            exposure_index(int): Individual exposure to use. Uses the co-added spectrum when
-                this is None.
+        # Create and fill the unmasked structured array of data.
+        data = np.empty(num_pixels,dtype = [
+            ('wavelength',np.float32),('flux',np.float32),('dflux',np.float32)])
+        data['wavelength'][:] = np.power(10.0,hdu['loglam'][:])
+        data['flux'][:] = hdu['flux'][:]
+        data['dflux'][good_pixels] = 1.0/np.sqrt(ivar[good_pixels])
+        data['dflux'][bad_pixels] = 0.0
 
-        Returns:
-            numpy.ndarray: Array of flux inverse variances in 1e-17 ergs/s/cm2/Angstrom,
-                corresponding to the wavelengths returned by :meth:`get_wavelength`.
-        """
-        return self.get_spectrum_hdu(exposure_index)['ivar'][:]
+        return np.ma.MaskedArray(data,mask=bad_pixels)
