@@ -72,6 +72,12 @@ Each data file download is streamed to a temporary files with `.downloading` app
 bossplot
 --------
 
-Plot the spectrum of a single BOSS observation, identified by its PLATE, MJD of the observation, and the FIBER that was assigned to the target whose spectrum you want to plot.
+Plot the spectrum of a single BOSS observation, identified by its PLATE, MJD of the observation, and the FIBER that was assigned to the target whose spectrum you want to plot. For example (these are the defaults if you omit any parameters)::
+
+    bosplot --plate 6641 --mjd 56383 --fiber 30
+
+This should open a new window containing the plot that you will need to close in order to exit the program.  To also save your plot, add the `--save` option with a filename that has a standard graphics format extension (pdf,png,...).  To save plots directly without displaying them, also use the `--no-display` option.
+
+The `bossplot` command will automatically download the appropriate data file if necessary.
 
 This script uses the `matplotlib` python library, which is not required for the `bossdata` package and therefore not automatically installed.

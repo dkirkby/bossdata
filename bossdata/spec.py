@@ -6,6 +6,8 @@
 
 from __future__ import division,print_function
 
+import re
+
 import numpy as np
 import numpy.ma
 
@@ -34,31 +36,49 @@ class SpecFile(object):
     def __init__(self,path):
         self.hdulist = fitsio.FITS(path,mode = fitsio.READONLY)
         self.lite = (len(self.hdulist) == 4)
+        self.header = self.hdulist[0].read_header()
+        # Look up the available exposures.
+        self.num_exposures = self.header['NEXP']
+        self.exposures = { }
+        expid_pattern = re.compile('([br][12])-([0-9]{8})-([0-9]{8})-([0-9]{8})')
+        for i in range(self.num_exposures):
+            # The order of arc and flat might be swapped here.
+            spec_id,exp_num,arc_num,flat_num = expid_pattern.match(
+                self.header['EXPID{0:02d}'.format(i+1)]).groups()
+            exposure_info = self.exposures.get(exp_num,{ })
+            exposure_info[spec_id[0]] = dict(
+                hdu_index=4+i,spec_id=spec_id,arc_num=arc_num,flat_num=flat_num)
+            self.exposures[exp_num] = exposure_info
+        # Reconstruct the time-ordered exposure sequence.
+        self.exposure_sequence = sorted(self.exposures.keys())
 
-    def get_spectrum_hdu(self,exposure_index=None):
-        """Get the HDU containing a specified spectrum.
+    def get_exposure_info(self,exposure_index=None,camera=None):
+        """Retrieve information about one exposure.
 
         Args:
-            exposure_index(int): Individual exposure to use. Uses the co-added spectrum when
-                this is None.
+            exposure_index(int): Individual exposure to use, specified as a sequence number
+                starting from zero, for the first exposure, and increasing up to
+                `self.num_exposures-1`. Uses the co-added spectrum when the value is None.
+            camera(str): Which camera to use. Must be either 'b' (blue) or 'r' (red) unless
+                exposure_index is None, in which case this argument is ignored.
 
         Returns:
-            The HDU object corresponding to the requested spectrum.
+            dict: A dictionary with keys (hdu_index,spec_id,arc_num,flat_num) of the
+                information encoded in our EXPnn header keywords.
 
         Raises:
-            ValueError: Invalid exposure_index.
+            ValueError: Invalid exposure_index or camera.
         """
-        if exposure_index is None:
-            return self.hdulist[1]
-        if exposure_index < 0:
-            raise ValueError('exposure index must be >= 0.')
-        try:
-            return self.hdulist[4+exposure_index]
-        except IndexError:
-            raise ValueError('Invalid exposure index {0:d}. Valid range is 0-{1:d}.'.format(
-                exposure_index,len(self.hdulist)-4))
+        if exposure_index < 0 or exposure_index >= self.num_exposures:
+            raise ValueError('exposure index must be in the range 0-{0}'.format(
+                self.num_exposures-1))
+        if camera not in ('b','r'):
+            raise ValueError('camera must be either "b" or "r".')
 
-    def get_valid_data(self,exposure_index=None,pixel_quality_mask=None):
+        exposure_num = self.exposure_sequence[exposure_index]
+        return self.exposures[exposure_num][camera]
+
+    def get_valid_data(self,exposure_index=None,camera=None,pixel_quality_mask=None):
         """Get the valid for a specified exposure or the combined coadd.
 
         You will probably find yourself using this idiom often::
@@ -67,8 +87,9 @@ class SpecFile(object):
             wlen,flux,dflux = data['wavelength'][:],data['flux'][:],data['dflux'][:]
 
         Args:
-            exposure_index(int): Individual exposure to use. Uses the co-added spectrum when
-                this is None.
+            exposure_index(int): Individual exposure to use, specified as a sequence number
+                starting from zero, for the first exposure, and increasing up to
+                `self.num_exposures-1`. Uses the co-added spectrum when the value is None.
             pixel_quality_mask(int): An integer value interpreted as a bit pattern using the
                 bits defined in :attr:`bossdata.bits.SPPIXMASK` (see also
                 http://www.sdss3.org/dr10/algorithms/bitmask_sppixmask.php). Any bits set in
@@ -79,21 +100,25 @@ class SpecFile(object):
 
         Returns:
             numpy.ma.MaskedArray: Masked array of per-pixel records. Pixels with no valid data
-                are included but masked. The record for each pixel has three named fields:
-                wavelength in Angstroms, flux and dflux in 1e-17 ergs/s/cm2/Angstrom. Wavelength
-                values are strictly increasing and dflux is calculated as ivar**-0.5 for pixels
-                with valid data.
+                are included but masked. The record for each pixel has four named fields:
+                wavelength and wdisp in Angstroms, flux and dflux in 1e-17 ergs/s/cm2/Angstrom.
+                Wavelength values are strictly increasing and dflux is calculated as ivar**-0.5
+                for pixels with valid data.
         """
-        hdu = self.get_spectrum_hdu(exposure_index)
-
+        # Look up the HDU for this spectrum and its pixel quality bitmap.
         if exposure_index is None:
+            hdu = self.hdulist[1]
             pixel_bits = hdu['and_mask'][:]
         else:
+            exposure_info = self.get_exposure_info(exposure_index,camera)
+            hdu = self.hdulist[exposure_info['hdu_index']]
             pixel_bits = hdu['mask'][:]
+        num_pixels = len(pixel_bits)
+
+        # Apply the pixel quality mask, if any.
         if pixel_quality_mask is not None:
             clear_allowed = np.bitwise_not(np.uint32(pixel_quality_mask))
             pixel_bits = np.bitwise_and(pixel_bits,clear_allowed)
-        num_pixels = len(pixel_bits)
 
         # Identify the pixels with valid data.
         ivar = hdu['ivar'][:]
@@ -102,8 +127,10 @@ class SpecFile(object):
 
         # Create and fill the unmasked structured array of data.
         data = np.empty(num_pixels,dtype = [
-            ('wavelength',np.float32),('flux',np.float32),('dflux',np.float32)])
+            ('wavelength',np.float32),('wdisp',np.float32),
+            ('flux',np.float32),('dflux',np.float32)])
         data['wavelength'][:] = np.power(10.0,hdu['loglam'][:])
+        data['wdisp'][:] = np.power(10.,hdu['wdisp'][:])
         data['flux'][:] = hdu['flux'][:]
         data['dflux'][good_pixels] = 1.0/np.sqrt(ivar[good_pixels])
         data['dflux'][bad_pixels] = 0.0
