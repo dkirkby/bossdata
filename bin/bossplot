@@ -44,6 +44,8 @@ def main():
         help = 'Exposure sequence number starting from 0, or plot the coadd if not set.')
     parser.add_argument('--camera',type = str, choices = ['blue','red','both'], default = 'both',
         help = 'Camera to use when plotting a single exposure.')
+    parser.add_argument('--allow-mask', type = str, default = None,
+        help = 'SPPIXMASK bit names to allow in valid data. Separate multiple names with |.')
     parser.add_argument('--save-plot', type = str, default = None, metavar = 'FILE',
         help = 'File name to save the generated plot to.')
     parser.add_argument('--no-display', action = 'store_true',
@@ -59,6 +61,12 @@ def main():
     if args.exposure is None and args.camera is not 'both':
         print('Ignoring camera = "{0}" for coadded spectrum.'.format(args.camera))
         args.camera = 'both'
+
+    if args.allow_mask is None:
+        pixel_quality_mask = None
+    else:
+        pixel_quality_mask = bossdata.bits.bitmask_from_text(
+            bossdata.bits.SPPIXMASK,args.allow_mask)
 
     finder = bossdata.path.Finder()
     remote_path = finder.get_spec_path(plate = args.plate,mjd = args.mjd,fiber = args.fiber,
@@ -83,7 +91,7 @@ def main():
     spectra = [ ]
     plot_colors = [ ]
     if args.exposure is None:
-        spectra.append(specfile.get_valid_data())
+        spectra.append(specfile.get_valid_data(pixel_quality_mask=pixel_quality_mask))
         plot_colors.append('black')
         if args.verbose:
             print('Showing coadd of {0:d} exposures:'.format(
@@ -93,12 +101,14 @@ def main():
         if args.verbose:
             print('Showing exposure',specfile.exposure_sequence[args.exposure])
         if args.camera in ('blue','both'):
-            spectra.append(specfile.get_valid_data(args.exposure,'b'))
+            spectra.append(specfile.get_valid_data(args.exposure,'b',
+                pixel_quality_mask=pixel_quality_mask))
             plot_colors.append('blue')
             if args.verbose:
                 print_mask_summary(specfile.get_pixel_mask(args.exposure,'b'))
         if args.camera in ('red','both'):
-            spectra.append(specfile.get_valid_data(args.exposure,'r'))
+            spectra.append(specfile.get_valid_data(args.exposure,'r',
+                pixel_quality_mask=pixel_quality_mask))
             plot_colors.append('red')
             if args.verbose:
                 print_mask_summary(specfile.get_pixel_mask(args.exposure,'r'))
