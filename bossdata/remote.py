@@ -4,7 +4,7 @@
 """Download BOSS data files from a remote server.
 """
 
-from __future__ import division,print_function
+from __future__ import division, print_function
 
 import os
 import os.path
@@ -13,7 +13,8 @@ import math
 
 import requests
 
-from progressbar import ProgressBar,Percentage,Bar,FileTransferSpeed
+from progressbar import ProgressBar, Percentage, Bar, FileTransferSpeed
+
 
 class Manager(object):
     """Manage downloads of BOSS data via HTTP.
@@ -34,7 +35,7 @@ class Manager(object):
     Raises:
         ValueError: No such directory local_root or missing data_url.
     """
-    def __init__(self,data_url = None,local_root = None):
+    def __init__(self, data_url=None, local_root=None):
 
         self.data_url = data_url
         if self.data_url is None:
@@ -49,7 +50,7 @@ class Manager(object):
         if self.local_root is not None and not os.path.isdir(self.local_root):
             raise ValueError('Cannot use non-existent path {} as local root.'.format(self.local_root))
 
-    def download(self,remote_path,local_path,chunk_size = 4096,progress_min_size = 10):
+    def download(self, remote_path, local_path, chunk_size=4096, progress_min_size=10):
         """Download a single BOSS data file.
 
         Downloads are streamed so that the memory requirements are independent of the file size.
@@ -81,11 +82,11 @@ class Manager(object):
         # Prepare the HTTP request. For details on the timeout parameter see
         # http://docs.python-requests.org/en/latest/user/advanced/#timeouts
         url = self.data_url + '/' + remote_path.lstrip('/')
-        request = requests.get(url,stream = True,timeout = (3.05, 27))
+        request = requests.get(url, stream=True, timeout=(3.05, 27))
 
         # Check that there is enough free space, if possible.
         progress_bar = None
-        file_size = request.headers.get('content-length',None)
+        file_size = request.headers.get('content-length', None)
         if file_size is not None:
             file_size = int(file_size)
             parent_path = os.path.dirname(local_path)
@@ -94,29 +95,29 @@ class Manager(object):
             Mb = 1<<20
             if file_size + 1*Mb > free_space:
                 raise RuntimeError('File size ({:.1f}Mb) exceeds free space for {}.'.format(
-                    file_size/(1.0*Mb),local_path))
+                    file_size/(1.0*Mb), local_path))
             if file_size > progress_min_size*Mb:
                 label = os.path.basename(local_path)
                 progress_bar = ProgressBar(
-                    widgets = [label,' ',Percentage(),Bar(),' ',FileTransferSpeed()],
+                    widgets = [label, ' ', Percentage(), Bar(), ' ', FileTransferSpeed()],
                     maxval = math.ceil(file_size/chunk_size)).start()
 
         # Stream the request response binary content into a temporary file.
         progress = 0
-        with open(local_path + '.downloading','wb') as f:
+        with open(local_path + '.downloading', 'wb') as f:
             for chunk in request.iter_content(chunk_size = chunk_size):
                 f.write(chunk)
                 if progress_bar:
                     progress += 1
                     progress_bar.update(progress)
         # Move the temporary file to its permanent location.
-        os.rename(local_path + '.downloading',local_path)
+        os.rename(local_path + '.downloading', local_path)
         if progress_bar:
             progress_bar.finish()
 
         return local_path
 
-    def local_path(self,remote_path):
+    def local_path(self, remote_path):
         """Get the local path corresponding to a remote path.
 
         Does not check that the file or its parent directory exists. Use :meth:`get` to
@@ -134,9 +135,9 @@ class Manager(object):
         """
         if self.local_root is None:
             raise RuntimeError('No local root specified (try setting BOSS_LOCAL_ROOT).')
-        return os.path.abspath(os.path.join(self.local_root,remote_path.lstrip('/')))
+        return os.path.abspath(os.path.join(self.local_root, remote_path.lstrip('/')))
 
-    def get(self,remote_path):
+    def get(self, remote_path):
         """Get a local file that mirrors a remote file, downloading the file if necessary.
 
         Args:
@@ -155,4 +156,4 @@ class Manager(object):
         parent_path = os.path.dirname(local_path)
         if not os.path.exists(parent_path):
             os.makedirs(parent_path)
-        return self.download(remote_path,local_path)
+        return self.download(remote_path, local_path)

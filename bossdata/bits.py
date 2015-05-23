@@ -11,9 +11,10 @@ automatically generate the bitmask definitions in this file with the
 :func:`extract_sdss_bitmasks` function.
 """
 
-from __future__ import division,print_function
+from __future__ import division, print_function
 
-def define_bitmask(mask_name,mask_description,**bits):
+
+def define_bitmask(mask_name, mask_description, **bits):
     """Define a new type for a bitmask with specified symbolic bit names.
 
     After defining a bitmask type, its bit names are accessible as class-level
@@ -54,10 +55,10 @@ def define_bitmask(mask_name,mask_description,**bits):
     bit_names = [ ]
     bit_offsets = [ ]
     bit_descriptions = [ ]
-    for name,bit_definition in bits.iteritems():
+    for name, bit_definition in bits.iteritems():
         bit_names.append(name)
-        if isinstance(bit_definition,tuple):
-            bit_offset,bit_description = bit_definition
+        if isinstance(bit_definition, tuple):
+            bit_offset, bit_description = bit_definition
             bit_offsets.append(int(bit_offset))
             bit_descriptions.append(bit_description)
         else:
@@ -67,22 +68,23 @@ def define_bitmask(mask_name,mask_description,**bits):
     if len(bit_offsets) != len(set(bit_offsets)):
         raise ValueError('Bit offset values must be unique.')
     # Initialize a class dictionary with attributes for each named bit.
-    class_dict = dict(zip(bit_names,(1<<offset for offset in bit_offsets)))
+    class_dict = dict(zip(bit_names, (1<<offset for offset in bit_offsets)))
     # Add a reverse-lookup mapping from offsets to names.
-    class_dict['_reverse_map'] = dict(zip(bit_offsets,bit_names))
+    class_dict['_reverse_map'] = dict(zip(bit_offsets, bit_names))
     # Add a dictionary of bit descriptions indexed by offset.
-    class_dict['_description'] = dict(zip(bit_offsets,bit_descriptions))
+    class_dict['_description'] = dict(zip(bit_offsets, bit_descriptions))
     # Use the mask description as the first line of the docstring.
     docstring = mask_description
     # Append each bit definition as a list of google-sphinx style attributes.
     docstring += '\n\nAttributes:\n'
-    for name,offset,description in zip(bit_names,bit_offsets,bit_descriptions):
-        docstring += '    {0} (int): (1<<{1}) {2}\n'.format(name,offset,description)
+    for name, offset, description in zip(bit_names, bit_offsets, bit_descriptions):
+        docstring += '    {0} (int): (1<<{1}) {2}\n'.format(name, offset, description)
     class_dict['__doc__'] = docstring
     # Return a new class type for this bitmask.
-    return type(mask_name,(),class_dict)
+    return type(mask_name, (), class_dict)
 
-def summarize_bitmask_values(mask,values,strict=True):
+
+def summarize_bitmask_values(mask, values, strict=True):
     """Summarize an array of bitmask values.
 
     Args:
@@ -97,13 +99,14 @@ def summarize_bitmask_values(mask,values,strict=True):
     """
     summary = { }
     for value in values:
-        for bit_name in decode_bitmask(mask,value,strict=strict):
-            bit_count = summary.get(bit_name,0)
+        for bit_name in decode_bitmask(mask, value, strict=strict):
+            bit_count = summary.get(bit_name, 0)
             bit_count += 1
             summary[bit_name] = bit_count
     return summary
 
-def decode_bitmask(mask,value,strict=True):
+
+def decode_bitmask(mask, value, strict=True):
     """Decode a integer value into its symbolic bit names.
 
     Use this function to convert a bitmask value into a list of symbolic bit names,
@@ -149,7 +152,8 @@ def decode_bitmask(mask,value,strict=True):
         shifted = shifted >> 1
     return tuple(names)
 
-def bitmask_from_text(mask,text):
+
+def bitmask_from_text(mask, text):
     """Initialize a bitmask from text.
 
     Builds an integer value from text containing bit names that should be set. The
@@ -170,7 +174,7 @@ def bitmask_from_text(mask,text):
     Raises:
         ValueError: invalid text specification.
     """
-    if not hasattr(mask,'__dict__'):
+    if not hasattr(mask, '__dict__'):
         raise ValueError('Invalid bitmask.')
     value = int(0)
     for bit_name in text.split('|'):
@@ -179,7 +183,8 @@ def bitmask_from_text(mask,text):
         value = value | mask.__dict__[bit_name]
     return value
 
-def extract_sdss_bitmasks(filename = 'sdssMaskbits.par',indent = ' '*4):
+
+def extract_sdss_bitmasks(filename = 'sdssMaskbits.par', indent = ' '*4):
     """Scan the parfile defining SDSS bitmasks and print code to define these types for bossdata.bits.
 
     This function is intended to be run by hand with the output pasted into this module, to
@@ -204,7 +209,7 @@ def extract_sdss_bitmasks(filename = 'sdssMaskbits.par',indent = ' '*4):
 
     mask_name = None
     with open(filename) as f:
-        for line_number,line in enumerate(f):
+        for line_number, line in enumerate(f):
             # Skip comment lines
             if line[0] == '#':
                 continue
@@ -212,7 +217,7 @@ def extract_sdss_bitmasks(filename = 'sdssMaskbits.par',indent = ' '*4):
             try:
                 tokens = shlex.split(line)
             except ValueError as e:
-                raise RuntimeError('Parse error on line {0:d}: {1:s}'.format(line_number,e))
+                raise RuntimeError('Parse error on line {0:d}: {1:s}'.format(line_number, e))
             if not tokens:
                 continue
 
@@ -221,18 +226,18 @@ def extract_sdss_bitmasks(filename = 'sdssMaskbits.par',indent = ' '*4):
                 if mask_name:
                     print(')')
                 # Start a new definition.
-                mask_name,description = tokens[1],tokens[3]
-                print('{0} = define_bitmask("{0}","{2}",'.format(mask_name,indent,description))
+                mask_name, description = tokens[1], tokens[3]
+                print('{0} = define_bitmask("{0}","{2}",'.format(mask_name, indent, description))
 
             if tokens[0] == 'maskbits':
                 if tokens[1] != mask_name:
                     raise RuntimeError('Parsing error on line {0:d}: found {1} but expected {2}.'.format(
-                        line_number,tokens[1],mask_name))
-                offset,name,description = tokens[2:5]
+                        line_number, tokens[1], mask_name))
+                offset, name, description = tokens[2:5]
                 # prepend an underscore to any names beginning with a digit so they are valid python names.
                 if name[0].isdigit():
                     name = '_' + name
-                print('{0}{1:30s} = ({2:3d}, "{3}"),'.format(indent,name,int(offset),description))
+                print('{0}{1:30s} = ({2:3d}, "{3}"),'.format(indent, name, int(offset), description))
 
         # End the final mask definition.
         if mask_name:

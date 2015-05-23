@@ -4,7 +4,7 @@
 """ Access spectroscopic data for a single BOSS target.
 """
 
-from __future__ import division,print_function
+from __future__ import division, print_function
 
 import re
 
@@ -13,7 +13,6 @@ import numpy.ma
 
 import fitsio
 
-from bossdata.bits import SPPIXMASK
 
 class SpecFile(object):
     """ A BOSS spec file containing summary data for a single target.
@@ -33,8 +32,8 @@ class SpecFile(object):
             :meth:`bossdata.remote.Manager.get` or using the :ref:`bossfetch` script. The file
             is opened in read-only mode so you do not need write privileges.
     """
-    def __init__(self,path):
-        self.hdulist = fitsio.FITS(path,mode = fitsio.READONLY)
+    def __init__(self, path):
+        self.hdulist = fitsio.FITS(path, mode = fitsio.READONLY)
         self.lite = (len(self.hdulist) == 4)
         self.header = self.hdulist[0].read_header()
         # Look up the available exposures.
@@ -43,16 +42,16 @@ class SpecFile(object):
         expid_pattern = re.compile('([br][12])-([0-9]{8})-([0-9]{8})-([0-9]{8})')
         for i in range(self.num_exposures):
             # The order of arc and flat might be swapped here.
-            spec_id,exp_num,arc_num,flat_num = expid_pattern.match(
+            spec_id, exp_num, arc_num, flat_num = expid_pattern.match(
                 self.header['EXPID{0:02d}'.format(i+1)]).groups()
-            exposure_info = self.exposures.get(exp_num,{ })
+            exposure_info = self.exposures.get(exp_num, { })
             exposure_info[spec_id[0]] = dict(
-                hdu_index=4+i,spec_id=spec_id,arc_num=arc_num,flat_num=flat_num)
+                hdu_index=4+i, spec_id=spec_id, arc_num=arc_num, flat_num=flat_num)
             self.exposures[exp_num] = exposure_info
         # Reconstruct the time-ordered exposure sequence.
         self.exposure_sequence = sorted(self.exposures.keys())
 
-    def get_exposure_info(self,exposure_index=None,camera=None):
+    def get_exposure_info(self, exposure_index=None, camera=None):
         """Retrieve information about one exposure.
 
         Args:
@@ -72,13 +71,13 @@ class SpecFile(object):
         if exposure_index < 0 or exposure_index >= self.num_exposures:
             raise ValueError('exposure index must be in the range 0-{0}'.format(
                 self.num_exposures-1))
-        if camera not in ('b','r'):
+        if camera not in ('b', 'r'):
             raise ValueError('camera must be either "b" or "r".')
 
         exposure_num = self.exposure_sequence[exposure_index]
         return self.exposures[exposure_num][camera]
 
-    def get_pixel_mask(self,exposure_index=None,camera=None):
+    def get_pixel_mask(self, exposure_index=None, camera=None):
         """Get the pixel mask for a specified exposure or the combined coadd.
 
         Returns the `and_mask` for coadded spectra. The entire mask is returned, including
@@ -100,11 +99,11 @@ class SpecFile(object):
             hdu = self.hdulist[1]
             return hdu['and_mask'][:]
         else:
-            exposure_info = self.get_exposure_info(exposure_index,camera)
+            exposure_info = self.get_exposure_info(exposure_index, camera)
             hdu = self.hdulist[exposure_info['hdu_index']]
             return hdu['mask'][:]
 
-    def get_valid_data(self,exposure_index=None,camera=None,pixel_quality_mask=None):
+    def get_valid_data(self, exposure_index=None, camera=None, pixel_quality_mask=None):
         """Get the valid for a specified exposure or the combined coadd.
 
         You will probably find yourself using this idiom often::
@@ -138,7 +137,7 @@ class SpecFile(object):
             hdu = self.hdulist[1]
             pixel_bits = hdu['and_mask'][:]
         else:
-            exposure_info = self.get_exposure_info(exposure_index,camera)
+            exposure_info = self.get_exposure_info(exposure_index, camera)
             hdu = self.hdulist[exposure_info['hdu_index']]
             pixel_bits = hdu['mask'][:]
         num_pixels = len(pixel_bits)
@@ -146,7 +145,7 @@ class SpecFile(object):
         # Apply the pixel quality mask, if any.
         if pixel_quality_mask is not None:
             clear_allowed = np.bitwise_not(np.uint32(pixel_quality_mask))
-            pixel_bits = np.bitwise_and(pixel_bits,clear_allowed)
+            pixel_bits = np.bitwise_and(pixel_bits, clear_allowed)
 
         # Identify the pixels with valid data.
         ivar = hdu['ivar'][:]
@@ -154,13 +153,13 @@ class SpecFile(object):
         good_pixels = ~bad_pixels
 
         # Create and fill the unmasked structured array of data.
-        data = np.empty(num_pixels,dtype = [
-            ('wavelength',np.float32),('wdisp',np.float32),
-            ('flux',np.float32),('dflux',np.float32)])
-        data['wavelength'][:] = np.power(10.0,hdu['loglam'][:])
-        data['wdisp'][:] = np.power(10.,hdu['wdisp'][:])
+        data = np.empty(num_pixels, dtype = [
+            ('wavelength', np.float32), ('wdisp', np.float32),
+            ('flux', np.float32), ('dflux', np.float32)])
+        data['wavelength'][:] = np.power(10.0, hdu['loglam'][:])
+        data['wdisp'][:] = np.power(10., hdu['wdisp'][:])
         data['flux'][:] = hdu['flux'][:]
         data['dflux'][good_pixels] = 1.0/np.sqrt(ivar[good_pixels])
         data['dflux'][bad_pixels] = 0.0
 
-        return np.ma.MaskedArray(data,mask=bad_pixels)
+        return np.ma.MaskedArray(data, mask=bad_pixels)

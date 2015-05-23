@@ -4,10 +4,11 @@
 """Generate paths to BOSS data files.
 """
 
-from __future__ import division,print_function
+from __future__ import division, print_function
 
 import os
 import os.path
+
 
 class Finder(object):
     """Initialize a path finder object.
@@ -23,21 +24,21 @@ class Finder(object):
         RuntimeError: No SAS root or redux version specified on the command line or via
             environment variables.
     """
-    def __init__(self,sas_root=None,redux_version=None):
+    def __init__(self, sas_root=None, redux_version=None):
         if sas_root is None:
             sas_root = os.getenv('BOSS_SAS_ROOT')
         if sas_root is None:
             raise RuntimeError('No SAS root specified: try setting $BOSS_SAS_ROOT.')
 
         if redux_version is None:
-            redux_version = os.getenv('BOSS_REDUX_VERSION',None)
+            redux_version = os.getenv('BOSS_REDUX_VERSION', None)
         if redux_version is None:
             raise RuntimeError('No redux version specifed: try setting $BOSS_REDUX_VERSION.')
 
         self.redux_version = redux_version
-        self.redux_base = os.path.join(sas_root,'boss','spectro','redux',redux_version)
+        self.redux_base = os.path.join(sas_root, 'boss', 'spectro', 'redux', redux_version)
 
-    def get_plate_path(self,plate):
+    def get_plate_path(self, plate):
         """Get the path to the specified plate.
 
         The returned path contains files that include all targets on the plate. Use the
@@ -57,9 +58,9 @@ class Finder(object):
         if plate < 0:
             raise ValueError('Invalid plate number ({}) must be > 0.'.format(plate))
 
-        return os.path.join(self.redux_base,str(plate))
+        return os.path.join(self.redux_base, str(plate))
 
-    def get_sp_all_path(self,lite = True):
+    def get_sp_all_path(self, lite=True):
         """Get the location of the metadata summary file.
 
         The data model of the full (non-lite) file is at
@@ -75,9 +76,9 @@ class Finder(object):
             name = 'spAll-{}.dat.gz'.format(self.redux_version)
         else:
             name = 'spAll-{}.fits'.format(self.redux_version)
-        return os.path.join(self.redux_base,name)
+        return os.path.join(self.redux_base, name)
 
-    def get_spec_path(self,plate,mjd,fiber,lite = True):
+    def get_spec_path(self, plate, mjd, fiber, lite=True):
         """Get the location of the spectrum file for the specified observation.
 
         The DR12 data model for the returned files is at
@@ -112,6 +113,7 @@ class Finder(object):
 
         path = 'spectra'
         if lite:
-            path = os.path.join(path,'lite')
-        name = 'spec-{plate:4d}-{mjd:5d}-{fiber:04d}.fits'.format(plate=plate,mjd=mjd,fiber=fiber)
-        return os.path.join(self.redux_base,path,str(plate),name)
+            path = os.path.join(path, 'lite')
+        name = 'spec-{plate:4d}-{mjd:5d}-{fiber:04d}.fits'.format(
+            plate=plate, mjd=mjd, fiber=fiber)
+        return os.path.join(self.redux_base, path, str(plate), name)

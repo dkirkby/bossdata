@@ -4,7 +4,7 @@
 """Support for querying the metadata associated with BOSS observations.
 """
 
-from __future__ import division,print_function
+from __future__ import division, print_function
 
 import os.path
 import gzip
@@ -14,12 +14,13 @@ import numpy as np
 import astropy.table
 import fitsio
 
-from progressbar import ProgressBar,Percentage,Bar
+from progressbar import ProgressBar, Percentage, Bar
 
 import bossdata.path
 import bossdata.remote
 
-def sql_create_table(table_name,recarray_dtype,renaming_rules = { },primary_key = None):
+
+def sql_create_table(table_name, recarray_dtype, renaming_rules = { }, primary_key = None):
     """Prepare an SQL statement to create a database for a numpy structured array.
 
     Any columns in the structured array data type that are themselves arrays will be
@@ -45,42 +46,43 @@ def sql_create_table(table_name,recarray_dtype,renaming_rules = { },primary_key 
     """
     columns = [ ]
     for column_dtype in recarray_dtype.descr:
-        name,dtype = column_dtype[:2]
+        name, dtype = column_dtype[:2]
         # Rename this column if requested.
         if name in renaming_rules:
             name = renaming_rules[name]
         # Map this column's data type to one of the sqlite3 types.
-        if np.issubdtype(dtype,np.integer):
+        if np.issubdtype(dtype, np.integer):
             sql_type = 'INTEGER'
-        elif np.issubdtype(dtype,np.float):
+        elif np.issubdtype(dtype, np.float):
             sql_type = 'REAL'
-        elif np.issubdtype(dtype,np.str):
+        elif np.issubdtype(dtype, np.str):
             sql_type = 'TEXT'
         else:
-            raise ValueError('Cannot map data type {} of {} to SQL.'.format(dtype,name))
+            raise ValueError('Cannot map data type {} of {} to SQL.'.format(dtype, name))
         if len(column_dtype) == 2:
-            columns.append('`{name}` {type}'.format(name = name,type = sql_type))
+            columns.append('`{name}` {type}'.format(name = name, type = sql_type))
         else:
             # Handle sub-array columns.
             array_shape = column_dtype[2]
             array_ndim = len(array_shape)
             array_size = np.prod(array_shape)
-            indices = np.unravel_index(np.arange(array_size),array_shape)
+            indices = np.unravel_index(np.arange(array_size), array_shape)
             for i in range(array_size):
                 element_name = name
                 for j in range(array_ndim):
                     element_name += '_{:d}'.format(indices[j][i])
-                columns.append('`{name}` {type}'.format(name = element_name,type = sql_type))
+                columns.append('`{name}` {type}'.format(name = element_name, type = sql_type))
     num_cols = len(columns)
 
     # Add a composite primary key on (plate,mjd,fiber).
     if primary_key:
         columns.append('PRIMARY KEY {}'.format(primary_key))
     # Put the pieces together into the final SQL.
-    sql = 'CREATE TABLE `{name}` ({columns})'.format(name = table_name,columns = ','.join(columns))
-    return sql,num_cols
+    sql = 'CREATE TABLE `{name}` ({columns})'.format(name = table_name, columns = ','.join(columns))
+    return sql, num_cols
 
-def create_meta_lite(sp_all_path,db_path,verbose = True):
+
+def create_meta_lite(sp_all_path, db_path, verbose = True):
     """Create the "lite" meta database from a locally mirrored spAll file.
 
     The created database has a composite primary index on the (PLATE,MJD,FIBER) columns and
@@ -98,13 +100,13 @@ def create_meta_lite(sp_all_path,db_path,verbose = True):
     # Read the database into memory.
     if verbose:
         print('Initializing the lite database...')
-    with gzip.open(sp_all_path,mode = 'r') as f:
-        table = astropy.table.Table.read(f,format = 'ascii')
+    with gzip.open(sp_all_path, mode = 'r') as f:
+        table = astropy.table.Table.read(f, format = 'ascii')
 
     # Create a new database file.
-    rules = { 'MODELFLUX{}'.format(i):'MODELFLUX_{}'.format(i) for i in range(5) }
-    sql,num_cols = sql_create_table('meta',table.dtype,
-        renaming_rules = rules,primary_key = '(PLATE,MJD,FIBER)')
+    rules = { 'MODELFLUX{}'.format(i): 'MODELFLUX_{}'.format(i) for i in range(5) }
+    sql, num_cols = sql_create_table('meta', table.dtype,
+        renaming_rules = rules, primary_key = '(PLATE,MJD,FIBER)')
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
     cursor.execute(sql)
@@ -112,10 +114,10 @@ def create_meta_lite(sp_all_path,db_path,verbose = True):
     # Insert rows into the database.
     sql = 'INSERT INTO meta VALUES ({})'.format(','.join('?'*num_cols))
     if verbose:
-        progress_bar = ProgressBar(widgets = ['Writing',' ',Percentage(),Bar()],
+        progress_bar = ProgressBar(widgets = ['Writing', ' ', Percentage(), Bar()],
             maxval = len(table)).start()
-    for i,row in enumerate(table):
-        cursor.execute(sql,row)
+    for i, row in enumerate(table):
+        cursor.execute(sql, row)
         if verbose:
             progress_bar.update(i+1)
     connection.commit()
@@ -123,7 +125,8 @@ def create_meta_lite(sp_all_path,db_path,verbose = True):
     if verbose:
         progress_bar.finish()
 
-def create_meta_full(sp_all_path,db_path,verbose = True):
+
+def create_meta_full(sp_all_path, db_path, verbose = True):
     """Create the "full" meta database from a locally mirrored spAll file.
 
     The created database renames FIBERID to FIBER and has a composite primary index on the
@@ -145,8 +148,8 @@ def create_meta_full(sp_all_path,db_path,verbose = True):
         table = hdulist[1].read()
 
         # Create a new database file.
-        sql,num_cols = sql_create_table('meta',table.dtype,
-            renaming_rules = {'FIBERID':'FIBER'},primary_key = '(PLATE,MJD,FIBER)')
+        sql, num_cols = sql_create_table('meta', table.dtype,
+            renaming_rules = {'FIBERID': 'FIBER'}, primary_key = '(PLATE,MJD,FIBER)')
         connection = sqlite3.connect(db_path)
         cursor = connection.cursor()
         cursor.execute(sql)
@@ -154,20 +157,20 @@ def create_meta_full(sp_all_path,db_path,verbose = True):
     # Insert rows into the database.
     sql = 'INSERT INTO meta VALUES ({})'.format(','.join('?'*num_cols))
     if verbose:
-        progress_bar = ProgressBar(widgets = ['Writing',' ',Percentage(),Bar()],
+        progress_bar = ProgressBar(widgets = ['Writing', ' ', Percentage(), Bar()],
             maxval = len(table)).start()
-    for i,row in enumerate(table):
+    for i, row in enumerate(table):
         # Unroll columns with sub-arrays into a flat list to match the flat SQL schema,
         # and convert numpy types to the native python types required by sqlite3.
         values = [ ]
-        for j,column_data in enumerate(row):
+        for j, column_data in enumerate(row):
             if column_data.dtype.kind == 'S':
                 values.append(column_data.rstrip())
-            elif isinstance(column_data,np.ndarray):
+            elif isinstance(column_data, np.ndarray):
                 values.extend(column_data.flatten().tolist())
             else:
                 values.append(column_data.item())
-        cursor.execute(sql,values)
+        cursor.execute(sql, values)
         if verbose:
             progress_bar.update(i+1)
     connection.commit()
@@ -181,6 +184,7 @@ sql_type_map = {
     'TEXT': str
 }
 
+
 class Database(object):
     """Initialize a searchable database of BOSS observation metadata.
 
@@ -192,7 +196,7 @@ class Database(object):
         lite(bool): Use the "lite" metadata format, which is considerably faster but only
             provides a subset of the most commonly accessed fields.
     """
-    def __init__(self,finder = None,mirror = None,lite = True):
+    def __init__(self, finder = None, mirror = None, lite = True):
 
         if finder is None:
             finder = bossdata.path.Finder()
@@ -203,19 +207,21 @@ class Database(object):
         remote_path = finder.get_sp_all_path(lite = lite)
         local_path = mirror.local_path(remote_path)
         if lite:
-            assert local_path.endswith('.dat.gz'),'Expected .dat.gz extension for {}.'.format(local_path)
-            db_path = local_path.replace('.dat.gz','-lite.db')
+            assert local_path.endswith('.dat.gz'), 'Expected .dat.gz extension for {}.'.format(
+                local_path)
+            db_path = local_path.replace('.dat.gz', '-lite.db')
         else:
-            assert local_path.endswith('.fits'),'Expected .fits extention for {}.'.format(local_path)
-            db_path = local_path.replace('.fits','.db')
+            assert local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
+                local_path)
+            db_path = local_path.replace('.fits', '.db')
 
         # Create the database if necessary.
         if not os.path.isfile(db_path):
             local_path = mirror.get(remote_path)
             if lite:
-                create_meta_lite(local_path,db_path)
+                create_meta_lite(local_path, db_path)
             else:
-                create_meta_full(local_path,db_path)
+                create_meta_full(local_path, db_path)
 
         # Connect to the database.
         self.connection = sqlite3.connect(db_path)
@@ -229,7 +235,7 @@ class Database(object):
         self.column_names = [ ]
         self.column_dtypes = [ ]
         for column_def in self.cursor:
-            index,name,dtype = column_def[:3]
+            index, name, dtype = column_def[:3]
             self.column_names.append(str(name))
             self.column_dtypes.append(sql_type_map[dtype])
 
@@ -237,7 +243,7 @@ class Database(object):
         self.cursor.execute('SELECT COUNT(*) FROM meta')
         self.num_rows = self.cursor.fetchone()[0]
 
-    def prepare_columns(self,column_names):
+    def prepare_columns(self, column_names):
         """Validate column names and lookup their types.
 
         Args:
@@ -253,9 +259,9 @@ class Database(object):
             ValueError: Invalid column name.
         """
         if column_names == '*':
-            return self.column_names,self.column_dtypes
+            return self.column_names, self.column_dtypes
 
-        names,dtypes = [ ],[ ]
+        names, dtypes = [ ], [ ]
         for name in column_names.split(','):
             try:
                 index = self.column_names.index(name)
@@ -263,9 +269,9 @@ class Database(object):
                 raise ValueError('Invalid column name {}.'.format(name))
             names.append(name)
             dtypes.append(self.column_dtypes[index])
-        return names,dtypes
+        return names, dtypes
 
-    def select_each(self,what = '*',where = None):
+    def select_each(self, what = '*', where = None):
         """Iterate over the results of an SQL select query.
 
         This method is normally used as an iterator, e.g.
@@ -287,7 +293,7 @@ class Database(object):
             sqlite3.OperationalError: failed to execute query.
         """
         # Prepare the SQL select statement we will use.
-        names,dtypes = self.prepare_columns(what)
+        names, dtypes = self.prepare_columns(what)
         what = ','.join(['`{}`'.format(name) for name in names])
         sql = 'SELECT {} from meta'.format(what)
         if where:
@@ -298,7 +304,7 @@ class Database(object):
         for row in self.cursor:
             yield row
 
-    def select_all(self,what = '*',where = None,max_rows = 100000):
+    def select_all(self, what = '*', where = None, max_rows = 100000):
         """Fetch all results of an SQL select query.
 
         Since this method loads all the results into memory, it is not suitable for queries that
@@ -320,7 +326,7 @@ class Database(object):
             RuntimeError: failed to execute query.
         """
         # Prepare the SQL select statement we will use.
-        names,dtypes = self.prepare_columns(what)
+        names, dtypes = self.prepare_columns(what)
         what = ','.join(['`{}`'.format(name) for name in names])
         sql = 'SELECT {} from meta'.format(what)
         if where:
@@ -332,7 +338,7 @@ class Database(object):
         try:
             self.cursor.execute(sql)
             rows = self.cursor.fetchall()
-        except sqlite3.OperationalError,e:
+        except sqlite3.OperationalError as e:
             raise RuntimeError('Database error: {}'.format(e.args[0]))
 
         if len(rows) == 0:
@@ -340,4 +346,4 @@ class Database(object):
 
         # Return a table of the results, letting astropy.table.Table infer the columns types
         # from the data itself.
-        return astropy.table.Table(rows = rows,names = names)
+        return astropy.table.Table(rows = rows, names = names)
