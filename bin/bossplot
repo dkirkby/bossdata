@@ -16,6 +16,17 @@ import matplotlib.pyplot as plt
 import bossdata.path
 import bossdata.remote
 import bossdata.spec
+import bossdata.bits
+
+def print_mask_summary(mask_values):
+    if np.any(mask_values):
+        print('Pixel mask summary:')
+        bit_summary = bossdata.bits.summarize_bitmask_values(
+            bossdata.bits.SPPIXMASK,mask_values)
+        for bit_name,bit_count in bit_summary.iteritems():
+            print('{0:5d} {1}'.format(bit_count,bit_name))
+    else:
+        print('No pixels masked.')
 
 def main():
     # Initialize and parse command-line arguments.
@@ -77,15 +88,20 @@ def main():
         if args.verbose:
             print('Showing coadd of {0:d} exposures:'.format(
                 len(specfile.exposure_sequence)),(','.join(specfile.exposure_sequence)))
+            print_mask_summary(specfile.get_pixel_mask())
     else:
+        if args.verbose:
+            print('Showing exposure',specfile.exposure_sequence[args.exposure])
         if args.camera in ('blue','both'):
             spectra.append(specfile.get_valid_data(args.exposure,'b'))
             plot_colors.append('blue')
+            if args.verbose:
+                print_mask_summary(specfile.get_pixel_mask(args.exposure,'b'))
         if args.camera in ('red','both'):
             spectra.append(specfile.get_valid_data(args.exposure,'r'))
             plot_colors.append('red')
-        if args.verbose:
-            print('Showing exposure',specfile.exposure_sequence[args.exposure])
+            if args.verbose:
+                print_mask_summary(specfile.get_pixel_mask(args.exposure,'r'))
 
     wlen_min,wlen_max = 20000.,0.
     for data,plot_color in zip(spectra,plot_colors):

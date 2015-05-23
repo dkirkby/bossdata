@@ -82,6 +82,27 @@ def define_bitmask(mask_name,mask_description,**bits):
     # Return a new class type for this bitmask.
     return type(mask_name,(),class_dict)
 
+def summarize_bitmask_values(mask,values,strict=True):
+    """Summarize an array of bitmask values.
+
+    Args:
+        mask: A bitmask type, normally created with :func:`create_bitmask`, that defines
+            the symbolic bit names to summarize.
+        values(numpy.ndarray): An array of values that will be decoded and summarized.
+
+    Returns:
+        dict: A dictionary with bit names as keys and the number of values in which each
+            bit is set as values.  Any bit that is never set will not appear in the list
+            of keys.
+    """
+    summary = { }
+    for value in values:
+        for bit_name in decode_bitmask(mask,value,strict=strict):
+            bit_count = summary.get(bit_name,0)
+            bit_count += 1
+            summary[bit_name] = bit_count
+    return summary
+
 def decode_bitmask(mask,value,strict=True):
     """Decode a integer value into its symbolic bit names.
 
