@@ -78,6 +78,32 @@ class SpecFile(object):
         exposure_num = self.exposure_sequence[exposure_index]
         return self.exposures[exposure_num][camera]
 
+    def get_pixel_mask(self,exposure_index=None,camera=None):
+        """Get the pixel mask for a specified exposure or the combined coadd.
+
+        Returns the `and_mask` for coadded spectra. The entire mask is returned, including
+        any pixels with zero inverse variance.
+
+        Args:
+            exposure_index(int): Individual exposure to use, specified as a sequence number
+                starting from zero, for the first exposure, and increasing up to
+                `self.num_exposures-1`. Uses the co-added spectrum when the value is None.
+            camera(str): Which camera to use. Must be either 'b' (blue) or 'r' (red) unless
+                exposure_index is None, in which case this argument is ignored.
+
+        Returns:
+            numpy.ndarray: Array of integers, one per pixel, encoding the mask bits defined
+                in :attr:`bossdata.bits.SPPIXMASK` (see also
+                http://www.sdss3.org/dr10/algorithms/bitmask_sppixmask.php).
+        """
+        if exposure_index is None:
+            hdu = self.hdulist[1]
+            return hdu['and_mask'][:]
+        else:
+            exposure_info = self.get_exposure_info(exposure_index,camera)
+            hdu = self.hdulist[exposure_info['hdu_index']]
+            return hdu['mask'][:]
+
     def get_valid_data(self,exposure_index=None,camera=None,pixel_quality_mask=None):
         """Get the valid for a specified exposure or the combined coadd.
 
@@ -90,6 +116,8 @@ class SpecFile(object):
             exposure_index(int): Individual exposure to use, specified as a sequence number
                 starting from zero, for the first exposure, and increasing up to
                 `self.num_exposures-1`. Uses the co-added spectrum when the value is None.
+            camera(str): Which camera to use. Must be either 'b' (blue) or 'r' (red) unless
+                exposure_index is None, in which case this argument is ignored.
             pixel_quality_mask(int): An integer value interpreted as a bit pattern using the
                 bits defined in :attr:`bossdata.bits.SPPIXMASK` (see also
                 http://www.sdss3.org/dr10/algorithms/bitmask_sppixmask.php). Any bits set in
