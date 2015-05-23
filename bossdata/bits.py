@@ -149,6 +149,36 @@ def decode_bitmask(mask,value,strict=True):
         shifted = shifted >> 1
     return tuple(names)
 
+def bitmask_from_text(mask,text):
+    """Initialize a bitmask from text.
+
+    Builds an integer value from text containing bit names that should be set. The
+    complement of :func:`decode_bitmask`. For example::
+
+        >>> COLORS = define_bitmask('COLORS','Primary colors',RED=0,BLUE=1,GREEN=4)
+        >>> '{0:b}'.format(bitmask_from_text(COLORS,'GREEN|BLUE'))
+        '10010'
+
+    Args:
+        mask: A bitmask type, normally created with :func:`create_bitmask`, that defines
+            the symbolic bit names that are allowed.
+        text: A list of bit names separated by '|'.
+
+    Returns:
+        int: Integer with bits set for each bit name appearing in the text.
+
+    Raises:
+        ValueError: invalid text specification.
+    """
+    if not hasattr(mask,'__dict__'):
+        raise ValueError('Invalid bitmask.')
+    value = int(0)
+    for bit_name in text.split('|'):
+        if bit_name not in mask.__dict__:
+            raise ValueError('Invalid bit name: {0}.'.format(bit_name))
+        value = value | mask.__dict__[bit_name]
+    return value
+
 def extract_sdss_bitmasks(filename = 'sdssMaskbits.par',indent = ' '*4):
     """Scan the parfile defining SDSS bitmasks and print code to define these types for bossdata.bits.
 

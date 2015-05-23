@@ -53,7 +53,7 @@ class TestBitmask(object):
             mask = bits.define_bitmask("MASK","description",A=0,B=0)
 
 class TestDecode(object):
-    """Test bitmask decoding functionality.
+    """Test decode_bitmask().
     """
     def test_decode_basic(self):
         mask = bits.define_bitmask("MASK","description",BIT0=0,BIT1=1,BIT4=4)
@@ -77,6 +77,28 @@ class TestDecode(object):
         assert bits.decode_bitmask(mask,(1<<2),strict=False) == ('1<<2',)
         assert bits.decode_bitmask(mask,mask.BIT0|(1<<2),strict=False) == ('BIT0','1<<2',)
         assert bits.decode_bitmask(mask,mask.BIT4|(1<<2),strict=False) == ('1<<2','BIT4',)
+
+class TestFromText(object):
+    """Test bitmask_from_text().
+    """
+
+    def test_from_text(self):
+        mask = bits.define_bitmask("MASK","description",BIT0=0,BIT1=1,BIT4=4)
+        assert bits.bitmask_from_text(mask,'BIT4|BIT0') == (mask.BIT4|mask.BIT0)
+
+    def test_from_no_mask(self):
+        with pytest.raises(ValueError):
+            bits.bitmask_from_text(None,'BIT4|BIT0')
+
+    def test_from_invalid_text(self):
+        mask = bits.define_bitmask("MASK","description",BIT0=0,BIT1=1,BIT4=4)
+        with pytest.raises(ValueError):
+            bits.bitmask_from_text(mask,'BIT5')
+
+    def test_from_invalid_format(self):
+        mask = bits.define_bitmask("MASK","description",BIT0=0,BIT1=1,BIT4=4)
+        with pytest.raises(ValueError):
+            bits.bitmask_from_text(mask,'BIT4,BIT0')
 
 class TestBOSS(object):
     """Test for expected BOSS bit mask definitions.
