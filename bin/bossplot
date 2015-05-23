@@ -74,6 +74,9 @@ def main():
     if args.exposure is None:
         spectra.append(specfile.get_valid_data())
         plot_colors.append('black')
+        if args.verbose:
+            print('Showing coadd of {0:d} exposures:'.format(
+                len(specfile.exposure_sequence)),(','.join(specfile.exposure_sequence)))
     else:
         if args.camera in ('blue','both'):
             spectra.append(specfile.get_valid_data(args.exposure,'b'))
@@ -81,6 +84,8 @@ def main():
         if args.camera in ('red','both'):
             spectra.append(specfile.get_valid_data(args.exposure,'r'))
             plot_colors.append('red')
+        if args.verbose:
+            print('Showing exposure',specfile.exposure_sequence[args.exposure])
 
     wlen_min,wlen_max = 20000.,0.
     for data,plot_color in zip(spectra,plot_colors):
@@ -90,7 +95,7 @@ def main():
         if args.scatter:
             left_axis.scatter(wlen,flux,color=plot_color,marker='.',s=0.1)
         else:
-            left_axis.fill_between(wlen,flux-dflux,flux+dflux,color=plot_color,alpha=0.2)
+            left_axis.fill_between(wlen,flux-dflux,flux+dflux,color=plot_color,alpha=0.5)
 
         num_masked = len(data.mask)
         if args.show_mask and num_masked > 0:
@@ -101,7 +106,7 @@ def main():
             for x in data.data['wavelength'][bad_pixels]:
                 x_mask.extend([x,x,None])
                 y_mask.extend([ymin,ymax,None])
-            plt.plot(x_mask,y_mask,'-',color=plot_color,alpha=0.5)
+            plt.plot(x_mask,y_mask,'-',color=plot_color,alpha=0.2)
 
         if args.show_dispersion:
             right_axis.plot(wlen,data['wdisp'][:],ls='-',color=plot_color)
