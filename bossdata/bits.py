@@ -247,7 +247,8 @@ def extract_sdss_bitmasks(filename='sdssMaskbits.par', indent=' ' * 4):
 # The bitmask definitions below were automatically generated using the extract_sdss_bitmasks function
 # and should not be edited by hand.
 SPPIXMASK = define_bitmask(
-    "SPPIXMASK","Mask bits for an SDSS spectrum. 0-15 refer to each fiber, 16-31 refer to each pixel in a spectrum.",
+    "SPPIXMASK",
+    "Mask bits for an SDSS spectrum. 0-15 refer to each fiber, 16-31 refer to each pixel in a spectrum.",
     NOPLUG                         = (  0, "Fiber not listed in plugmap file"),
     BADTRACE                       = (  1, "Bad trace from routine TRACE320CRUDE"),
     BADFLAT                        = (  2, "Low counts in fiberflat"),
@@ -275,7 +276,9 @@ SPPIXMASK = define_bitmask(
     BADSKYCHI                      = ( 27, "Relative chi^2 > 3 in sky residuals at this wavelength"),
     REDMONSTER                     = ( 28, "Contiguous region of bad chi^2 in sky residuals (with threshhold of relative chi^2 > 3)."),
 )
-TARGET = define_bitmask("TARGET","Primary target mask bits in SDSS-I, -II (for LEGACY_TARGET1 or PRIMTARGET).",
+TARGET = define_bitmask(
+    "TARGET",
+    "Primary target mask bits in SDSS-I, -II (for LEGACY_TARGET1 or PRIMTARGET).",
     QSO_HIZ                        = (  0, "High-redshift (griz) QSO target"),
     QSO_CAP                        = (  1, "ugri-selected quasar at high Galactic latitude"),
     QSO_SKIRT                      = (  2, "ugri-selected quasar at low Galactic latitude"),
@@ -308,7 +311,9 @@ TARGET = define_bitmask("TARGET","Primary target mask bits in SDSS-I, -II (for L
     QSO_REJECT                     = ( 29, "Object in explicitly excluded region of color space, therefore not targeted at QSO"),
     SOUTHERN_SURVEY                = ( 31, "Set in primtarget if this is a special program target"),
 )
-TTARGET = define_bitmask("TTARGET","Secondary target mask bits in SDSS-I, -II (for LEGACY_TARGET2, SPECIAL_TARGET2 or SECTARGET).",
+TTARGET = define_bitmask(
+    "TTARGET",
+    "Secondary target mask bits in SDSS-I, -II (for LEGACY_TARGET2, SPECIAL_TARGET2 or SECTARGET).",
     LIGHT_TRAP                     = (  0, "hole drilled for bright star, to avoid scattered light"),
     REDDEN_STD                     = (  1, "reddening standard star"),
     TEST_TARGET                    = (  2, "a test target"),
@@ -321,7 +326,9 @@ TTARGET = define_bitmask("TTARGET","Secondary target mask bits in SDSS-I, -II (f
     HOT_STD                        = (  9, "hot standard star"),
     SOUTHERN_SURVEY                = ( 31, "a segue or southern survey target"),
 )
-ZWARNING = define_bitmask("ZWARNING","Warnings for SDSS spectra.",
+ZWARNING = define_bitmask(
+    "ZWARNING",
+    "Warnings for SDSS spectra.",
     SKY                            = (  0, "sky fiber"),
     LITTLE_COVERAGE                = (  1, "too little wavelength coverage (WCOVERAGE < 0.18)"),
     SMALL_DELTA_CHI2               = (  2, "chi-squared of best fit is too close to that of second best (<0.01 in reduced chi-sqaured)"),
@@ -333,7 +340,9 @@ ZWARNING = define_bitmask("ZWARNING","Warnings for SDSS spectra.",
     BAD_TARGET                     = (  8, "catastrophically bad targeting data (e.g. ASTROMBAD in CALIB_STATUS)"),
     NODATA                         = (  9, "No data for this fiber, e.g. because spectrograph was broken during this exposure (ivar=0 for all pixels)"),
 )
-RESOLVE_STATUS = define_bitmask("RESOLVE_STATUS","Resolve status for an SDSS catalog entry.  Only one of bits RUN_PRIMARY, RUN_RAMP, RUN_OVERLAPONLY, RUN_IGNORE, and RUN_DUPLICATE can be set. RUN_EDGE can be set for any object. To get a unique set of objects across the whole survey, search for objects with SURVEY_PRIMARY set. To get a unique set of objects within a run, search for objects with RUN_PRIMARY set.",
+RESOLVE_STATUS = define_bitmask(
+    "RESOLVE_STATUS",
+    "Resolve status for an SDSS catalog entry.  Only one of bits RUN_PRIMARY, RUN_RAMP, RUN_OVERLAPONLY, RUN_IGNORE, and RUN_DUPLICATE can be set. RUN_EDGE can be set for any object. To get a unique set of objects across the whole survey, search for objects with SURVEY_PRIMARY set. To get a unique set of objects within a run, search for objects with RUN_PRIMARY set.",
     RUN_PRIMARY                    = (  0, "primary within the objects own run (but not necessarily for the survey as a whole)"),
     RUN_RAMP                       = (  1, "in what would be the overlap area of a field, but with no neighboring field"),
     RUN_OVERLAPONLY                = (  2, "only appears in the overlap between two fields"),
@@ -346,7 +355,9 @@ RESOLVE_STATUS = define_bitmask("RESOLVE_STATUS","Resolve status for an SDSS cat
     SURVEY_BADFIELD                = ( 11, "In field with score=0"),
     SURVEY_EDGE                    = ( 12, "Not kept as secondary because it is RUN_RAMP or RUN_EDGE object"),
 )
-IMAGE_STATUS = define_bitmask("IMAGE_STATUS","Sky and instrument conditions of SDSS image",
+IMAGE_STATUS = define_bitmask(
+    "IMAGE_STATUS",
+    "Sky and instrument conditions of SDSS image",
     CLEAR                          = (  0, "Clear skies"),
     CLOUDY                         = (  1, "Cloudy skies (unphotometric)"),
     UNKNOWN                        = (  2, "Sky conditions unknown (unphotometric)"),
@@ -358,7 +369,9 @@ IMAGE_STATUS = define_bitmask("IMAGE_STATUS","Sky and instrument conditions of S
     DEAD_CCD                       = (  8, "CCD bad (unphotometric)"),
     NOISY_CCD                      = (  9, "CCD noisy (unphotometric)"),
 )
-CALIB_STATUS = define_bitmask("CALIB_STATUS","Calibration status for an SDSS image",
+CALIB_STATUS = define_bitmask(
+    "CALIB_STATUS",
+    "Calibration status for an SDSS image",
     PHOTOMETRIC                    = (  0, "Photometric observations"),
     UNPHOT_OVERLAP                 = (  1, "Unphotometric observations, calibrated based on overlaps with clear, ubercalibrated data; this is done on a field-by-field basis"),
     UNPHOT_EXTRAP_CLEAR            = (  2, "Extrapolate the solution from the clear part of a night (that was ubercalibrated) to the cloudy part"),
@@ -375,12 +388,16 @@ CALIB_STATUS = define_bitmask("CALIB_STATUS","Calibration status for an SDSS ima
     PS1_PCOMP_MODEL                = ( 13, "Enough information for PS1-based principal component flat model"),
     PS1_LOW_RMS                    = ( 14, "Low RMS in comparison with PS1"),
 )
-VAGC_SELECT = define_bitmask("VAGC_SELECT","Selection flags for Main VAGC sample",
+VAGC_SELECT = define_bitmask(
+    "VAGC_SELECT",
+    "Selection flags for Main VAGC sample",
     TILED                          = (  0, "selected because near a tiled target"),
     PLATEHOLE                      = (  1, "selected because near a hole on an SDSS plate"),
     MAIN                           = (  2, "selected according to slightly adjusted Main sample criteria"),
 )
-OBJECT1 = define_bitmask("OBJECT1","Object flags from photo reductions for SDSS (first 32)",
+OBJECT1 = define_bitmask(
+    "OBJECT1",
+    "Object flags from photo reductions for SDSS (first 32)",
     CANONICAL_CENTER               = (  0, "The quantities (psf counts, model fits and likelihoods) that are usually determined at an object's center as determined band-by-band were in fact determined at the canonical center (suitably transformed). This is due to the object being to close to the edge to extract a profile at the local center, and OBJECT1_EDGE is also set."),
     BRIGHT                         = (  1, "Indicates that the object was detected as a bright object. Since these are typically remeasured as faint objects, most users can ignore BRIGHT objects."),
     EDGE                           = (  2, "Object is too close to edge of frame in this band."),
@@ -414,7 +431,9 @@ OBJECT1 = define_bitmask("OBJECT1","Object flags from photo reductions for SDSS 
     BINNED4                        = ( 30, "The object was detected in a 4x4 binned image. The objects detected in the 2x2 binned image are not removed before doing this."),
     MOVED                          = ( 31, "The object appears to have moved during the exposure. Such objects are candidates to be deblended as moving objects."),
 )
-OBJECT2 = define_bitmask("OBJECT2","Object flags from photo reductions for SDSS (second 32)",
+OBJECT2 = define_bitmask(
+    "OBJECT2",
+    "Object flags from photo reductions for SDSS (second 32)",
     DEBLENDED_AS_MOVING            = (  0, "The object has the MOVED flag set, and was deblended on the assumption that it was moving."),
     NODEBLEND_MOVING               = (  1, "The object has the MOVED flag set, but was not deblended as a moving object."),
     TOO_FEW_DETECTIONS             = (  2, "The object has the MOVED flag set, but has too few detection to be deblended as moving."),
@@ -448,7 +467,9 @@ OBJECT2 = define_bitmask("OBJECT2","Object flags from photo reductions for SDSS 
     SPARE2                         = ( 30, ""),
     SPARE1                         = ( 31, ""),
 )
-Q_EYEBALL = define_bitmask("Q_EYEBALL","Quality eyeball flags from VAGC",
+Q_EYEBALL = define_bitmask(
+    "Q_EYEBALL",
+    "Quality eyeball flags from VAGC",
     DONE                           = (  0, ""),
     OTHER                          = (  1, ""),
     UNCLASSIFIABLE                 = (  2, ""),
@@ -479,7 +500,9 @@ Q_EYEBALL = define_bitmask("Q_EYEBALL","Quality eyeball flags from VAGC",
     USE_CHILD_IMAGE                = ( 27, ""),
     USE_CHILD_SPECTRUM             = ( 28, ""),
 )
-T_EYEBALL = define_bitmask("T_EYEBALL","Type eyeball flags from VAGC",
+T_EYEBALL = define_bitmask(
+    "T_EYEBALL",
+    "Type eyeball flags from VAGC",
     DONE                           = (  0, ""),
     OTHER                          = (  1, ""),
     UNCLASSIFIABLE                 = (  2, ""),
@@ -509,7 +532,9 @@ T_EYEBALL = define_bitmask("T_EYEBALL","Type eyeball flags from VAGC",
     MERGER                         = ( 26, ""),
     OUTFLOW                        = ( 27, ""),
 )
-M_EYEBALL = define_bitmask("M_EYEBALL","Eyeball flags for mergers in VAGC",
+M_EYEBALL = define_bitmask(
+    "M_EYEBALL",
+    "Eyeball flags for mergers in VAGC",
     DONE                           = (  0, ""),
     NOT_MERGER                     = (  1, ""),
     QUESTIONABLE                   = (  2, ""),
@@ -527,7 +552,9 @@ M_EYEBALL = define_bitmask("M_EYEBALL","Eyeball flags for mergers in VAGC",
     DURING                         = ( 14, ""),
     AFTER                          = ( 15, ""),
 )
-FLUXMATCH_STATUS = define_bitmask("FLUXMATCH_STATUS","Flags from flux-based matching to SDSS photometry",
+FLUXMATCH_STATUS = define_bitmask(
+    "FLUXMATCH_STATUS",
+    "Flags from flux-based matching to SDSS photometry",
     ORIGINAL_FLUXMATCH             = (  0, "used the original positional match (which exists)"),
     FIBER_FLUXMATCH                = (  1, "flagged due to fiberflux/aperflux issue"),
     NONMATCH_FLUXMATCH             = (  2, "flagged due to non-match"),
@@ -535,7 +562,9 @@ FLUXMATCH_STATUS = define_bitmask("FLUXMATCH_STATUS","Flags from flux-based matc
     PARENT_FLUXMATCH               = (  4, "overlapping parent has no children, so used it"),
     BRIGHTEST_FLUXMATCH            = (  5, "picked the brightest child"),
 )
-BOSS_TARGET1 = define_bitmask("BOSS_TARGET1","BOSS survey primary target selection flags",
+BOSS_TARGET1 = define_bitmask(
+    "BOSS_TARGET1",
+    "BOSS survey primary target selection flags",
     GAL_LOZ                        = (  0, "low-z lrgs"),
     GAL_CMASS                      = (  1, "dperp > 0.55, color-mag cut "),
     GAL_CMASS_COMM                 = (  2, "dperp > 0.55, commissioning color-mag cut"),
@@ -567,7 +596,9 @@ BOSS_TARGET1 = define_bitmask("BOSS_TARGET1","BOSS survey primary target selecti
     TEMPLATE_STAR_PHOTO            = ( 34, "stellar templates "),
     TEMPLATE_STAR_SPECTRO          = ( 35, "stellar templates (spectroscopically known)"),
 )
-ANCILLARY_TARGET1 = define_bitmask("ANCILLARY_TARGET1","BOSS survey target flags for ancillary programs",
+ANCILLARY_TARGET1 = define_bitmask(
+    "ANCILLARY_TARGET1",
+    "BOSS survey target flags for ancillary programs",
     AMC                            = (  0, "defined in blake_boss_v2.descr"),
     FLARE1                         = (  1, "defined in blake_boss_v2.descr"),
     FLARE2                         = (  2, "defined in blake_boss_v2.descr"),
@@ -632,7 +663,9 @@ ANCILLARY_TARGET1 = define_bitmask("ANCILLARY_TARGET1","BOSS survey target flags
     GAL_NEAR_QSO                   = ( 62, "defined in weiner-qso-sightline.fits"),
     MTEMP                          = ( 63, "defined in blake-transient-v3.fits"),
 )
-ANCILLARY_TARGET2 = define_bitmask("ANCILLARY_TARGET2","additional BOSS survey target flags for ancillary programs",
+ANCILLARY_TARGET2 = define_bitmask(
+    "ANCILLARY_TARGET2",
+    "additional BOSS survey target flags for ancillary programs",
     HIZQSO82                       = (  0, "defined in mcgreer-hizqso.fits"),
     HIZQSOIR                       = (  1, "defined in mcgreer-hizqso.fits"),
     KQSO_BOSS                      = (  2, "defined in mcmahon-ukidss.fits"),
@@ -697,7 +730,9 @@ ANCILLARY_TARGET2 = define_bitmask("ANCILLARY_TARGET2","additional BOSS survey t
     ELAIS_N1_GMRT_TAYLOR           = ( 61, "LOFAR-selected target"),
     ELAIS_N1_JVLA                  = ( 62, "LOFAR-selected target"),
 )
-BOSSTILE_STATUS = define_bitmask("BOSSTILE_STATUS","BOSS tiling code status bits",
+BOSSTILE_STATUS = define_bitmask(
+    "BOSSTILE_STATUS",
+    "BOSS tiling code status bits",
     TILED                          = (  0, "assigned a fiber"),
     NAKED                          = (  1, "not in area covered by tiles"),
     BOSSTARGET                     = (  2, "in the high priority set of targets"),
@@ -723,7 +758,9 @@ BOSSTILE_STATUS = define_bitmask("BOSSTILE_STATUS","BOSS tiling code status bits
     ANCILLARY_ROUND2               = ( 22, "new ancillaries added June 2012 (tiled after old ancillaries)"),
     MIDLEVEL_PRIORITY              = ( 23, "targets (from ancillary list) tiled between gals and ancillaries"),
 )
-EBOSS_TARGET0 = define_bitmask("EBOSS_TARGET0","targeting bitmask for SEQUELS (eBOSS precursor)",
+EBOSS_TARGET0 = define_bitmask(
+    "EBOSS_TARGET0",
+    "targeting bitmask for SEQUELS (eBOSS precursor)",
     DO_NOT_OBSERVE                 = (  0, "Don't put a fiber on this object"),
     LRG_IZW                        = (  1, "LRG selection in i/z/W plane"),
     LRG_RIW                        = (  2, "LRG selection in r/i/W plan with (i-z) cut"),
@@ -750,7 +787,9 @@ EBOSS_TARGET0 = define_bitmask("EBOSS_TARGET0","targeting bitmask for SEQUELS (e
     SEQUELS_PTF_VARIABLE           = ( 40, "Variability objects from PTF"),
     SEQUELS_COLLIDED               = ( 41, "Collided galaxies from BOSS"),
 )
-EBOSS_TARGET1 = define_bitmask("EBOSS_TARGET1","targeting bitmask for eBOSS",
+EBOSS_TARGET1 = define_bitmask(
+    "EBOSS_TARGET1",
+    "targeting bitmask for eBOSS",
     DO_NOT_OBSERVE                 = (  0, "Don't put a fiber on this object"),
     LRG1_WISE                      = (  1, "LRG selection in i/z/W plane"),
     LRG1_IDROP                     = (  2, "LRG selection in r/i/W plan with (i-z) cut"),
@@ -772,7 +811,9 @@ EBOSS_TARGET1 = define_bitmask("EBOSS_TARGET1","targeting bitmask for eBOSS",
     STD_WD                         = ( 51, "white dwarfs"),
     STD_QSO                        = ( 52, "qso"),
 )
-EBOSS_TARGET2 = define_bitmask("EBOSS_TARGET2","targeting bitmask for eBOSS",
+EBOSS_TARGET2 = define_bitmask(
+    "EBOSS_TARGET2",
+    "targeting bitmask for eBOSS",
     SPIDERS_RASS_AGN               = (  0, "RASS AGN sources"),
     SPIDERS_RASS_CLUS              = (  1, "RASS Cluster sources"),
     SPIDERS_ERASS_AGN              = (  2, "ERASS AGN sources"),
@@ -799,7 +840,9 @@ EBOSS_TARGET2 = define_bitmask("EBOSS_TARGET2","targeting bitmask for eBOSS",
     ELG_UGRIZWbright_TEST1         = ( 45, "WISE selection for test1 ELG plates"),
     ELG_GRIW_TEST1                 = ( 46, "WISE selection for test1 ELG plates"),
 )
-SEGUE1_TARGET = define_bitmask("SEGUE1_TARGET","SEGUE-1 primary target bits",
+SEGUE1_TARGET = define_bitmask(
+    "SEGUE1_TARGET",
+    "SEGUE-1 primary target bits",
     SEGUE1_FG                      = (  9, "F and G stars, based on g-r color (0.2<g-r<0.48 and 14<g<20.2)"),
     SEG1LOW_KG                     = ( 10, "low latitude selection of K-giant stars"),
     SEG1LOW_TO                     = ( 11, "low latitude selection of bluetip stars"),
@@ -819,7 +862,9 @@ SEGUE1_TARGET = define_bitmask("SEGUE1_TARGET","SEGUE-1 primary target bits",
     SEG1LOW_AGB                    = ( 27, "low latitude selection of AGB stars"),
     SEGUE1_CHECKED                 = ( 31, "was a checked object"),
 )
-SEGUE1_TARGET2 = define_bitmask("SEGUE1_TARGET2","SEGUE-1 secondary target bits",
+SEGUE1_TARGET2 = define_bitmask(
+    "SEGUE1_TARGET2",
+    "SEGUE-1 secondary target bits",
     REDDEN_STD                     = (  1, "reddening standard star"),
     SEGUE1_QA                      = (  3, "QA Duplicate Observations (unused)"),
     SKY                            = (  4, "sky target"),
@@ -827,7 +872,9 @@ SEGUE1_TARGET2 = define_bitmask("SEGUE1_TARGET2","SEGUE-1 secondary target bits"
     SEGUE1_SCIENCE                 = ( 30, "SEGUE-1 science target"),
     SEGUE1_TEST                    = ( 31, "SEGUE-1 test target"),
 )
-SEGUE2_TARGET1 = define_bitmask("SEGUE2_TARGET1","SEGUE-2 primary target bits",
+SEGUE2_TARGET1 = define_bitmask(
+    "SEGUE2_TARGET1",
+    "SEGUE-2 primary target bits",
     SEGUE2_MSTO                    = (  0, "Main-sequence turnoff"),
     SEGUE2_REDKG                   = (  1, "Red K-giant stars"),
     SEGUE2_LKG                     = (  2, "K-giant star identified by l-color"),
@@ -841,7 +888,9 @@ SEGUE2_TARGET1 = define_bitmask("SEGUE2_TARGET1","SEGUE-2 primary target bits",
     SEGUE2_CWD                     = ( 17, "Cool white dwarf"),
     SEGUE2_CHECKED                 = ( 31, "was a checked object"),
 )
-SEGUE2_TARGET2 = define_bitmask("SEGUE2_TARGET2","SEGUE-2 secondary target bits",
+SEGUE2_TARGET2 = define_bitmask(
+    "SEGUE2_TARGET2",
+    "SEGUE-2 secondary target bits",
     LIGHT_TRAP                     = (  0, "light trap hole"),
     SEGUE2_REDDENING               = (  1, "reddening standard"),
     SEGUE2_TEST                    = (  2, "test target"),
@@ -856,7 +905,9 @@ SEGUE2_TARGET2 = define_bitmask("SEGUE2_TARGET2","SEGUE-2 secondary target bits"
     SEGUE2_STETSON                 = ( 11, "Stetson standard target"),
     SEGUE2_CHECKED                 = ( 31, "was a checked object"),
 )
-SPECIAL_TARGET1 = define_bitmask("SPECIAL_TARGET1","SDSS special program target bits",
+SPECIAL_TARGET1 = define_bitmask(
+    "SPECIAL_TARGET1",
+    "SDSS special program target bits",
     APBIAS                         = (  0, "aperture bias target"),
     LOWZ_ANNIS                     = (  1, "low-redshift cluster galaxy"),
     QSO_M31                        = (  2, "QSO in M31"),
@@ -897,7 +948,9 @@ SPECIAL_TARGET1 = define_bitmask("SPECIAL_TARGET1","SDSS special program target 
     PERSEUS                        = ( 37, "galaxy in perseus-pisces"),
     LOWZ_LOVEDAY                   = ( 38, "low redshift galaxy selected by Loveday "),
 )
-APOGEE_TARGET1 = define_bitmask("APOGEE_TARGET1","APOGEE primary target bits",
+APOGEE_TARGET1 = define_bitmask(
+    "APOGEE_TARGET1",
+    "APOGEE primary target bits",
     APOGEE_FAINT                   = (  0, "Selected in faint bin of cohort"),
     APOGEE_MEDIUM                  = (  1, "Selected in medium bin of cohort"),
     APOGEE_BRIGHT                  = (  2, "Selected in bright bin of cohort"),
@@ -931,7 +984,9 @@ APOGEE_TARGET1 = define_bitmask("APOGEE_TARGET1","APOGEE primary target bits",
     APOGEE_SEGUE_OVERLAP           = ( 30, "Selected because of overlap with SEGUE survey"),
     APOGEE_CHECKED                 = ( 31, "This target has been checked"),
 )
-APOGEE_TARGET2 = define_bitmask("APOGEE_TARGET2","APOGEE secondary target bits",
+APOGEE_TARGET2 = define_bitmask(
+    "APOGEE_TARGET2",
+    "APOGEE secondary target bits",
     LIGHT_TRAP                     = (  0, "Light trap"),
     APOGEE_FLUX_STANDARD           = (  1, "Flux standard"),
     APOGEE_STANDARD_STAR           = (  2, "Stellar abundance, parameters standard"),
@@ -952,14 +1007,18 @@ APOGEE_TARGET2 = define_bitmask("APOGEE_TARGET2","APOGEE secondary target bits",
     APOGEE_MIRCLUSTER_STAR         = ( 17, "Candidate MIR-detected cluster member (ancillary)"),
     APOGEE_CHECKED                 = ( 31, "This target has been checked"),
 )
-APOGEE_EXTRATARG = define_bitmask("APOGEE_EXTRATARG","APOGEE pixel level mask bits",
+APOGEE_EXTRATARG = define_bitmask(
+    "APOGEE_EXTRATARG",
+    "APOGEE pixel level mask bits",
     NOT_MAIN                       = (  0, "Not main survey target"),
     COMMISSIONING                  = (  1, "Commissioning data"),
     TELLURIC                       = (  2, "Telluric target"),
     APO1M                          = (  3, "APO1M + APOGEE observation"),
     DUPLICATE                      = (  4, "Duplicate observation of star"),
 )
-APOGEE_PIXMASK = define_bitmask("APOGEE_PIXMASK","APOGEE extra targeting bits",
+APOGEE_PIXMASK = define_bitmask(
+    "APOGEE_PIXMASK",
+    "APOGEE extra targeting bits",
     BADPIX                         = (  0, "Pixel marked as BAD in bad pixel mask"),
     CRPIX                          = (  1, "Pixel marked as cosmic ray in ap3d"),
     SATPIX                         = (  2, "Pixel marked as saturated in ap3d"),
@@ -975,7 +1034,9 @@ APOGEE_PIXMASK = define_bitmask("APOGEE_PIXMASK","APOGEE extra targeting bits",
     SIG_SKYLINE                    = ( 12, "Pixel falls near sky line that has significant flux compared with object"),
     SIG_TELLURIC                   = ( 13, "Pixel falls near telluric line that has significant absorption"),
 )
-APOGEE_STARFLAG = define_bitmask("APOGEE_STARFLAG","APOGEE star-level mask bits",
+APOGEE_STARFLAG = define_bitmask(
+    "APOGEE_STARFLAG",
+    "APOGEE star-level mask bits",
     BAD_PIXELS                     = (  0, "Spectrum has many bad pixels (>40%): BAD"),
     COMMISSIONING                  = (  1, "Commissioning data (MJD<55761), non-standard configuration, poor LSF: WARN"),
     BRIGHT_NEIGHBOR                = (  2, "Star has neighbor more than 10 times brighter: WARN"),
@@ -989,7 +1050,9 @@ APOGEE_STARFLAG = define_bitmask("APOGEE_STARFLAG","APOGEE star-level mask bits"
     SUSPECT_RV_COMBINATION         = ( 16, "WARNING: RVs from synthetic template differ significantly from those from combined template"),
     SUSPECT_BROAD_LINES            = ( 17, "WARNING: cross-correlation peak with template significantly broader than autocorrelation of template"),
 )
-APOGEE_ASPCAPFLAG = define_bitmask("APOGEE_ASPCAPFLAG","APOGEE ASPCAP mask bits",
+APOGEE_ASPCAPFLAG = define_bitmask(
+    "APOGEE_ASPCAPFLAG",
+    "APOGEE ASPCAP mask bits",
     TEFF_WARN                      = (  0, "WARNING on effective temperature (see PARAMFLAG[0] for details)"),
     LOGG_WARN                      = (  1, "WARNING on log g (see PARAMFLAG[1] for details)"),
     VMICRO_WARN                    = (  2, "WARNING on vmicro (see PARAMFLAG[2] for details)"),
@@ -1016,7 +1079,9 @@ APOGEE_ASPCAPFLAG = define_bitmask("APOGEE_ASPCAPFLAG","APOGEE ASPCAP mask bits"
     SN_BAD                         = ( 27, "S/N<50 (BAD)"),
     NO_ASPCAP_RESULT               = ( 31, "No result"),
 )
-APOGEE_PARAMFLAG = define_bitmask("APOGEE_PARAMFLAG","APOGEE parameter mask bits (set for each stellar parameter in ASPCAP fit)",
+APOGEE_PARAMFLAG = define_bitmask(
+    "APOGEE_PARAMFLAG",
+    "APOGEE parameter mask bits (set for each stellar parameter in ASPCAP fit)",
     GRIDEDGE_BAD                   = (  0, "Parameter within 1/8 grid spacing of grid edge"),
     CALRANGE_BAD                   = (  1, "Parameter outside valid range of calibration determination"),
     OTHER_BAD                      = (  2, "Other error condition"),
@@ -1025,7 +1090,9 @@ APOGEE_PARAMFLAG = define_bitmask("APOGEE_PARAMFLAG","APOGEE parameter mask bits
     OTHER_WARN                     = ( 10, "Other warning condition"),
     PARAM_FIXED                    = ( 16, "Parameter set at fixed value, not fit"),
 )
-APOGEE2_TARGET1 = define_bitmask("APOGEE2_TARGET1","APOGEE2 primary target bits",
+APOGEE2_TARGET1 = define_bitmask(
+    "APOGEE2_TARGET1",
+    "APOGEE2 primary target bits",
     APOGEE2_ONEBIN_GT_0_5          = (  0, "Selected in single (J-Ks)o > 0.5 color bin"),
     APOGEE2_TWOBIN_0_5_TO_0_8      = (  1, "Selected in blue 0.5 < (J-Ks)o < 0.8 color bin"),
     APOGEE2_TWOBIN_GT_0_8          = (  2, "Selected in red (J-Ks)o > 0.8 color bin"),
@@ -1056,7 +1123,9 @@ APOGEE2_TARGET1 = define_bitmask("APOGEE2_TARGET1","APOGEE2 primary target bits"
     APOGEE2_FAINT_EXTRA            = ( 29, "Faint star (fainter than cohort limit; not required to reach survey S/N requirement)"),
     APOGEE2_APOKASC                = ( 30, "Selected as part of the APOKASC program (incl. seismic/gyro targets and others)"),
 )
-APOGEE2_TARGET2 = define_bitmask("APOGEE2_TARGET2","APOGEE2 secondary target bits",
+APOGEE2_TARGET2 = define_bitmask(
+    "APOGEE2_TARGET2",
+    "APOGEE2 secondary target bits",
     APOGEE2_STANDARD_STAR          = (  2, "Stellar parameters/abundance standard"),
     APOGEE2_RV_STANDARD            = (  3, "Stellar RV standard"),
     APOGEE2_SKY                    = (  4, "Sky fiber"),
@@ -1073,7 +1142,9 @@ APOGEE2_TARGET2 = define_bitmask("APOGEE2_TARGET2","APOGEE2 secondary target bit
     APOGEE2_1M_TARGET              = ( 22, "Selected as a 1-m target"),
     APOGEE2_OBJECT                 = ( 30, "This object is an APOGEE-2 target"),
 )
-APOGEE2_TARGET3 = define_bitmask("APOGEE2_TARGET3","APOGEE2 trinary target bits",
+APOGEE2_TARGET3 = define_bitmask(
+    "APOGEE2_TARGET3",
+    "APOGEE2 trinary target bits",
     APOGEE2_KOI                    = (  0, "Selected as part of the long cadence KOI study"),
     APOGEE2_EB                     = (  1, "Selected as part of the EB program"),
     APOGEE2_KOI_CONTROL            = (  2, "Selected as part of the long cadence KOI control sample"),
@@ -1083,7 +1154,9 @@ APOGEE2_TARGET3 = define_bitmask("APOGEE2_TARGET3","APOGEE2 trinary target bits"
     APOGEE2_ANCILLARY              = (  8, "Selected as an ancillary target"),
     APOGEE2_MASSIVE_STAR           = (  9, "Selected as part of the Massive Star program"),
 )
-MANGA_DRP2QUAL = define_bitmask("MANGA_DRP2QUAL","Mask bits for MaNGA DRP-2d quality flags",
+MANGA_DRP2QUAL = define_bitmask(
+    "MANGA_DRP2QUAL",
+    "Mask bits for MaNGA DRP-2d quality flags",
     VALIDFILE                      = (  0, "File is valid"),
     EXTRACTBAD                     = (  1, "Many bad values in extracted frame"),
     EXTRACTBRIGHT                  = (  2, "Extracted spectra abnormally bright"),
@@ -1098,7 +1171,9 @@ MANGA_DRP2QUAL = define_bitmask("MANGA_DRP2QUAL","Mask bits for MaNGA DRP-2d qua
     SKYSUBFAIL                     = ( 11, "Failed sky subtraction"),
     FULLCLOUD                      = ( 12, "Completely cloudy exposure"),
 )
-MANGA_DRP3QUAL = define_bitmask("MANGA_DRP3QUAL","Mask bits for MaNGA DRP-3d quality flags",
+MANGA_DRP3QUAL = define_bitmask(
+    "MANGA_DRP3QUAL",
+    "Mask bits for MaNGA DRP-3d quality flags",
     VALIDFILE                      = (  0, "File is valid"),
     BADDEPTH                       = (  1, "IFU does not reach target depth"),
     SKYSUBBAD                      = (  2, " Bad sky subtraction in one or more frames"),
@@ -1110,10 +1185,14 @@ MANGA_DRP3QUAL = define_bitmask("MANGA_DRP3QUAL","Mask bits for MaNGA DRP-3d qua
     BADFLUX                        = (  8, " Bad flux calibration"),
     CRITICAL                       = ( 30, " Critical failure in one or more frames"),
 )
-MANGA_DAPQUAL = define_bitmask("MANGA_DAPQUAL","Mask bits for MaNGA DAP quality flags",
+MANGA_DAPQUAL = define_bitmask(
+    "MANGA_DAPQUAL",
+    "Mask bits for MaNGA DAP quality flags",
     VALIDFILE                      = (  0, "File is valid"),
 )
-MANGA_DRP2PIXMASK = define_bitmask("MANGA_DRP2PIXMASK","Mask bits per fiber or pixel for 2d MaNGA spectra.",
+MANGA_DRP2PIXMASK = define_bitmask(
+    "MANGA_DRP2PIXMASK",
+    "Mask bits per fiber or pixel for 2d MaNGA spectra.",
     NOPLUG                         = (  0, "Fiber not listed in plugmap file"),
     BADTRACE                       = (  1, "Bad trace"),
     BADFLAT                        = (  2, "Low counts in fiberflat"),
@@ -1145,14 +1224,18 @@ MANGA_DRP2PIXMASK = define_bitmask("MANGA_DRP2PIXMASK","Mask bits per fiber or p
     REDMONSTER                     = ( 29, "Contiguous region of bad chi^2 in sky residuals (with threshhold of relative chi^2 > 3)."),
     _3DREJECT                      = ( 30, "Used in RSS file, indicates should be rejected when making 3D cube"),
 )
-MANGA_DRP3PIXMASK = define_bitmask("MANGA_DRP3PIXMASK","Mask bits per spaxel for a MaNGA data cube.",
+MANGA_DRP3PIXMASK = define_bitmask(
+    "MANGA_DRP3PIXMASK",
+    "Mask bits per spaxel for a MaNGA data cube.",
     NOCOV                          = (  0, "No coverage in cube"),
     LOWCOV                         = (  1, "Low coverage depth in cube"),
     DEADFIBER                      = (  2, "Major contributing fiber is dead"),
     FORESTAR                       = (  3, "Foreground star"),
     DONOTUSE                       = ( 10, "Do not use this spaxel for science"),
 )
-MANGA_TARGET1 = define_bitmask("MANGA_TARGET1","Mask bits identifying galaxy samples.",
+MANGA_TARGET1 = define_bitmask(
+    "MANGA_TARGET1",
+    "Mask bits identifying galaxy samples.",
     NONE                           = (  0, " "),
     PRIMARY_PLUS_COM               = (  1, " March 2014 commissioning"),
     SECONDARY_COM                  = (  2, " March 2014 commissioning"),
@@ -1169,7 +1252,9 @@ MANGA_TARGET1 = define_bitmask("MANGA_TARGET1","Mask bits identifying galaxy sam
     FILLER                         = ( 13, " Filler targets"),
     ANCILLARY                      = ( 14, " Ancillary program targets"),
 )
-MANGA_TARGET2 = define_bitmask("MANGA_TARGET2","Mask bits identifying non-galaxy samples.",
+MANGA_TARGET2 = define_bitmask(
+    "MANGA_TARGET2",
+    "Mask bits identifying non-galaxy samples.",
     NONE                           = (  0, " "),
     SKY                            = (  1, " "),
     STELLIB_SDSS_COM               = (  2, "Commissioning selection using SDSS photometry"),
@@ -1183,7 +1268,9 @@ MANGA_TARGET2 = define_bitmask("MANGA_TARGET2","Mask bits identifying non-galaxy
     STD_WD                         = ( 24, " "),
     STD_APASS_COM                  = ( 25, "Commissioning selection of stds using APASS photometry"),
 )
-MANGA_TARGET3 = define_bitmask("MANGA_TARGET3","Mask bits identifying ancillary samples.",
+MANGA_TARGET3 = define_bitmask(
+    "MANGA_TARGET3",
+    "Mask bits identifying ancillary samples.",
     NONE                           = (  0, " "),
     AGN_BAT                        = (  1, " "),
     AGN_OIII                       = (  2, " "),
