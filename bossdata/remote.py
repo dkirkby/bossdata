@@ -8,7 +8,6 @@ from __future__ import division, print_function
 
 import os
 import os.path
-import stat
 import math
 
 import requests
@@ -90,22 +89,22 @@ class Manager(object):
         if file_size is not None:
             file_size = int(file_size)
             parent_path = os.path.dirname(local_path)
-            stat = os.statvfs(parent_path)
-            free_space = stat.f_bavail*stat.f_frsize
-            Mb = 1<<20
-            if file_size + 1*Mb > free_space:
+            file_stat = os.statvfs(parent_path)
+            free_space = file_stat.f_bavail * file_stat.f_frsize
+            Mb = 1 << 20
+            if file_size + 1 * Mb > free_space:
                 raise RuntimeError('File size ({:.1f}Mb) exceeds free space for {}.'.format(
-                    file_size/(1.0*Mb), local_path))
-            if file_size > progress_min_size*Mb:
+                    file_size / (1.0 * Mb), local_path))
+            if file_size > progress_min_size * Mb:
                 label = os.path.basename(local_path)
                 progress_bar = ProgressBar(
-                    widgets = [label, ' ', Percentage(), Bar(), ' ', FileTransferSpeed()],
-                    maxval = math.ceil(file_size/chunk_size)).start()
+                    widgets=[label, ' ', Percentage(), Bar(), ' ', FileTransferSpeed()],
+                    maxval=math.ceil(file_size / chunk_size)).start()
 
         # Stream the request response binary content into a temporary file.
         progress = 0
         with open(local_path + '.downloading', 'wb') as f:
-            for chunk in request.iter_content(chunk_size = chunk_size):
+            for chunk in request.iter_content(chunk_size=chunk_size):
                 f.write(chunk)
                 if progress_bar:
                     progress += 1

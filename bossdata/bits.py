@@ -52,9 +52,9 @@ def define_bitmask(mask_name, mask_description, **bits):
         ValueError: bit definition is invalid or an offset is repeated.
     """
     # Scan the bit definitions.
-    bit_names = [ ]
-    bit_offsets = [ ]
-    bit_descriptions = [ ]
+    bit_names = []
+    bit_offsets = []
+    bit_descriptions = []
     for name, bit_definition in bits.iteritems():
         bit_names.append(name)
         if isinstance(bit_definition, tuple):
@@ -68,7 +68,7 @@ def define_bitmask(mask_name, mask_description, **bits):
     if len(bit_offsets) != len(set(bit_offsets)):
         raise ValueError('Bit offset values must be unique.')
     # Initialize a class dictionary with attributes for each named bit.
-    class_dict = dict(zip(bit_names, (1<<offset for offset in bit_offsets)))
+    class_dict = dict(zip(bit_names, (1 << offset for offset in bit_offsets)))
     # Add a reverse-lookup mapping from offsets to names.
     class_dict['_reverse_map'] = dict(zip(bit_offsets, bit_names))
     # Add a dictionary of bit descriptions indexed by offset.
@@ -97,7 +97,7 @@ def summarize_bitmask_values(mask, values, strict=True):
             bit is set as values.  Any bit that is never set will not appear in the list
             of keys.
     """
-    summary = { }
+    summary = {}
     for value in values:
         for bit_name in decode_bitmask(mask, value, strict=strict):
             bit_count = summary.get(bit_name, 0)
@@ -137,7 +137,7 @@ def decode_bitmask(mask, value, strict=True):
         AttributeError: mask does not have the attributes necessary to define a bitmask.
         ValueError: value has a bit set that has no symbolic name defined and strict is True.
     """
-    names = [ ]
+    names = []
     shifted = int(value)
     offset = 0
     while shifted:
@@ -184,7 +184,7 @@ def bitmask_from_text(mask, text):
     return value
 
 
-def extract_sdss_bitmasks(filename = 'sdssMaskbits.par', indent = ' '*4):
+def extract_sdss_bitmasks(filename='sdssMaskbits.par', indent=' ' * 4):
     """Scan the parfile defining SDSS bitmasks and print code to define these types for bossdata.bits.
 
     This function is intended to be run by hand with the output pasted into this module, to
@@ -227,7 +227,8 @@ def extract_sdss_bitmasks(filename = 'sdssMaskbits.par', indent = ' '*4):
                     print(')')
                 # Start a new definition.
                 mask_name, description = tokens[1], tokens[3]
-                print('{0} = define_bitmask("{0}","{2}",'.format(mask_name, indent, description))
+                print('{0} = define_bitmask(\n{1}"{0}",\n{1}"{2}",'.format(
+                    mask_name, indent, description))
 
             if tokens[0] == 'maskbits':
                 if tokens[1] != mask_name:
@@ -245,7 +246,8 @@ def extract_sdss_bitmasks(filename = 'sdssMaskbits.par', indent = ' '*4):
 
 # The bitmask definitions below were automatically generated using the extract_sdss_bitmasks function
 # and should not be edited by hand.
-SPPIXMASK = define_bitmask("SPPIXMASK","Mask bits for an SDSS spectrum. 0-15 refer to each fiber, 16-31 refer to each pixel in a spectrum.",
+SPPIXMASK = define_bitmask(
+    "SPPIXMASK","Mask bits for an SDSS spectrum. 0-15 refer to each fiber, 16-31 refer to each pixel in a spectrum.",
     NOPLUG                         = (  0, "Fiber not listed in plugmap file"),
     BADTRACE                       = (  1, "Bad trace from routine TRACE320CRUDE"),
     BADFLAT                        = (  2, "Low counts in fiberflat"),

@@ -33,20 +33,20 @@ class SpecFile(object):
             is opened in read-only mode so you do not need write privileges.
     """
     def __init__(self, path):
-        self.hdulist = fitsio.FITS(path, mode = fitsio.READONLY)
+        self.hdulist = fitsio.FITS(path, mode=fitsio.READONLY)
         self.lite = (len(self.hdulist) == 4)
         self.header = self.hdulist[0].read_header()
         # Look up the available exposures.
         self.num_exposures = self.header['NEXP']
-        self.exposures = { }
+        self.exposures = {}
         expid_pattern = re.compile('([br][12])-([0-9]{8})-([0-9]{8})-([0-9]{8})')
         for i in range(self.num_exposures):
             # The order of arc and flat might be swapped here.
             spec_id, exp_num, arc_num, flat_num = expid_pattern.match(
-                self.header['EXPID{0:02d}'.format(i+1)]).groups()
-            exposure_info = self.exposures.get(exp_num, { })
+                self.header['EXPID{0:02d}'.format(i + 1)]).groups()
+            exposure_info = self.exposures.get(exp_num, {})
             exposure_info[spec_id[0]] = dict(
-                hdu_index=4+i, spec_id=spec_id, arc_num=arc_num, flat_num=flat_num)
+                hdu_index=4 + i, spec_id=spec_id, arc_num=arc_num, flat_num=flat_num)
             self.exposures[exp_num] = exposure_info
         # Reconstruct the time-ordered exposure sequence.
         self.exposure_sequence = sorted(self.exposures.keys())
@@ -70,7 +70,7 @@ class SpecFile(object):
         """
         if exposure_index < 0 or exposure_index >= self.num_exposures:
             raise ValueError('exposure index must be in the range 0-{0}'.format(
-                self.num_exposures-1))
+                self.num_exposures - 1))
         if camera not in ('b', 'r'):
             raise ValueError('camera must be either "b" or "r".')
 
@@ -153,13 +153,13 @@ class SpecFile(object):
         good_pixels = ~bad_pixels
 
         # Create and fill the unmasked structured array of data.
-        data = np.empty(num_pixels, dtype = [
+        data = np.empty(num_pixels, dtype=[
             ('wavelength', np.float32), ('wdisp', np.float32),
             ('flux', np.float32), ('dflux', np.float32)])
         data['wavelength'][:] = np.power(10.0, hdu['loglam'][:])
         data['wdisp'][:] = np.power(10., hdu['wdisp'][:])
         data['flux'][:] = hdu['flux'][:]
-        data['dflux'][good_pixels] = 1.0/np.sqrt(ivar[good_pixels])
+        data['dflux'][good_pixels] = 1.0 / np.sqrt(ivar[good_pixels])
         data['dflux'][bad_pixels] = 0.0
 
-        return np.ma.MaskedArray(data, mask=bad_pixels)
+        return numpy.ma.MaskedArray(data, mask=bad_pixels)
