@@ -105,7 +105,9 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
         table = astropy.table.Table.read(f, format='ascii')
 
     # Create a new database file.
-    rules = {'MODELFLUX{}'.format(i): 'MODELFLUX_{}'.format(i) for i in range(5)}
+    rules = {}
+    for i in range(5):
+        rules['MODELFLUX{}'.format(i)] = 'MODELFLUX_{}'.format(i)
     sql, num_cols = sql_create_table(
         'meta', table.dtype, renaming_rules=rules, primary_key='(PLATE,MJD,FIBER)')
     connection = sqlite3.connect(db_path)

@@ -85,16 +85,14 @@ Ready to contribute? Here's how to set up `bossdata` for local development.
 
 5. When you're done making changes, check that your changes pass flake8 and the tests, including testing other Python versions with tox::
 
-    $ flake8 bossdata tests
-    $ python setup.py test
-    $ tox
-
-   To get flake8 and tox, just pip install them into your virtualenv.
-
-   Run tests with::
-
-    py.test --doctest-modules --verbose bossdata
     flake8 --doctests --exclude bossdata/bits.py --max-line-length 95 bossdata
+    py.test --doctest-modules --verbose bossdata
+
+   Note that `--doctest-modules` will require that all external modules imported from our modules are installed, so omit that option if you only want to run the unit tests.
+
+   To get flake8 and tox, just pip install them into your virtualenv.  If you don't already have a python-2.6 environment installed, try this if you are using conda::
+
+    conda create -n py26 python=2.6 anaconda
 
 6. Commit your changes and push your branch to GitHub::
 
