@@ -7,8 +7,9 @@
 
 from __future__ import division,print_function
 
-import argparse
 import os.path
+
+from astropy.utils.compat import argparse
 
 from progressbar import ProgressBar,Percentage,Bar
 
