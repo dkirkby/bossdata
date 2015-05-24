@@ -17,8 +17,3 @@ Tools to access and work with SDSS BOSS data from http://dr12.sdss3.org.
 * Free software: MIT license
 * Documentation: https://bossdata.readthedocs.org
 * Code: https://github.com/dkirkby/bossdata
-
-Features
---------
-
-* TODO

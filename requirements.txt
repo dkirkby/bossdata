@@ -1,6 +1,8 @@
+# https://packaging.python.org/en/latest/requirements.html#requirements-files
+# https://caremad.io/2013/07/setup-vs-requirement/
 wheel==0.23.0
-pytest>=2.6.3
-requests>=2.7.0
-progressbar>=2.3
-astropy>=1.0.1
-fitsio>=0.9.7
+pytest==2.6.3
+requests==2.7.0
+progressbar==2.3
+astropy==1.0.1
+fitsio==0.9.7

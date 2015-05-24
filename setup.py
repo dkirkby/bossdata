@@ -30,7 +30,10 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read().replace('.. :changelog:', '')
 
 requirements = [
-    # TODO: put package requirements here
+    'requests>=2.7.0',
+    'progressbar>=2.3',
+    'astropy>=1.0.1',
+    'fitsio>=0.9.7',
 ]
 
 test_requirements = [
@@ -40,9 +43,9 @@ test_requirements = [
 setup(
     name='bossdata',
     version='0.1.0',
-    description="Tools to access SDSS BOSS data.",
+    description='Tools to access SDSS BOSS data.',
     long_description=readme + '\n\n' + history,
-    author="David Kirkby",
+    author='David Kirkby',
     author_email='dkirkby@uci.edu',
     url='https://github.com/dkirkby/bossdata',
     packages=[
@@ -51,14 +54,14 @@ setup(
     package_dir={'bossdata':
                  'bossdata'},
     scripts = [
-        # TODO: list installable scripts here, which should start with #!/usr/bin/env python
-        # bin/myscript1,
-        # bin/myscript2
+        'bin/bossfetch',
+        'bin/bossquery',
+        'bin/bossplot',
     ],
-    include_package_data=True,
+    #include_package_data=True,
+    #zip_safe=False,
     install_requires=requirements,
-    license="MIT",
-    zip_safe=False,
+    license='MIT',
     keywords='bossdata',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
