@@ -78,7 +78,8 @@ def sql_create_table(table_name, recarray_dtype, renaming_rules={}, primary_key=
     if primary_key:
         columns.append('PRIMARY KEY {}'.format(primary_key))
     # Put the pieces together into the final SQL.
-    sql = 'CREATE TABLE `{name}` ({columns})'.format(name=table_name, columns=','.join(columns))
+    sql = 'CREATE TABLE `{name}` ({columns})'.format(
+        name=table_name, columns=','.join(columns))
     return sql, num_cols
 
 
@@ -89,12 +90,12 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
     the input columns MODELFLUX0..4 are renamed MODELFLUX_0..4 to be consistent with their
     names in the full database after sub-array un-rolling.
 
-    The DR12 spAll lite file is ~115Mb and converts to a ~470Mb SQL database file. The conversion
-    takes about 24 minutes on a laptop.
+    The DR12 spAll lite file is ~115Mb and converts to a ~470Mb SQL database file.
+    The conversion takes about 24 minutes on a laptop.
 
     Args:
-        sp_all_path(str): Absolute local path of the "lite" spAll file, which is expected to be
-            a gzipped ASCII data file.
+        sp_all_path(str): Absolute local path of the "lite" spAll file, which is expected
+            to be a gzipped ASCII data file.
         db_path(str): Local path where the corresponding sqlite3 database will be written.
     """
     # Read the database into memory.
@@ -204,7 +205,8 @@ class Database(object):
         if mirror is None:
             mirror = bossdata.remote.Manager()
 
-        # Get the local name of the metadata source file and the corresponding SQL database name.
+        # Get the local name of the metadata source file and the corresponding SQL
+        # database name.
         remote_path = finder.get_sp_all_path(lite=lite)
         local_path = mirror.local_path(remote_path)
         if lite:
@@ -281,14 +283,15 @@ class Database(object):
                 # each row is a tuple of values
                 ...
 
-        Since this method does not load all the results of a large query into memory, it is suitable
-        for queries that are expected to return a large number of rows. For smaller queries, the
-        :meth:`select_all` method might be more convenient.
+        Since this method does not load all the results of a large query into memory, it
+        is suitable for queries that are expected to return a large number of rows. For
+        smaller queries, the :meth:`select_all` method might be more convenient.
 
         Args:
-            what(str): Comma separated list of column names to return or '*' to return all columns.
-            where(str): SQL selection clause or None for no filtering. Reserved column names such
-                as PRIMARY must be `escaped` in this clause.
+            what(str): Comma separated list of column names to return or '*' to return
+                all columns.
+            where(str): SQL selection clause or None for no filtering. Reserved column
+                names such as PRIMARY must be `escaped` in this clause.
 
         Raises:
             sqlite3.OperationalError: failed to execute query.
@@ -308,14 +311,15 @@ class Database(object):
     def select_all(self, what='*', where=None, max_rows=100000):
         """Fetch all results of an SQL select query.
 
-        Since this method loads all the results into memory, it is not suitable for queries that
-        are expected to return a large number of rows.  Instead, use :meth:`select_each` for large
-        queries.
+        Since this method loads all the results into memory, it is not suitable for queries
+        that are expected to return a large number of rows.  Instead, use :meth:`select_each`
+        for large queries.
 
         Args:
-            what(str): Comma separated list of column names to return or '*' to return all columns.
-            where(str): SQL selection clause or None for no filtering. Reserved column names such
-                as PRIMARY must be `escaped` in this clause.
+            what(str): Comma separated list of column names to return or '*' to return all
+                columns.
+            where(str): SQL selection clause or None for no filtering. Reserved column names
+                such as PRIMARY must be `escaped` in this clause.
             max_rows(int): Maximum number of rows that will be returned.
 
         Returns:

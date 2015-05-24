@@ -47,19 +47,22 @@ class Manager(object):
         if self.local_root is None:
             self.local_root = os.getenv('BOSS_LOCAL_ROOT')
         if self.local_root is not None and not os.path.isdir(self.local_root):
-            raise ValueError('Cannot use non-existent path {} as local root.'.format(self.local_root))
+            raise ValueError('Cannot use non-existent path {} as local root.'.format(
+                self.local_root))
 
     def download(self, remote_path, local_path, chunk_size=4096, progress_min_size=10):
         """Download a single BOSS data file.
 
-        Downloads are streamed so that the memory requirements are independent of the file size.
+        Downloads are streamed so that the memory requirements are independent of the
+        file size.
 
         Args:
-            remote_path(str): The full path to the remote file relative to the remote server root,
-                which should normally be obtained using :class:`bossdata.path` methods.
+            remote_path(str): The full path to the remote file relative to the remote
+                server root, which should normally be obtained using :class:`bossdata.path`
+                methods.
             local_path(str): The (absolute or relative) path of the local file to write.
-            chunk_size(int): Size of data chunks to use for the streaming download. Larger sizes
-                will potentially download faster but also require more memory.
+            chunk_size(int): Size of data chunks to use for the streaming download. Larger
+                sizes will potentially download faster but also require more memory.
             progress_min_size(int): Display a text progress bar for any downloads whose size
                 in Mb exceeds this value.
 
@@ -123,8 +126,9 @@ class Manager(object):
         ensure that the file exists, downloading it if necessary.
 
         Args:
-            remote_path(str): The full path to the remote file relative to the remote server root,
-                which should normally be obtained using :class:`bossdata.path` methods.
+            remote_path(str): The full path to the remote file relative to the remote
+                server root, which should normally be obtained using :class:`bossdata.path`
+                methods.
 
         Returns:
             str: Absolute local path of the local file that mirrors the remote file.
@@ -140,8 +144,9 @@ class Manager(object):
         """Get a local file that mirrors a remote file, downloading the file if necessary.
 
         Args:
-            remote_path(str): The full path to the remote file relative to the remote server root,
-                which should normally be obtained using :class:`bossdata.path` methods.
+            remote_path(str): The full path to the remote file relative to the remote
+                server root, which should normally be obtained using :class:`bossdata.path`
+                methods.
 
         Returns:
             str: Absolute local path of the local file that mirrors the remote file.

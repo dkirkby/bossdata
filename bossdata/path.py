@@ -94,9 +94,10 @@ class Finder(object):
         Args:
             plate(int): Plate number, which must be positive.
             mjd(int): Modified Julian date of the observation, which must be > 3500.
-            fiber(int): Fiber number of the target on this plate, which must be in the range 1-1000.
-            lite(bool): Specifies the "lite" version which contains only HDUs 0-3, no so per-exposure
-                data is included.
+            fiber(int): Fiber number of the target on this plate, which must be in the
+                range 1-1000.
+            lite(bool): Specifies the "lite" version which contains only HDUs 0-3, so no
+                per-exposure data is included.
 
         Returns:
             str: Full path to the spectrum file for the specified observation.

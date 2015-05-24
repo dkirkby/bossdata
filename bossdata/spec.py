@@ -28,9 +28,9 @@ class SpecFile(object):
 
     Args:
         path(str): Local path of the spec FITS file to use.  This should normally be obtained
-            via :meth:`bossdata.path.Finder.get_spec_path` and can be automatically mirrored via
-            :meth:`bossdata.remote.Manager.get` or using the :ref:`bossfetch` script. The file
-            is opened in read-only mode so you do not need write privileges.
+            via :meth:`bossdata.path.Finder.get_spec_path` and can be automatically mirrored
+            via :meth:`bossdata.remote.Manager.get` or using the :ref:`bossfetch` script. The
+            file is opened in read-only mode so you do not need write privileges.
     """
     def __init__(self, path):
         self.hdulist = fitsio.FITS(path, mode=fitsio.READONLY)

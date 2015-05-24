@@ -94,6 +94,7 @@ Ready to contribute? Here's how to set up `bossdata` for local development.
    Run tests with::
 
     py.test --doctest-modules --verbose bossdata
+    flake8 --doctests --exclude bossdata/bits.py --max-line-length 95 bossdata
 
 6. Commit your changes and push your branch to GitHub::
 
@@ -115,10 +116,3 @@ Before you submit a pull request, check that it meets these guidelines:
 3. The pull request should work for Python 2.6 and 2.7. Check
    https://travis-ci.org/dkirkby/bossdata/pull_requests
    and make sure that the tests pass for all supported Python versions.
-
-Tips
-----
-
-To run a subset of tests::
-
-    $ python -m unittest tests.test_bossdata

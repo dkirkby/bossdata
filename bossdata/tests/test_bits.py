@@ -78,8 +78,10 @@ class TestDecode(object):
     def test_decode_non_strict(self):
         mask = bits.define_bitmask("MASK", "description", BIT0=0, BIT1=1, BIT4=4)
         assert bits.decode_bitmask(mask, (1 << 2), strict=False) == ('1<<2',)
-        assert bits.decode_bitmask(mask, mask.BIT0 | (1 << 2), strict=False) == ('BIT0', '1<<2',)
-        assert bits.decode_bitmask(mask, mask.BIT4 | (1 << 2), strict=False) == ('1<<2', 'BIT4',)
+        assert bits.decode_bitmask(
+            mask, mask.BIT0 | (1 << 2), strict=False) == ('BIT0', '1<<2',)
+        assert bits.decode_bitmask(
+            mask, mask.BIT4 | (1 << 2), strict=False) == ('1<<2', 'BIT4',)
 
 
 class TestFromText(object):
