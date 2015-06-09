@@ -71,6 +71,7 @@ class Manager(object):
 
         Raises:
             ValueError: local_path directory does not exist.
+            RuntimeError: HTTP request returned an error status.
         """
         if not local_path:
             raise ValueError('Missing required argument local_path.')
@@ -85,6 +86,8 @@ class Manager(object):
         # http://docs.python-requests.org/en/latest/user/advanced/#timeouts
         url = self.data_url + '/' + remote_path.lstrip('/')
         request = requests.get(url, stream=True, timeout=(3.05, 27))
+        if request.status_code != requests.codes.ok:
+            raise RuntimeError('HTTP request failed with status {0}.'.format(request.status_code))
 
         # Check that there is enough free space, if possible.
         progress_bar = None
