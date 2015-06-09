@@ -20,7 +20,9 @@ class Manager(object):
 
     The default mapping from remote to local filenames is to mirror the remote file hierarchy
     on the local disk.  The normal mode of operation is to establish the local root for the
-    mirror using the BOSS_LOCAL_ROOT environment variable.
+    mirror using the BOSS_LOCAL_ROOT environment variable. When the constructor is called
+    with no arguments, it will raise a ValueError if either BOSS_DATA_URL or BOSS_LOCAL_ROOT
+    is not set.
 
     Args:
         data_url(str): Base URL of all BOSS data files. A trailing / on the URL is optional. If
@@ -40,14 +42,16 @@ class Manager(object):
         if self.data_url is None:
             self.data_url = os.getenv('BOSS_DATA_URL')
         if self.data_url is None:
-            raise ValueError('No data URL specified (try setting BOSS_DATA_URL).')
+            raise ValueError('No data URL specified: try setting $BOSS_DATA_URL.')
         self.data_url = self.data_url.rstrip('/')
 
         self.local_root = local_root
         if self.local_root is None:
             self.local_root = os.getenv('BOSS_LOCAL_ROOT')
-        if self.local_root is not None and not os.path.isdir(self.local_root):
-            raise ValueError('Cannot use non-existent path {} as local root.'.format(
+            if self.local_root is None:
+                raise ValueError('No local root specified: try setting $BOSS_LOCAL_ROOT.')
+        if not os.path.isdir(self.local_root):
+            raise ValueError('Cannot use non-existent path "{}" as local root.'.format(
                 self.local_root))
 
     def download(self, remote_path, local_path, chunk_size=4096, progress_min_size=10):

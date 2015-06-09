@@ -43,8 +43,12 @@ def main():
         progress_bar = ProgressBar(widgets = [Percentage(),Bar()],maxval = num_obs).start()
         num_bytes = 0
 
-    finder = bossdata.path.Finder()
-    mirror = bossdata.remote.Manager()
+    try:
+        finder = bossdata.path.Finder()
+        mirror = bossdata.remote.Manager()
+    except ValueError,e:
+        print(e)
+        return -1
 
     # Fetch each observation serially.
     num_fetched = 0
