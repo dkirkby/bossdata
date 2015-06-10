@@ -112,11 +112,9 @@ Version Update Checklist
 5. Update the version value in `setup.py`
 6. Push changes to github, which will trigger a Travis integration test of the release-candidate branch.
 7. Merge the pull request.
+8. Submit the changes to pypi::
 
-PyPI Update Checklist
----------------------
-
-1.
+    python setup.py sdist bdist_wheel upload
 
 Pull Request Guidelines
 -----------------------
