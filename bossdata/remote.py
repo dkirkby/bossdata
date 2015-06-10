@@ -7,6 +7,7 @@
 from __future__ import division, print_function
 
 import os
+import stat
 import os.path
 import math
 
@@ -20,7 +21,9 @@ class Manager(object):
 
     The default mapping from remote to local filenames is to mirror the remote file hierarchy
     on the local disk.  The normal mode of operation is to establish the local root for the
-    mirror using the BOSS_LOCAL_ROOT environment variable.
+    mirror using the BOSS_LOCAL_ROOT environment variable. When the constructor is called
+    with no arguments, it will raise a ValueError if either BOSS_DATA_URL or BOSS_LOCAL_ROOT
+    is not set.
 
     Args:
         data_url(str): Base URL of all BOSS data files. A trailing / on the URL is optional. If
@@ -40,21 +43,30 @@ class Manager(object):
         if self.data_url is None:
             self.data_url = os.getenv('BOSS_DATA_URL')
         if self.data_url is None:
-            raise ValueError('No data URL specified (try setting BOSS_DATA_URL).')
+            raise ValueError('No data URL specified: try setting $BOSS_DATA_URL.')
         self.data_url = self.data_url.rstrip('/')
 
         self.local_root = local_root
         if self.local_root is None:
             self.local_root = os.getenv('BOSS_LOCAL_ROOT')
-        if self.local_root is not None and not os.path.isdir(self.local_root):
-            raise ValueError('Cannot use non-existent path {} as local root.'.format(
+            if self.local_root is None:
+                raise ValueError('No local root specified: try setting $BOSS_LOCAL_ROOT.')
+        if not os.path.isdir(self.local_root):
+            raise ValueError('Cannot use non-existent path "{}" as local root.'.format(
                 self.local_root))
 
     def download(self, remote_path, local_path, chunk_size=4096, progress_min_size=10):
         """Download a single BOSS data file.
 
         Downloads are streamed so that the memory requirements are independent of the
-        file size.
+        file size. During the download, the file is written to its final location but
+        with '.downloading' appended to the file name. This means than any download
+        that is interrupted or fails will normally not lead to an incomplete file
+        being returned by a subsequent call to :meth:`get`. Instead, the file will
+        be re-downloaded. Tere is no facility for resuming a previous partial download.
+        After a successful download, the file is renamed to its final location and
+        has its permission bits set to read only (to prevent accidental modifications
+        of files that are supposed to exactly mirror the remote file system).
 
         Args:
             remote_path(str): The full path to the remote file relative to the remote
@@ -71,6 +83,7 @@ class Manager(object):
 
         Raises:
             ValueError: local_path directory does not exist.
+            RuntimeError: HTTP request returned an error status.
         """
         if not local_path:
             raise ValueError('Missing required argument local_path.')
@@ -85,6 +98,9 @@ class Manager(object):
         # http://docs.python-requests.org/en/latest/user/advanced/#timeouts
         url = self.data_url + '/' + remote_path.lstrip('/')
         request = requests.get(url, stream=True, timeout=(3.05, 27))
+        if request.status_code != requests.codes.ok:
+            raise RuntimeError('HTTP request failed with status {0}.'.format(
+                request.status_code))
 
         # Check that there is enough free space, if possible.
         progress_bar = None
@@ -112,6 +128,8 @@ class Manager(object):
                 if progress_bar:
                     progress += 1
                     progress_bar.update(progress)
+        # Make the temporary file read only by anyone.
+        os.chmod(local_path + '.downloading', stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
         # Move the temporary file to its permanent location.
         os.rename(local_path + '.downloading', local_path)
         if progress_bar:

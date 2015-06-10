@@ -56,6 +56,10 @@ def main():
         help = 'Indicate pixels with invalid data using vertical lines.')
     parser.add_argument('--show-dispersion', action = 'store_true',
         help = 'Show the wavelength dispersion using the right-hand axis.')
+    parser.add_argument('--show-sky', action = 'store_true',
+        help = 'Show the subtracted sky flux instead of the object flux.')
+    parser.add_argument('--add-sky', action = 'store_true',
+        help = 'Add the subtracted sky to the object flux (overrides show-sky).')
     args = parser.parse_args()
 
     if args.exposure is None and args.camera is not 'both':
@@ -68,13 +72,16 @@ def main():
         pixel_quality_mask = bossdata.bits.bitmask_from_text(
             bossdata.bits.SPPIXMASK,args.allow_mask)
 
-    finder = bossdata.path.Finder()
+    try:
+        finder = bossdata.path.Finder()
+        mirror = bossdata.remote.Manager()
+    except ValueError as e:
+        print(e)
+        return -1
+
     remote_path = finder.get_spec_path(plate = args.plate,mjd = args.mjd,fiber = args.fiber,
         lite = (args.exposure is None))
-
-    mirror = bossdata.remote.Manager()
     local_path = mirror.get(remote_path)
-
     specfile = bossdata.spec.SpecFile(local_path)
 
     # Initialize the plot.
@@ -90,8 +97,9 @@ def main():
     # We will potentially plot two spectra.
     spectra = [ ]
     plot_colors = [ ]
+    data_args = dict(include_wdisp=args.show_dispersion, include_sky=args.show_sky or args.add_sky)
     if args.exposure is None:
-        spectra.append(specfile.get_valid_data(pixel_quality_mask=pixel_quality_mask))
+        spectra.append(specfile.get_valid_data(pixel_quality_mask=pixel_quality_mask, **data_args))
         plot_colors.append('black')
         if args.verbose:
             print('Showing coadd of {0:d} exposures:'.format(
@@ -102,13 +110,13 @@ def main():
             print('Showing exposure',specfile.exposure_sequence[args.exposure])
         if args.camera in ('blue','both'):
             spectra.append(specfile.get_valid_data(args.exposure,'b',
-                pixel_quality_mask=pixel_quality_mask))
+                pixel_quality_mask=pixel_quality_mask, **data_args))
             plot_colors.append('blue')
             if args.verbose:
                 print_mask_summary(specfile.get_pixel_mask(args.exposure,'b'))
         if args.camera in ('red','both'):
             spectra.append(specfile.get_valid_data(args.exposure,'r',
-                pixel_quality_mask=pixel_quality_mask))
+                pixel_quality_mask=pixel_quality_mask, **data_args))
             plot_colors.append('red')
             if args.verbose:
                 print_mask_summary(specfile.get_pixel_mask(args.exposure,'r'))
@@ -116,7 +124,13 @@ def main():
     wlen_min,wlen_max = 20000.,0.
     for data,plot_color in zip(spectra,plot_colors):
 
-        wlen,flux,dflux = data['wavelength'][:],data['flux'][:],data['dflux'][:]
+        wlen,dflux = data['wavelength'][:],data['dflux'][:]
+        if args.add_sky:
+            flux = data['sky'][:] + data['flux'][:]
+        elif args.show_sky:
+            flux = data['sky'][:]
+        else:
+            flux = data['flux'][:]
 
         if args.scatter:
             left_axis.scatter(wlen,flux,color=plot_color,marker='.',s=0.1)

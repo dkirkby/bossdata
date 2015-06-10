@@ -102,6 +102,27 @@ Ready to contribute? Here's how to set up `bossdata` for local development.
 
 7. Submit a pull request through the GitHub website.
 
+Version Update Checklist
+------------------------
+
+1. Start a new release candidate branch, e.g., 0.2.0rc
+2. Create a pull request on github for this branch (its ok that it doesn't have any new code yet).
+3. Iterate on changes.
+4. Add a brief description of the changes to `HISTORY.rst`
+5. Update the version value in `setup.py`
+6. Push changes to github, which will trigger a Travis integration test of the release-candidate branch.
+7. Merge the pull request.
+8. Update local master and tag the new version::
+
+    git fetch
+    git checkout master
+    git pull
+    git tag 0.2.0
+
+9. Submit the changes to pypi::
+
+    python setup.py sdist bdist_wheel upload
+
 Pull Request Guidelines
 -----------------------
 
