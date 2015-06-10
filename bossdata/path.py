@@ -14,11 +14,11 @@ class Finder(object):
     """Initialize a path finder object.
 
     When the constructor is called with no arguments, it will raise a ValueError if either
-    BOSS_SAS_ROOT or BOSS_REDUX_VERSION is not set.
+    BOSS_SAS_PATH or BOSS_REDUX_VERSION is not set.
 
     Args:
         sas_root(str): Location of the SAS root path to use, e.g., /sas/dr12. Will use the
-            value of the BOSS_SAS_ROOT environment variable if this is not set.
+            value of the BOSS_SAS_PATH environment variable if this is not set.
         redux_version(str): String tag specifying the BOSS spectro reduction version to use,
             e.g., v5_7_0. Will use the value of the BOSS_REDUX_VERSION environment variable
             if this is not set.
@@ -29,9 +29,9 @@ class Finder(object):
     """
     def __init__(self, sas_root=None, redux_version=None):
         if sas_root is None:
-            sas_root = os.getenv('BOSS_SAS_ROOT')
+            sas_root = os.getenv('BOSS_SAS_PATH')
         if sas_root is None:
-            raise ValueError('No SAS root specified: try setting $BOSS_SAS_ROOT.')
+            raise ValueError('No SAS root specified: try setting $BOSS_SAS_PATH.')
 
         if redux_version is None:
             redux_version = os.getenv('BOSS_REDUX_VERSION', None)
@@ -39,7 +39,7 @@ class Finder(object):
             raise ValueError('No redux version specifed: try setting $BOSS_REDUX_VERSION.')
 
         self.redux_version = redux_version
-        self.redux_base = os.path.join(sas_root, 'boss', 'spectro', 'redux', redux_version)
+        self.redux_base = os.path.join(sas_root, 'spectro', 'redux', redux_version)
 
     def get_plate_path(self, plate):
         """Get the path to the specified plate.

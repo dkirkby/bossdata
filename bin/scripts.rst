@@ -5,18 +5,18 @@ Before running any scripts, you will normally need to establish your local confi
 
 * BOSS_LOCAL_ROOT: The top-level directory where all downloaded data files will be locally mirrored. Make sure there is enough space here for the files you plan to use locally. You might want to exclude this directory from your backups since it can get large and can be easily recreated.
 * BOSS_DATA_URL: The top-level URL for downloading BOSS data. This should normally be `http://dr12.sdss3.org` for publicly accessible data.
-* BOSS_SAS_ROOT: This identifies the data release that you want to work with. This should normally be /sas/dr12, which corresponds to the final BOSS Data Release 12.
+* BOSS_SAS_PATH: This identifies the top-level path under SAS of the data you want to work with, and should normally begin with "/sas". For the final BOSS Data Release 12, use "/sas/dr12/boss".
 * BOSS_REDUX_VERSION: This is the pipeline reconstruction version that you want to work with. This should normally be either v5_7_0, which corresponds to the final processing of all BOSS data, or v5_7_2 for SEQUELS data.
 
 As a sanity check of your configuration, the following shell command::
 
-    echo $BOSS_DATA_URL/$BOSS_SAS_ROOT/boss/spectro/redux/$BOSS_REDUX_VERSION/
+    echo $BOSS_DATA_URL/$BOSS_SAS_PATH/boss/spectro/redux/$BOSS_REDUX_VERSION/
 
 should print a valid URL that displays a directory listing in any browser, without requiring any authentication. For bash users, the following lines added to your `~/.bashrc` file should be a good starting point::
 
     export BOSS_LOCAL_ROOT=...some suitable local path...
     export BOSS_DATA_URL=http://dr12.sdss3.org
-    export BOSS_SAS_ROOT=/sas/dr12
+    export BOSS_SAS_PATH=/sas/dr12/boss
     export BOSS_REDUX_VERSION=v5_7_0
 
 For complete documentation on the command-line options of any script use the `--help` option, for example::
