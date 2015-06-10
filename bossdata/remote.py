@@ -7,6 +7,7 @@
 from __future__ import division, print_function
 
 import os
+import stat
 import os.path
 import math
 
@@ -58,7 +59,14 @@ class Manager(object):
         """Download a single BOSS data file.
 
         Downloads are streamed so that the memory requirements are independent of the
-        file size.
+        file size. During the download, the file is written to its final location but
+        with '.downloading' appended to the file name. This means than any download
+        that is interrupted or fails will normally not lead to an incomplete file
+        being returned by a subsequent call to :meth:`get`. Instead, the file will
+        be re-downloaded. Tere is no facility for resuming a previous partial download.
+        After a successful download, the file is renamed to its final location and
+        has its permission bits set to read only (to prevent accidental modifications
+        of files that are supposed to exactly mirror the remote file system).
 
         Args:
             remote_path(str): The full path to the remote file relative to the remote
@@ -91,7 +99,8 @@ class Manager(object):
         url = self.data_url + '/' + remote_path.lstrip('/')
         request = requests.get(url, stream=True, timeout=(3.05, 27))
         if request.status_code != requests.codes.ok:
-            raise RuntimeError('HTTP request failed with status {0}.'.format(request.status_code))
+            raise RuntimeError('HTTP request failed with status {0}.'.format(
+                request.status_code))
 
         # Check that there is enough free space, if possible.
         progress_bar = None
@@ -119,6 +128,8 @@ class Manager(object):
                 if progress_bar:
                     progress += 1
                     progress_bar.update(progress)
+        # Make the temporary file read only by anyone.
+        os.chmod(local_path + '.downloading', stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
         # Move the temporary file to its permanent location.
         os.rename(local_path + '.downloading', local_path)
         if progress_bar:

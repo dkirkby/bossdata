@@ -104,7 +104,7 @@ class SpecFile(object):
             return hdu['mask'][:]
 
     def get_valid_data(self, exposure_index=None, camera=None, pixel_quality_mask=None,
-        include_wdisp=False, include_sky=False):
+                       include_wdisp=False, include_sky=False):
         """Get the valid for a specified exposure or the combined coadd.
 
         You will probably find yourself using this idiom often::
@@ -131,10 +131,10 @@ class SpecFile(object):
         Returns:
             numpy.ma.MaskedArray: Masked array of per-pixel records. Pixels with no valid data
                 are included but masked. The record for each pixel has at least the following
-                named fields: wavelength in Angstroms, flux and dflux in 1e-17 ergs/s/cm2/Angstrom.
-                Wavelength values are strictly increasing and dflux is calculated as ivar**-0.5
-                for pixels with valid data. Optional fields are wdisp in Angstroms and sky in
-                1e-17 ergs/s/cm2/Angstrom.
+                named fields: wavelength in Angstroms, flux and dflux in 1e-17
+                ergs/s/cm2/Angstrom. Wavelength values are strictly increasing and dflux is
+                calculated as ivar**-0.5 for pixels with valid data. Optional fields are
+                wdisp in Angstroms and sky in 1e-17 ergs/s/cm2/Angstrom.
         """
         # Look up the HDU for this spectrum and its pixel quality bitmap.
         if exposure_index is None:
@@ -157,7 +157,7 @@ class SpecFile(object):
         good_pixels = ~bad_pixels
 
         # Create and fill the unmasked structured array of data.
-        dtype = [('wavelength', np.float32),('flux', np.float32), ('dflux', np.float32)]
+        dtype = [('wavelength', np.float32), ('flux', np.float32), ('dflux', np.float32)]
         if include_wdisp:
             dtype.append(('wdisp', np.float32))
         if include_sky:
