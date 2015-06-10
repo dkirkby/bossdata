@@ -72,13 +72,16 @@ def main():
         pixel_quality_mask = bossdata.bits.bitmask_from_text(
             bossdata.bits.SPPIXMASK,args.allow_mask)
 
-    finder = bossdata.path.Finder()
+    try:
+        finder = bossdata.path.Finder()
+        mirror = bossdata.remote.Manager()
+    except ValueError as e:
+        print(e)
+        return -1
+
     remote_path = finder.get_spec_path(plate = args.plate,mjd = args.mjd,fiber = args.fiber,
         lite = (args.exposure is None))
-
-    mirror = bossdata.remote.Manager()
     local_path = mirror.get(remote_path)
-
     specfile = bossdata.spec.SpecFile(local_path)
 
     # Initialize the plot.

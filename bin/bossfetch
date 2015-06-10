@@ -46,7 +46,7 @@ def main():
     try:
         finder = bossdata.path.Finder()
         mirror = bossdata.remote.Manager()
-    except ValueError,e:
+    except ValueError as e:
         print(e)
         return -1
 

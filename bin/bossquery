@@ -37,7 +37,7 @@ def main():
     try:
         meta_db = bossdata.meta.Database(lite = not args.full)
         table = meta_db.select_all(args.what,args.where,max_rows = args.max_rows)
-    except (RuntimeError,ValueError),e:
+    except (RuntimeError,ValueError) as e:
         print(e)
         return -1
 
