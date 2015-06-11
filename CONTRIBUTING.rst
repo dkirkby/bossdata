@@ -118,6 +118,8 @@ Version Update Checklist
     git checkout master
     git pull
     git tag 0.2.0
+    git push --tags
+    git branch -d 0.2.0rc
 
 9. Submit the changes to pypi::
 
