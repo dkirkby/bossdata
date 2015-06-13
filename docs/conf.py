@@ -34,13 +34,17 @@ class Mock(MagicMock):
     def __div__(self, other):
         return Mock()
 
-# List all packages here that we import but that ReadTheDocs can safely ignore.
+# List all external packages (i.e., not part of the python standard library) here that
+# we import but that ReadTheDocs can safely ignore.
 # When a submodule is used, its parents also need to be listed here.
 MOCK_MODULES = [
     'requests',
     'progressbar',
     'astropy',
     'astropy.table',
+    'sqlite3',
+    'numpy',
+    'numpy.ma',
 ]
 if on_rtd:
     sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)

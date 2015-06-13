@@ -34,6 +34,8 @@ requirements = [
     'progressbar>=2.3',
     'astropy>=1.0.1',
     'fitsio>=0.9.7',
+    'numpy>=1.9.2',
+    'sqlite3>=2.6.0',
 ]
 
 test_requirements = [
@@ -42,7 +44,7 @@ test_requirements = [
 
 setup(
     name='bossdata',
-    version='0.2.0',
+    version='0.2.1',
     description='Tools to access SDSS BOSS data.',
     long_description=readme + '\n\n' + history,
     author='David Kirkby',

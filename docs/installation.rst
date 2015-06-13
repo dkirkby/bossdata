@@ -15,3 +15,5 @@ The following additional pacakges are used by bossdata and will be installed aut
  * progressbar
  * astropy
  * fitsio
+ * numpy
+ * sqlite3
