@@ -42,7 +42,6 @@ MOCK_MODULES = [
     'progressbar',
     'astropy',
     'astropy.table',
-    'sqlite3',
     'numpy',
     'numpy.ma',
 ]

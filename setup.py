@@ -35,7 +35,6 @@ requirements = [
     'astropy>=1.0.1',
     'fitsio>=0.9.7',
     'numpy>=1.9.2',
-    'sqlite3>=2.6.0',
 ]
 
 test_requirements = [
