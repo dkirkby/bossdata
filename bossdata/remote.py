@@ -126,19 +126,24 @@ class Manager(object):
 
         # Stream the request response binary content into a temporary file.
         progress = 0
-        with open(local_path + '.downloading', 'wb') as f:
-            for chunk in request.iter_content(chunk_size=chunk_size):
-                f.write(chunk)
-                if progress_bar:
-                    progress += 1
-                    progress_bar.update(progress)
-        # Make the temporary file read only by anyone.
-        os.chmod(local_path + '.downloading', stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
-        # Move the temporary file to its permanent location.
-        os.rename(local_path + '.downloading', local_path)
+        try:
+            with open(local_path + '.downloading', 'wb') as f:
+                for chunk in request.iter_content(chunk_size=chunk_size):
+                    f.write(chunk)
+                    if progress_bar:
+                        progress += 1
+                        progress_bar.update(progress)
+            # Make the temporary file read only by anyone.
+            os.chmod(local_path + '.downloading', stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
+            # Move the temporary file to its permanent location.
+            os.rename(local_path + '.downloading', local_path)
+        except requests.exceptions.RequestException as e:
+            raise RuntimeError('HTTP streaming failed: {}.'.format(str(e)))
+        except IOError as e:
+            raise RuntimeError('Streaming IO error: {}.'.format(str(e)))
+
         if progress_bar:
             progress_bar.finish()
-
         return local_path
 
     def local_path(self, remote_path):
