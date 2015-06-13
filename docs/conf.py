@@ -44,6 +44,7 @@ MOCK_MODULES = [
     'astropy.table',
     'numpy',
     'numpy.ma',
+    'fitsio',
 ]
 if on_rtd:
     sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
