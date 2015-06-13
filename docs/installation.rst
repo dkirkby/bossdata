@@ -2,9 +2,13 @@
 Installation
 ============
 
-At the command line::
+To install, use the command line::
 
     % pip install bossdata
+
+To upgrade to the latest version::
+
+    % pip install bossdata --upgrade
 
 Requirements
 ------------
