@@ -67,6 +67,10 @@ The `--verbose` option displays a progress bar showing the fraction of files alr
 
 Each data file download is streamed to a temporary files with `.downloading` appended to their name then renamed to remove this extension after the download completes normally. If a download is interrupted or fails for some reason, the partially downloaded file will remain in the local mirror.  Re-running a `bossfetch` command will automatically re-download any partially downloaded file.
 
+By default, downloading is split between two parallel subprocesses but you can change this with the
+`--nproc` option.  For downloading "lite" files, using more than 2 subprocesses will probably not
+improve the overall performance.
+
 .. _bossplot:
 
 bossplot
