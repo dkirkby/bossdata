@@ -43,7 +43,7 @@ test_requirements = [
 
 setup(
     name='bossdata',
-    version='0.2.1',
+    version='0.2.2',
     description='Tools to access SDSS BOSS data.',
     long_description=readme + '\n\n' + history,
     author='David Kirkby',
