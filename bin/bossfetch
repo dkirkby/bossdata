@@ -66,6 +66,9 @@ def main():
         remote_paths.append(finder.get_spec_path(
             plate = row['PLATE'],mjd = row['MJD'],fiber = row['FIBER'],lite = not args.full))
     num_files = len(remote_paths)
+    if num_files == 0:
+        print('No files to fetch.')
+        return 0
 
     if args.verbose:
         print('Fetching {:d} files...'.format(num_files))
@@ -75,6 +78,8 @@ def main():
     response_queue = multiprocessing.Queue()
 
     # Launch subprocesses to handle subsets of remote paths.
+    if num_files < args.nproc:
+        args.nproc = num_files
     chunk_size = (len(remote_paths) + args.nproc - 1)//args.nproc
     processes = []
     for i in range(args.nproc):
