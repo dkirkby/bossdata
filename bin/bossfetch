@@ -52,11 +52,6 @@ def main():
     else:
         input_format = None
     table = astropy.table.Table.read(args.observations,format=input_format)
-    num_obs = len(table)
-
-    if args.verbose:
-        print('Fetching {:d} observations...'.format(num_obs))
-        progress_bar = ProgressBar(widgets=[Percentage(), Bar()], maxval=num_obs).start()
 
     try:
         finder = bossdata.path.Finder()
@@ -70,6 +65,11 @@ def main():
     for row in table:
         remote_paths.append(finder.get_spec_path(
             plate = row['PLATE'],mjd = row['MJD'],fiber = row['FIBER'],lite = not args.full))
+    num_files = len(remote_paths)
+
+    if args.verbose:
+        print('Fetching {:d} files...'.format(num_files))
+        progress_bar = ProgressBar(widgets=[Percentage(), Bar()], maxval=num_files).start()
 
     # Initialize a queue that subprocesses use to signal their progress.
     response_queue = multiprocessing.Queue()
@@ -117,9 +117,9 @@ def main():
         print('Processed {:.1f} Mb of data files for {:d} observations.'.format(
             num_bytes/float(1<<20),num_fetched))
 
-    if num_fetched != num_obs:
-        print('WARNING: {:d} of {:d} observations were not fetched.'.format(
-            num_obs-num_fetched,num_obs),'Re-run the command after any problems are fixed.')
+    if num_fetched != num_files:
+        print('WARNING: {:d} of {:d} files were not fetched.'.format(
+            num_files-num_fetched,num_files),'Re-run the command after any problems are fixed.')
 
 if __name__ == '__main__':
     main()
