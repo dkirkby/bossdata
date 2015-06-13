@@ -105,23 +105,36 @@ Ready to contribute? Here's how to set up `bossdata` for local development.
 Version Update Checklist
 ------------------------
 
-1. Start a new release candidate branch, e.g., 0.2.0rc
-2. Create a pull request on github for this branch (its ok that it doesn't have any new code yet).
-3. Iterate on changes.
-4. Add a brief description of the changes to `HISTORY.rst`
-5. Update the version value in `setup.py`
-6. Push changes to github, which will trigger a Travis integration test of the release-candidate branch.
-7. Merge the pull request.
-8. Update local master and tag the new version::
+1. Start a new release candidate branch, e.g., 0.2.1rc
+2. Update the `version` in `setup.py`
+3. Update the `__version__` in `__init__.py`
+4. Create a pull request on github for this branch (its ok that it doesn't have any new code yet).
+5. Iterate on changes.
+6. Add a brief description of the changes to `HISTORY.rst`
+7. Push changes to github, which will trigger a Travis integration test of the release-candidate branch.
+8. Merge the pull request.
+9. Update local master and tag the new version::
 
     git fetch
     git checkout master
     git pull
-    git tag 0.2.0
+    git tag 0.2.1
+    git push --tags
+    git branch -d 0.2.1rc
 
 9. Submit the changes to pypi::
 
     python setup.py sdist bdist_wheel upload
+
+New External Depencency Checklist
+------------------------
+
+These steps are not required for modules that are included with the python standard library.
+
+1. Add to `MOCK_MODULES` in `docs/conf.py`.
+2. Add the actual version being used to `requirements.txt`
+3. Add to the `requirements` list in `setup.py`
+4. Mention in `docs/installation.rst`
 
 Pull Request Guidelines
 -----------------------

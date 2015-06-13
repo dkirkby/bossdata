@@ -97,10 +97,13 @@ class Manager(object):
         # Prepare the HTTP request. For details on the timeout parameter see
         # http://docs.python-requests.org/en/latest/user/advanced/#timeouts
         url = self.data_url + '/' + remote_path.lstrip('/')
-        request = requests.get(url, stream=True, timeout=(3.05, 27))
-        if request.status_code != requests.codes.ok:
-            raise RuntimeError('HTTP request failed with status {0}.'.format(
-                request.status_code))
+        try:
+            request = requests.get(url, stream=True, timeout=(3.05, 27))
+            if request.status_code != requests.codes.ok:
+                raise RuntimeError('HTTP request returned error code {0}.'.format(
+                    request.status_code))
+        except requests.exceptions.RequestException as e:
+            raise RuntimeError('HTTP request failed: {}.'.format(str(e)))
 
         # Check that there is enough free space, if possible.
         progress_bar = None
@@ -177,5 +180,12 @@ class Manager(object):
         # Create local directories as needed.
         parent_path = os.path.dirname(local_path)
         if not os.path.exists(parent_path):
-            os.makedirs(parent_path)
+            # There is a potential race condition if other processes are running.
+            # In python >= 3.2 we would use the new exist_ok=True option, but here we instead
+            # silently ignore a "FileExists" OSError (errno 17).
+            try:
+                os.makedirs(parent_path)
+            except OSError as e:
+                if e.errno != 17:
+                    raise e
         return self.download(remote_path, local_path)
