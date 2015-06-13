@@ -63,6 +63,34 @@ class Finder(object):
 
         return os.path.join(self.redux_base, str(plate))
 
+    def get_plate_plan_path(self, plate, mjd, combined=True):
+        """Get the path to the specified plate plan file.
+
+        A combined plan may span several nearby MJDs, in which case the last MJD is
+        the one used to identify the plan.
+
+        Args:
+            plate(int): Plate number, which must be positive.
+            mjd(int): Modified Julian date of the observation, which must be > 3500.
+            combined(bool): Specifies the combined plan, which spans all MJDs
+                associated with a coadd, but does not include calibration frames
+                (arcs,flats) for a specific MJD.
+
+        Returns:
+            str: Full path to the requested plan file.
+
+        Raises:
+            ValueError: Invalid plate or mjd inputs.
+        """
+        if mjd <= 3500:
+            raise ValueError('Invalid mjd ({}) must be >= 3500.'.format(mjd))
+
+        if combined:
+            filename = 'spPlancomb-{plate:4d}-{mjd:5d}.par'.format(plate=plate, mjd=mjd)
+        else:
+            filename = 'spPlan2d-{plate:4d}-{mjd:5d}.par'.format(plate=plate, mjd=mjd)
+        return os.path.join(self.get_plate_path(plate),filename)
+
     def get_sp_all_path(self, lite=True):
         """Get the location of the metadata summary file.
 
@@ -106,7 +134,7 @@ class Finder(object):
             str: Full path to the spectrum file for the specified observation.
 
         Raises:
-            ValueError: Invalid plate number must be > 0.
+            ValueError: Invalid plate, mjd or fiber inputs.
         """
         if plate < 0:
             raise ValueError('Invalid plate number ({}) must be > 0.'.format(plate))

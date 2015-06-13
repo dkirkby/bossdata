@@ -10,6 +10,7 @@ Submodules
     bossdata.meta
     bossdata.spec
     bossdata.bits
+    bossdata.plate
 
 Module contents
 ---------------

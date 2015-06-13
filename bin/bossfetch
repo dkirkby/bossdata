@@ -18,6 +18,7 @@ import astropy.table
 
 import bossdata.path
 import bossdata.remote
+import bossdata.plate
 
 def fetch(remote_paths,response_queue):
     mirror = bossdata.remote.Manager()
@@ -37,12 +38,20 @@ def main():
         help='File containing PLATE,MJD,FIBER columns that specify the observations to fetch.')
     parser.add_argument('--full', action='store_true',
         help='Fetch the full version of each spectrum data file.')
+    parser.add_argument('--frame', action='store_true',
+        help='Fetch spFrame files for each plate instead of individual spectra.')
+    parser.add_argument('--cframe', action='store_true',
+        help='Fetch spCFrame files for each plate instead of individual spectra.')
     parser.add_argument('--nproc', type=int, default=2,
         help='Number of subprocesses to use to parallelize downloads (1-5).')
     args = parser.parse_args()
 
     if args.nproc < 1 or args.nproc > 5:
         print('nproc must be 1-5.')
+        return -1
+
+    if args.full and (args.frame or args.cframe):
+        print('Option --full is not compatible with --frame or --cframe.')
         return -1
 
     # Read the list of observations to fetch.
@@ -61,10 +70,23 @@ def main():
         return -1
 
     # Build a list of remote paths from the input plate-mjd-fiber values.
-    remote_paths = []
-    for row in table:
-        remote_paths.append(finder.get_spec_path(
-            plate = row['PLATE'],mjd = row['MJD'],fiber = row['FIBER'],lite = not args.full))
+    remote_paths = set()
+    if args.frame or args.cframe:
+        plates = {}
+        for row in table:
+            tag = (row['PLATE'], row['MJD'])
+            if tag in plates:
+                plan = plates[tag]
+            else:
+                plan_remote_path = finder.get_plate_plan_path(plate=row['PLATE'], mjd=row['MJD'])
+                plan_local_path = mirror.get(plan_remote_path)
+                plan = bossdata.plate.Plan(plan_local_path)
+                plates[tag] = plan
+    else:
+        for row in table:
+            remote_paths.add(finder.get_spec_path(
+                plate=row['PLATE'], mjd=row['MJD'], fiber=row['FIBER'], lite=not args.full))
+    remote_paths = list(remote_paths)
     num_files = len(remote_paths)
     if num_files == 0:
         print('No files to fetch.')
