@@ -107,7 +107,8 @@ Version Update Checklist
 
 1. Start a new release candidate branch, e.g::
 
-    git checkout -t -b 0.2.1rc
+    git checkout -b 0.2.1rc
+    git push -u origin 0.2.1rc
 
 2. Update the `version` in `setup.py`
 3. Update the `__version__` in `__init__.py`

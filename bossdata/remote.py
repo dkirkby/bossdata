@@ -76,7 +76,8 @@ class Manager(object):
             chunk_size(int): Size of data chunks to use for the streaming download. Larger
                 sizes will potentially download faster but also require more memory.
             progress_min_size(int): Display a text progress bar for any downloads whose size
-                in Mb exceeds this value.
+                in Mb exceeds this value. No progress bar will ever be shown if this
+                value is None.
 
         Returns:
             str: Absolute local path of the downloaded file.
@@ -117,7 +118,7 @@ class Manager(object):
             if file_size + 1 * Mb > free_space:
                 raise RuntimeError('File size ({:.1f}Mb) exceeds free space for {}.'.format(
                     file_size / (1.0 * Mb), local_path))
-            if file_size > progress_min_size * Mb:
+            if progress_min_size is not None and file_size > progress_min_size * Mb:
                 label = os.path.basename(local_path)
                 progress_bar = ProgressBar(
                     widgets=[label, ' ', Percentage(), Bar(), ' ', FileTransferSpeed()],
@@ -161,13 +162,16 @@ class Manager(object):
             raise RuntimeError('No local root specified (try setting BOSS_LOCAL_ROOT).')
         return os.path.abspath(os.path.join(self.local_root, remote_path.lstrip('/')))
 
-    def get(self, remote_path):
+    def get(self, remote_path, progress_min_size=10):
         """Get a local file that mirrors a remote file, downloading the file if necessary.
 
         Args:
             remote_path(str): The full path to the remote file relative to the remote
                 server root, which should normally be obtained using :class:`bossdata.path`
                 methods.
+            progress_min_size(int): Display a text progress bar for any downloads whose size
+                in Mb exceeds this value. No progress bar will ever be shown if this
+                value is None.
 
         Returns:
             str: Absolute local path of the local file that mirrors the remote file.
