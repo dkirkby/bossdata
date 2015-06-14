@@ -18,9 +18,9 @@ import bossdata.remote
 import bossdata.spec
 import bossdata.bits
 
-def print_mask_summary(mask_values):
+def print_mask_summary(label, mask_values):
     if np.any(mask_values):
-        print('Pixel mask summary:')
+        print('{0} pixel mask summary:'.format(label))
         bit_summary = bossdata.bits.summarize_bitmask_values(
             bossdata.bits.SPPIXMASK,mask_values)
         for bit_name,bit_count in bit_summary.iteritems():
@@ -83,6 +83,9 @@ def main():
         lite = (args.exposure is None))
     local_path = mirror.get(remote_path)
     specfile = bossdata.spec.SpecFile(local_path)
+    if args.verbose:
+        print('Exposure summary:')
+        print(specfile.exposure_table)
 
     # Initialize the plot.
     figure = plt.figure(figsize=(12,8))
@@ -102,24 +105,23 @@ def main():
         spectra.append(specfile.get_valid_data(pixel_quality_mask=pixel_quality_mask, **data_args))
         plot_colors.append('black')
         if args.verbose:
-            print('Showing coadd of {0:d} exposures:'.format(
-                len(specfile.exposure_sequence)),(','.join(specfile.exposure_sequence)))
-            print_mask_summary(specfile.get_pixel_mask())
+            print('Showing coadd of {0:d} exposures:'.format(specfile.num_exposures))
+            print_mask_summary('Coadd (AND)',specfile.get_pixel_mask())
     else:
         if args.verbose:
-            print('Showing exposure',specfile.exposure_sequence[args.exposure])
+            print('Showing exposure {0}.'.format(specfile.exposure_table[args.exposure]['exp']))
         if args.camera in ('blue','both'):
-            spectra.append(specfile.get_valid_data(args.exposure,'b',
+            spectra.append(specfile.get_valid_data(args.exposure,'blue',
                 pixel_quality_mask=pixel_quality_mask, **data_args))
             plot_colors.append('blue')
             if args.verbose:
-                print_mask_summary(specfile.get_pixel_mask(args.exposure,'b'))
+                print_mask_summary('Blue',specfile.get_pixel_mask(args.exposure,'blue'))
         if args.camera in ('red','both'):
-            spectra.append(specfile.get_valid_data(args.exposure,'r',
+            spectra.append(specfile.get_valid_data(args.exposure,'red',
                 pixel_quality_mask=pixel_quality_mask, **data_args))
             plot_colors.append('red')
             if args.verbose:
-                print_mask_summary(specfile.get_pixel_mask(args.exposure,'r'))
+                print_mask_summary('Red',specfile.get_pixel_mask(args.exposure,'red'))
 
     wlen_min,wlen_max = 20000.,0.
     for data,plot_color in zip(spectra,plot_colors):
