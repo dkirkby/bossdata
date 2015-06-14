@@ -36,7 +36,10 @@ class Plan(object):
                 # Validate the exposure names, which should all have the form
                 # [prefix]-[cc]-[eeeeeeee].fits
                 exposure_id = set()
+                specs = set()
                 for name in tokens[7:11]:
+                    if name == 'UNKNOWN':
+                        continue
                     name,ext = os.path.splitext(name)
                     if ext != '.fits':
                         raise RuntimeError('Unexpected extension {} in {}.'.format(ext,path))
@@ -48,11 +51,12 @@ class Plan(object):
                     if fields[1] not in ('r1','b1','r2','b2'):
                         raise RuntimeError('Unexpected camera {} in {}.'.format(fields[1],path))
                     exposure_id.add(int(fields[2]))
+                    specs.add(fields[1])
                 if len(exposure_id) != 1:
                     raise RuntimeError('Multiple exposure IDs: {}.'.format(exposure_id))
                 # Build an exposure record to save.
                 exposure = dict(
-                    MJD=tokens[2], EXPTIME=float(tokens[5]), EXPID=exposure_id.pop())
+                    MJD=tokens[2], EXPTIME=float(tokens[5]), EXPID=exposure_id.pop(), SPECS=specs)
                 # Record this exposure under the appropriate category.
                 flavor = tokens[4]
                 if flavor in self.exposures:
@@ -83,7 +87,8 @@ class Plan(object):
                 identifies the spectrograph (one of b1,r1,b2,r2) and [eeeeeeee] is the
                 zero-padded exposure number. For calibrated exposures, [prefix] is
                 "spCFrame" and [ext] is "fits".  For un-calibrated exposures, [prefix]
-                is "spFrame" and [ext] is "fits.gz".
+                is "spFrame" and [ext] is "fits.gz". Returns None if the name is
+                unknown for this camera and fiber combination.
 
         Raises:
             ValueError: one of the inputs is invalid.
@@ -101,7 +106,10 @@ class Plan(object):
         else:
             index = '2'
         spectrograph = camera[0] + index
-        exposure_id = self.exposures['science'][sequence_number]['EXPID']
+        exposure_info = self.exposures['science'][sequence_number]
+        if spectrograph not in exposure_info['SPECS']:
+            return None
+        exposure_id = exposure_info['EXPID']
         if calibrated:
             prefix, ext = 'spCFrame','fits'
         else:

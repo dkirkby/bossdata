@@ -74,6 +74,11 @@ def main():
         remote_paths = set()
         if args.frame or args.cframe:
             plans = {}
+            calibrated = {}
+            if args.frame:
+                calibrated['spFrame'] = False
+            if args.cframe:
+                calibrated['spCFrame'] = True
             for row in table:
                 tag = (row['PLATE'], row['MJD'])
                 if tag in plans:
@@ -87,22 +92,27 @@ def main():
                     plans[tag] = plan
                 plate_path = finder.get_plate_path(plate=row['PLATE'])
                 for i in range(plan.num_science_exposures):
-                    if args.frame:
-                        remote_paths.add(os.path.join(plate_path,
-                            plan.get_exposure_name(i, 'blue', row['FIBER'], calibrated=True)))
-                        remote_paths.add(os.path.join(plate_path,
-                            plan.get_exposure_name(i, 'red', row['FIBER'], calibrated=True)))
-                    if args.cframe:
-                        remote_paths.add(os.path.join(plate_path,
-                            plan.get_exposure_name(i, 'blue', row['FIBER'], calibrated=False)))
-                        remote_paths.add(os.path.join(plate_path,
-                            plan.get_exposure_name(i, 'red', row['FIBER'], calibrated=False)))
+                    for name,cal in calibrated.iteritems():
+                        blue_path = plan.get_exposure_name(
+                            i, 'blue', row['FIBER'], calibrated=cal)
+                        if blue_path is None:
+                            print('Missing blue {0} for {1}-{2}-{3}.'.format(
+                                name, row['PLATE'], row['MJD'], row['FIBER']))
+                        else:
+                            remote_paths.add(os.path.join(plate_path, blue_path))
+                        red_path = plan.get_exposure_name(
+                            i, 'red', row['FIBER'], calibrated=cal)
+                        if red_path is None:
+                            print('Missing red {0} for {1}-{2}-{3}.'.format(
+                                name, row['PLATE'], row['MJD'], row['FIBER']))
+                        else:
+                            remote_paths.add(os.path.join(plate_path, red_path))
         else:
             for row in table:
                 remote_paths.add(finder.get_spec_path(
                     plate=row['PLATE'], mjd=row['MJD'], fiber=row['FIBER'], lite=not args.full))
     except RuntimeError as e:
-        print('Error while preparing paths: {}.'.format(str(e)))
+        print('Error while preparing paths: {}'.format(str(e)))
         return -1
     remote_paths = list(remote_paths)
     num_files = len(remote_paths)
