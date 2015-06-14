@@ -154,7 +154,7 @@ def main():
             process.terminate()
 
     if args.verbose:
-        print('Processed {:.1f} Mb for {:d} files.'.format(
+        print('Fetched {:.1f} Mb for {:d} files.'.format(
             num_bytes/float(1<<20),num_fetched))
 
     if num_fetched != num_files:
