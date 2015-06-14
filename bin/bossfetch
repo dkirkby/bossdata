@@ -70,35 +70,40 @@ def main():
         return -1
 
     # Build a list of remote paths from the input plate-mjd-fiber values.
-    remote_paths = set()
-    if args.frame or args.cframe:
-        plans = {}
-        for row in table:
-            tag = (row['PLATE'], row['MJD'])
-            if tag in plans:
-                plan = plans[tag]
-            else:
-                plan_remote_path = finder.get_plate_plan_path(plate=row['PLATE'], mjd=row['MJD'])
-                # The next line downloads the small plan file, if necessary.
-                plan_local_path = mirror.get(plan_remote_path)
-                plan = bossdata.plate.Plan(plan_local_path)
-                plans[tag] = plan
-            plate_path = finder.get_plate_path(plate=row['PLATE'])
-            for i in range(plan.num_science_exposures):
-                if args.frame:
-                    remote_paths.add(os.path.join(plate_path,
-                        plan.get_exposure_name(i, 'blue', row['FIBER'], calibrated=True)))
-                    remote_paths.add(os.path.join(plate_path,
-                        plan.get_exposure_name(i, 'red', row['FIBER'], calibrated=True)))
-                if args.cframe:
-                    remote_paths.add(os.path.join(plate_path,
-                        plan.get_exposure_name(i, 'blue', row['FIBER'], calibrated=False)))
-                    remote_paths.add(os.path.join(plate_path,
-                        plan.get_exposure_name(i, 'red', row['FIBER'], calibrated=False)))
-    else:
-        for row in table:
-            remote_paths.add(finder.get_spec_path(
-                plate=row['PLATE'], mjd=row['MJD'], fiber=row['FIBER'], lite=not args.full))
+    try:
+        remote_paths = set()
+        if args.frame or args.cframe:
+            plans = {}
+            for row in table:
+                tag = (row['PLATE'], row['MJD'])
+                if tag in plans:
+                    plan = plans[tag]
+                else:
+                    plan_remote_path = finder.get_plate_plan_path(
+                        plate=row['PLATE'], mjd=row['MJD'])
+                    # The next line downloads the small plan file, if necessary.
+                    plan_local_path = mirror.get(plan_remote_path)
+                    plan = bossdata.plate.Plan(plan_local_path)
+                    plans[tag] = plan
+                plate_path = finder.get_plate_path(plate=row['PLATE'])
+                for i in range(plan.num_science_exposures):
+                    if args.frame:
+                        remote_paths.add(os.path.join(plate_path,
+                            plan.get_exposure_name(i, 'blue', row['FIBER'], calibrated=True)))
+                        remote_paths.add(os.path.join(plate_path,
+                            plan.get_exposure_name(i, 'red', row['FIBER'], calibrated=True)))
+                    if args.cframe:
+                        remote_paths.add(os.path.join(plate_path,
+                            plan.get_exposure_name(i, 'blue', row['FIBER'], calibrated=False)))
+                        remote_paths.add(os.path.join(plate_path,
+                            plan.get_exposure_name(i, 'red', row['FIBER'], calibrated=False)))
+        else:
+            for row in table:
+                remote_paths.add(finder.get_spec_path(
+                    plate=row['PLATE'], mjd=row['MJD'], fiber=row['FIBER'], lite=not args.full))
+    except RuntimeError as e:
+        print('Error while preparing paths: {}.'.format(str(e)))
+        return -1
     remote_paths = list(remote_paths)
     num_files = len(remote_paths)
     if num_files == 0:

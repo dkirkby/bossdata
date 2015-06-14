@@ -71,11 +71,14 @@ Ready to contribute? Here's how to set up `bossdata` for local development.
 
     $ git clone git@github.com:your_name_here/bossdata.git
 
-3. Install your local copy into a virtualenv. Assuming you have virtualenvwrapper installed, this is how you set up your fork for local development::
+3. Install your local copy for local development::
 
-    $ mkvirtualenv bossdata
     $ cd bossdata/
-    $ python setup.py develop
+    $ python setup.py develop --user
+
+To later revert back to a system-installed version of the package, un-install your development install using::
+
+    $ python setup.py develop --user --uninstall
 
 4. Create a branch for local development::
 

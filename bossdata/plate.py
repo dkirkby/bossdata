@@ -39,14 +39,14 @@ class Plan(object):
                 for name in tokens[7:11]:
                     name,ext = os.path.splitext(name)
                     if ext != '.fits':
-                        raise RuntimeError('Unexpected extension {}.'.format(ext))
+                        raise RuntimeError('Unexpected extension {} in {}.'.format(ext,name))
                     fields = name.split('-')
                     if len(fields) != 3:
                         raise RuntimeError('Unexpected exposure name {}.'.format(name))
                     if fields[0] not in ('sdR','spFrame'):
-                        raise RuntimeError('Unexpected prefix {}.'.format(fields[0]))
+                        raise RuntimeError('Unexpected prefix {} in {}.'.format(fields[0],name))
                     if fields[1] not in ('r1','b1','r2','b2'):
-                        raise RuntimeError('Unexpected camera {}.'.format(fields[1]))
+                        raise RuntimeError('Unexpected camera {} in {}.'.format(fields[1],name))
                     exposure_id.add(int(fields[2]))
                 if len(exposure_id) != 1:
                     raise RuntimeError('Multiple exposure IDs: {}.'.format(exposure_id))
