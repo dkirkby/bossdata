@@ -76,7 +76,8 @@ class Manager(object):
             chunk_size(int): Size of data chunks to use for the streaming download. Larger
                 sizes will potentially download faster but also require more memory.
             progress_min_size(int): Display a text progress bar for any downloads whose size
-                in Mb exceeds this value.
+                in Mb exceeds this value. No progress bar will ever be shown if this
+                value is None.
 
         Returns:
             str: Absolute local path of the downloaded file.
@@ -117,7 +118,7 @@ class Manager(object):
             if file_size + 1 * Mb > free_space:
                 raise RuntimeError('File size ({:.1f}Mb) exceeds free space for {}.'.format(
                     file_size / (1.0 * Mb), local_path))
-            if file_size > progress_min_size * Mb:
+            if progress_min_size is not None and file_size > progress_min_size * Mb:
                 label = os.path.basename(local_path)
                 progress_bar = ProgressBar(
                     widgets=[label, ' ', Percentage(), Bar(), ' ', FileTransferSpeed()],
@@ -125,19 +126,24 @@ class Manager(object):
 
         # Stream the request response binary content into a temporary file.
         progress = 0
-        with open(local_path + '.downloading', 'wb') as f:
-            for chunk in request.iter_content(chunk_size=chunk_size):
-                f.write(chunk)
-                if progress_bar:
-                    progress += 1
-                    progress_bar.update(progress)
-        # Make the temporary file read only by anyone.
-        os.chmod(local_path + '.downloading', stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
-        # Move the temporary file to its permanent location.
-        os.rename(local_path + '.downloading', local_path)
+        try:
+            with open(local_path + '.downloading', 'wb') as f:
+                for chunk in request.iter_content(chunk_size=chunk_size):
+                    f.write(chunk)
+                    if progress_bar:
+                        progress += 1
+                        progress_bar.update(progress)
+            # Make the temporary file read only by anyone.
+            os.chmod(local_path + '.downloading', stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
+            # Move the temporary file to its permanent location.
+            os.rename(local_path + '.downloading', local_path)
+        except requests.exceptions.RequestException as e:
+            raise RuntimeError('HTTP streaming failed: {}.'.format(str(e)))
+        except IOError as e:
+            raise RuntimeError('Streaming IO error: {}.'.format(str(e)))
+
         if progress_bar:
             progress_bar.finish()
-
         return local_path
 
     def local_path(self, remote_path):
@@ -161,20 +167,33 @@ class Manager(object):
             raise RuntimeError('No local root specified (try setting BOSS_LOCAL_ROOT).')
         return os.path.abspath(os.path.join(self.local_root, remote_path.lstrip('/')))
 
-    def get(self, remote_path):
+    def get(self, remote_path, progress_min_size=10, auto_download=True):
         """Get a local file that mirrors a remote file, downloading the file if necessary.
 
         Args:
             remote_path(str): The full path to the remote file relative to the remote
                 server root, which should normally be obtained using :class:`bossdata.path`
                 methods.
+            progress_min_size(int): Display a text progress bar for any downloads whose size
+                in Mb exceeds this value. No progress bar will ever be shown if this
+                value is None.
+            auto_download(bool): Automatically download the file to the local mirror
+                if necessary. If this is not set and the file is not already mirrored,
+                then a RuntimeError occurs.
 
         Returns:
             str: Absolute local path of the local file that mirrors the remote file.
+
+        Raises:
+            RuntimeError: File is not already mirrored and auto_download is False.
         """
         local_path = self.local_path(remote_path)
         if os.path.isfile(local_path):
             return local_path
+
+        if not auto_download:
+            raise RuntimeError('File not in mirror and auto_download is False: {}'.format(
+                remote_path))
 
         # If we get here, the file is not available locally so try to download it now.
         # Create local directories as needed.
@@ -188,4 +207,4 @@ class Manager(object):
             except OSError as e:
                 if e.errno != 17:
                     raise e
-        return self.download(remote_path, local_path)
+        return self.download(remote_path, local_path, progress_min_size=progress_min_size)

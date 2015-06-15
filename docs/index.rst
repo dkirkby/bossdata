@@ -13,8 +13,9 @@ Contents:
 
    readme
    installation
-   usage
+   overview
    scripts
+   usage
    contributing
    authors
    history

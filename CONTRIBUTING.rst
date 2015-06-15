@@ -71,11 +71,14 @@ Ready to contribute? Here's how to set up `bossdata` for local development.
 
     $ git clone git@github.com:your_name_here/bossdata.git
 
-3. Install your local copy into a virtualenv. Assuming you have virtualenvwrapper installed, this is how you set up your fork for local development::
+3. Install your local copy for local development::
 
-    $ mkvirtualenv bossdata
     $ cd bossdata/
-    $ python setup.py develop
+    $ python setup.py develop --user
+
+To later revert back to a system-installed version of the package, un-install your development install using::
+
+    $ python setup.py develop --user --uninstall
 
 4. Create a branch for local development::
 
@@ -105,7 +108,11 @@ Ready to contribute? Here's how to set up `bossdata` for local development.
 Version Update Checklist
 ------------------------
 
-1. Start a new release candidate branch, e.g., 0.2.1rc
+1. Start a new release candidate branch, e.g::
+
+    git checkout -b 0.2.1rc
+    git push -u origin 0.2.1rc
+
 2. Update the `version` in `setup.py`
 3. Update the `__version__` in `__init__.py`
 4. Create a pull request on github for this branch (its ok that it doesn't have any new code yet).
@@ -113,7 +120,7 @@ Version Update Checklist
 6. Add a brief description of the changes to `HISTORY.rst`
 7. Push changes to github, which will trigger a Travis integration test of the release-candidate branch.
 8. Merge the pull request.
-9. Update local master and tag the new version::
+9. Update local master and tag the new version, e.g::
 
     git fetch
     git checkout master

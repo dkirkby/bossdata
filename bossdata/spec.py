@@ -13,6 +13,8 @@ import numpy.ma
 
 import fitsio
 
+import astropy.table
+
 
 class SpecFile(object):
     """ A BOSS spec file containing summary data for a single target.
@@ -38,44 +40,67 @@ class SpecFile(object):
         self.header = self.hdulist[0].read_header()
         # Look up the available exposures.
         self.num_exposures = self.header['NEXP']
-        self.exposures = {}
+        exposures = {}
         expid_pattern = re.compile('([br][12])-([0-9]{8})-([0-9]{8})-([0-9]{8})')
         for i in range(self.num_exposures):
-            # The order of arc and flat might be swapped here.
-            spec_id, exp_num, arc_num, flat_num = expid_pattern.match(
+            spec_id, exp_num, flat_num, arc_num = expid_pattern.match(
                 self.header['EXPID{0:02d}'.format(i + 1)]).groups()
-            exposure_info = self.exposures.get(exp_num, {})
-            exposure_info[spec_id[0]] = dict(
-                hdu_index=4 + i, spec_id=spec_id, arc_num=arc_num, flat_num=flat_num)
-            self.exposures[exp_num] = exposure_info
-        # Reconstruct the time-ordered exposure sequence.
-        self.exposure_sequence = sorted(self.exposures.keys())
+            if exp_num in exposures:
+                info = exposures[exp_num]
+                # Check that the arc and flat exposure numbers agree.
+                if info['arc'] != arc_num:
+                    raise RuntimeError(
+                        'Found different red/blue arcs for expid {}.'.format(exp_num))
+                if info['flat'] != flat_num:
+                    raise RuntimeError(
+                        'Found different red/blue flats for expid {}.'.format(exp_num))
+            else:
+                # Initialize a new record with zeros to indicate a missing camera.
+                info = dict(arc=arc_num, flat=flat_num, bhdu=0, rhdu=0)
+            # Record the HDU number for this camera.
+            info[spec_id[0]+'hdu'] = 4 + i
+            exposures[exp_num] = info
+        # Build a table of exposure info sorted by exposure number.
+        self.exposure_table = astropy.table.Table(
+            names=('exp', 'arc', 'flat', 'bhdu', 'rhdu'),
+            dtype=('i4', 'i4', 'i4', 'i4', 'i4'))
+        for exp_num in sorted(exposures.keys()):
+            info = exposures[exp_num]
+            self.exposure_table.add_row(
+                (exp_num, info['arc'], info['flat'], info['bhdu'], info['rhdu']))
 
-    def get_exposure_info(self, exposure_index=None, camera=None):
-        """Retrieve information about one exposure.
+    def get_exposure_hdu(self, exposure_index=None, camera=None):
+        """Lookup the HDU for one exposure.
 
         Args:
             exposure_index(int): Individual exposure to use, specified as a sequence number
                 starting from zero, for the first exposure, and increasing up to
-                `self.num_exposures-1`. Uses the co-added spectrum when the value is None.
-            camera(str): Which camera to use. Must be either 'b' (blue) or 'r' (red) unless
-                exposure_index is None, in which case this argument is ignored.
+                `self.num_exposures-1`.
+            camera(str): Which camera to use. Must be either 'blue' or 'red'.
 
         Returns:
-            dict: A dictionary with keys (hdu_index,spec_id,arc_num,flat_num) of the
-                information encoded in our EXPnn header keywords.
+            hdu: The HDU containing data for the requested exposure.
 
         Raises:
             ValueError: Invalid exposure_index or camera.
+            RuntimeError: This camera is missing for this exposure.
         """
         if exposure_index < 0 or exposure_index >= self.num_exposures:
             raise ValueError('exposure index must be in the range 0-{0}'.format(
                 self.num_exposures - 1))
-        if camera not in ('b', 'r'):
-            raise ValueError('camera must be either "b" or "r".')
+        if camera not in ('blue', 'red'):
+            raise ValueError('camera must be either "blue" or "red".')
 
-        exposure_num = self.exposure_sequence[exposure_index]
-        return self.exposures[exposure_num][camera]
+        info = self.exposure_table[exposure_index]
+        if camera == 'blue':
+            hdu_index = info['bhdu']
+        else:
+            hdu_index = info['rhdu']
+        if hdu_index == 0:
+            raise RuntimeError('Missing {0} camera for exposure {1}.'.format(
+                camera, info['exp']))
+
+        return self.hdulist[hdu_index]
 
     def get_pixel_mask(self, exposure_index=None, camera=None):
         """Get the pixel mask for a specified exposure or the combined coadd.
@@ -99,13 +124,12 @@ class SpecFile(object):
             hdu = self.hdulist[1]
             return hdu['and_mask'][:]
         else:
-            exposure_info = self.get_exposure_info(exposure_index, camera)
-            hdu = self.hdulist[exposure_info['hdu_index']]
+            hdu = self.get_exposure_hdu(exposure_index, camera)
             return hdu['mask'][:]
 
     def get_valid_data(self, exposure_index=None, camera=None, pixel_quality_mask=None,
                        include_wdisp=False, include_sky=False):
-        """Get the valid for a specified exposure or the combined coadd.
+        """Get the valid data for a specified exposure or the combined coadd.
 
         You will probably find yourself using this idiom often::
 
@@ -141,8 +165,7 @@ class SpecFile(object):
             hdu = self.hdulist[1]
             pixel_bits = hdu['and_mask'][:]
         else:
-            exposure_info = self.get_exposure_info(exposure_index, camera)
-            hdu = self.hdulist[exposure_info['hdu_index']]
+            hdu = self.get_exposure_hdu(exposure_index, camera)
             pixel_bits = hdu['mask'][:]
         num_pixels = len(pixel_bits)
 

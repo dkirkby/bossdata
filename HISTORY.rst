@@ -20,3 +20,9 @@ History
 ------------------
 
 * Fix issues #9 #12 #13.
+
+0.2.2 (2015-06-15)
+------------------
+
+* Really fix issues #9 #13.
+* Add support for finding and fetching spFrame and spCFrame files (#17).
