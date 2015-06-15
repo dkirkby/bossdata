@@ -28,7 +28,7 @@ class Plan(object):
     def __init__(self, path):
         self.plate = None
         self.exposures = {}
-        with open(path,'r') as f:
+        with open(path, 'r') as f:
             for line in f:
                 if not line.startswith('SPEXP'):
                     continue
@@ -38,7 +38,7 @@ class Plan(object):
                     self.plate = tokens[1]
                 elif self.plate != tokens[1]:
                     raise RuntimeError('Internal error: unexpected plate {0} in {1}.'.format(
-                        tokens[1],path))
+                        tokens[1], path))
                 # Validate the exposure names, which should all have the form
                 # [prefix]-[cc]-[eeeeeeee].fits
                 exposure_id = set()
@@ -46,23 +46,27 @@ class Plan(object):
                 for name in tokens[7:11]:
                     if name == 'UNKNOWN':
                         continue
-                    name,ext = os.path.splitext(name)
+                    name, ext = os.path.splitext(name)
                     if ext != '.fits':
-                        raise RuntimeError('Unexpected extension {} in {}.'.format(ext,path))
+                        raise RuntimeError('Unexpected extension {} in {}.'.format(ext, path))
                     fields = name.split('-')
                     if len(fields) != 3:
-                        raise RuntimeError('Unexpected exposure name {} in {}.'.format(name,path))
-                    if fields[0] not in ('sdR','spFrame'):
-                        raise RuntimeError('Unexpected prefix {} in {}.'.format(fields[0],path))
-                    if fields[1] not in ('r1','b1','r2','b2'):
-                        raise RuntimeError('Unexpected camera {} in {}.'.format(fields[1],path))
+                        raise RuntimeError(
+                            'Unexpected exposure name {} in {}.'.format(name, path))
+                    if fields[0] not in ('sdR', 'spFrame'):
+                        raise RuntimeError(
+                            'Unexpected prefix {} in {}.'.format(fields[0], path))
+                    if fields[1] not in ('r1', 'b1', 'r2', 'b2'):
+                        raise RuntimeError(
+                            'Unexpected camera {} in {}.'.format(fields[1], path))
                     exposure_id.add(int(fields[2]))
                     specs.add(fields[1])
                 if len(exposure_id) != 1:
                     raise RuntimeError('Multiple exposure IDs: {}.'.format(exposure_id))
                 # Build an exposure record to save.
                 exposure = dict(
-                    MJD=tokens[2], EXPTIME=float(tokens[5]), EXPID=exposure_id.pop(), SPECS=specs)
+                    MJD=tokens[2], EXPTIME=float(tokens[5]),
+                    EXPID=exposure_id.pop(), SPECS=specs)
                 # Record this exposure under the appropriate category.
                 flavor = tokens[4]
                 if flavor in self.exposures:
@@ -105,7 +109,7 @@ class Plan(object):
                 sequence_number, self.num_science_exposures))
         if fiber < 1 or fiber > 1000:
             raise ValueError('Invalid fiber ({}) must be 1-1000.'.format(fiber))
-        if camera not in ('blue','red'):
+        if camera not in ('blue', 'red'):
             raise ValueError('Invalid camera ({}) must be blue or red.'.format(camera))
 
         if fiber <= 500:
@@ -118,11 +122,12 @@ class Plan(object):
             return None
         exposure_id = exposure_info['EXPID']
         if calibrated:
-            prefix, ext = 'spCFrame','fits'
+            prefix, ext = 'spCFrame', 'fits'
         else:
-            prefix, ext = 'spFrame','fits.gz'
+            prefix, ext = 'spFrame', 'fits.gz'
 
-        return '{0}-{1}-{2:08d}.{3}'.format(prefix,spectrograph,exposure_id,ext)
+        return '{0}-{1}-{2:08d}.{3}'.format(prefix, spectrograph, exposure_id, ext)
+
 
 class Frame(object):
     """A single-exposure frame of one BOSS spectrograph.
@@ -144,7 +149,7 @@ class Frame(object):
             un-calibrated (spFrame) frame file.
     """
     def __init__(self, path, index, calibrated):
-        if index not in (1,2):
+        if index not in (1, 2):
             raise ValueError('Invalid index ({}) should be 1 or 2.'.format(index))
         self.index = index
         self.calibrated = calibrated
@@ -216,9 +221,9 @@ class Frame(object):
             include_sky: Include a sky flux column in the returned data.
 
         Returns:
-            numpy.ma.MaskedArray: Masked array of shape (nfibers,npixels). Pixels with no valid data
-                are included but masked. The record for each pixel has at least the following
-                named fields: wavelength in Angstroms, flux and dflux in 1e-17
+            numpy.ma.MaskedArray: Masked array of shape (nfibers,npixels). Pixels with no
+                valid data are included but masked. The record for each pixel has at least
+                the following named fields: wavelength in Angstroms, flux and dflux in 1e-17
                 ergs/s/cm2/Angstrom. Wavelength values are strictly increasing and dflux is
                 calculated as ivar**-0.5 for pixels with valid data. Optional fields are
                 wdisp in Angstroms and sky in 1e-17 ergs/s/cm2/Angstrom.
@@ -256,7 +261,7 @@ class Frame(object):
             dtype.append(('wdisp', np.float32))
         if include_sky:
             dtype.append(('sky', np.float32))
-        data = np.empty((num_fibers,num_pixels), dtype=dtype)
+        data = np.empty((num_fibers, num_pixels), dtype=dtype)
         if self.calibrated:
             data['wavelength'][:] = np.power(10.0, self.loglam[offsets])
         else:

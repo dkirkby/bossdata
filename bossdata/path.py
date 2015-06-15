@@ -89,7 +89,7 @@ class Finder(object):
             filename = 'spPlancomb-{plate:4d}-{mjd:5d}.par'.format(plate=plate, mjd=mjd)
         else:
             filename = 'spPlan2d-{plate:4d}-{mjd:5d}.par'.format(plate=plate, mjd=mjd)
-        return os.path.join(self.get_plate_path(plate),filename)
+        return os.path.join(self.get_plate_path(plate), filename)
 
     def get_sp_all_path(self, lite=True):
         """Get the location of the metadata summary file.

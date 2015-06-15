@@ -56,18 +56,18 @@ class SpecFile(object):
                         'Found different red/blue flats for expid {}.'.format(exp_num))
             else:
                 # Initialize a new record with zeros to indicate a missing camera.
-                info = dict(arc=arc_num,flat=flat_num,bhdu=0,rhdu=0)
+                info = dict(arc=arc_num, flat=flat_num, bhdu=0, rhdu=0)
             # Record the HDU number for this camera.
             info[spec_id[0]+'hdu'] = 4 + i
             exposures[exp_num] = info
         # Build a table of exposure info sorted by exposure number.
         self.exposure_table = astropy.table.Table(
-            names=('exp','arc','flat','bhdu','rhdu'),
-            dtype=('i4','i4','i4','i4','i4'))
+            names=('exp', 'arc', 'flat', 'bhdu', 'rhdu'),
+            dtype=('i4', 'i4', 'i4', 'i4', 'i4'))
         for exp_num in sorted(exposures.keys()):
             info = exposures[exp_num]
             self.exposure_table.add_row(
-                (exp_num,info['arc'],info['flat'],info['bhdu'],info['rhdu']))
+                (exp_num, info['arc'], info['flat'], info['bhdu'], info['rhdu']))
 
     def get_exposure_hdu(self, exposure_index=None, camera=None):
         """Lookup the HDU for one exposure.
@@ -98,7 +98,7 @@ class SpecFile(object):
             hdu_index = info['rhdu']
         if hdu_index == 0:
             raise RuntimeError('Missing {0} camera for exposure {1}.'.format(
-                camera,info['exp']))
+                camera, info['exp']))
 
         return self.hdulist[hdu_index]
 
