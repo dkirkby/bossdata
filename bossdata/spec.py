@@ -67,7 +67,7 @@ class SpecFile(object):
         for exp_num in sorted(exposures.keys()):
             info = exposures[exp_num]
             self.exposure_table.add_row(
-                (exp_num,info['arc'],info['flat'],info['rhdu'],info['bhdu']))
+                (exp_num,info['arc'],info['flat'],info['bhdu'],info['rhdu']))
 
     def get_exposure_hdu(self, exposure_index=None, camera=None):
         """Lookup the HDU for one exposure.
