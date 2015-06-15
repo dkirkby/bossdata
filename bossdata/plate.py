@@ -8,6 +8,9 @@ from __future__ import division, print_function
 
 import os.path
 
+import fitsio
+
+
 class Plan(object):
     """The plan file for configuring the BOSS pipeline to combine exposures of a single plate.
 
@@ -116,3 +119,68 @@ class Plan(object):
             prefix, ext = 'spFrame','fits.gz'
 
         return '{0}-{1}-{2:08d}.{3}'.format(prefix,spectrograph,exposure_id,ext)
+
+class Frame(object):
+    """A single-exposure frame of one BOSS spectrograph.
+
+    This class supports both types of frame data files: the uncalibrated spFrame and
+    the calibrated spCFrame. The corresponding data models are documented at:
+
+    http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spFrame.html
+    http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spCFrame.html
+
+    Args:
+        path(str): Local path of the frame FITS file to use.  This should normally be obtained
+            via :meth:`Plan.get_exposure_name` and can be automatically mirrored
+            via :meth:`bossdata.remote.Manager.get` or using the :ref:`bossfetch` script. The
+            file is opened in read-only mode so you do not need write privileges.
+        index(int): Identifies if this is the first (1) or second (2) spectrograph, which
+            determines whether it has spectra for fibers 1-500 or 501-1000.
+    """
+    def __init__(self, path, index):
+        if index not in (1,2):
+            raise ValueError('Invalid index ({}) should be 1 or 2.'.format(index))
+        self.index = index
+        self.hdulist = fitsio.FITS(path, mode=fitsio.READONLY)
+        self.masks = None
+
+    def get_fiber_offsets(self, fiber):
+        """Convert fiber numbers to array offsets.
+
+        Args:
+            fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000.  All fibers must
+                be in the appropriate range 1-500 or 501-1000 for this frame's spectograph.
+                Fibers do not need to be sorted and repetitions are ok.
+
+        Returns:
+            numpy.ndarray: Numpy array of offsets 0-499.
+
+        Raises:
+            ValueError: Fiber number is out of the valid range for this spectrograph.
+        """
+        offset = fiber - 500*(index+1) - 1
+        if np.any((offset < 0) | (offset > 499)):
+            raise ValueError('Fiber number out of range for this spectrograph.')
+        return offset
+
+    def get_pixel_masks(self, fibers):
+        """Get the pixel masks for specified fibers.
+
+        The entire mask is returned for each fiber, including any pixels with zero
+        inverse variance.
+
+        Args:
+            fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000.  All fibers must
+                be in the appropriate range 1-500 or 501-1000 for this frame's spectograph.
+                Fibers do not need to be sorted and repetitions are ok.
+
+        Returns:
+            numpy.ndarray: Integer numpy array of shape (nfibers,npixels) where (i,j)
+                encodes the mask bits defined in :attr:`bossdata.bits.SPPIXMASK` (see also
+                http://www.sdss3.org/dr10/algorithms/bitmask_sppixmask.php) for pixel-j
+                of the fiber with index fibers[i].
+        """
+        offsets = self.get_fiber_offsets(fibers)
+        if self.masks is None:
+            self.masks = self.hdulist[2].read()
+        return self.masks[offsets]
