@@ -101,7 +101,7 @@ def main():
             if red_name is None:
                 print('Red camera data not available.')
                 return -1
-            frames['red'] = bossdata.plate.Frame(
+            frames['red'] = bossdata.plate.FrameFile(
                 mirror.get(os.path.join(frame_path, red_name)),
                 index=1 + (args.fiber-1)//500, calibrated=args.cframe)
         if args.camera in ('blue','both'):
@@ -110,7 +110,7 @@ def main():
             if blue_name is None:
                 print('Blue camera data not available.')
                 return -1
-            frames['blue'] = bossdata.plate.Frame(
+            frames['blue'] = bossdata.plate.FrameFile(
                 mirror.get(os.path.join(frame_path, blue_name)),
                 index=1 + (args.fiber-1)//500, calibrated=args.cframe)
     else:

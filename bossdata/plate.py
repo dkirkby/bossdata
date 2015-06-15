@@ -129,8 +129,8 @@ class Plan(object):
         return '{0}-{1}-{2:08d}.{3}'.format(prefix, spectrograph, exposure_id, ext)
 
 
-class Frame(object):
-    """A single-exposure frame of one BOSS spectrograph.
+class FrameFile(object):
+    """A BOSS frame file containing a single exposure of one spectrograph (500 fibers).
 
     This class supports both types of frame data files: the uncalibrated spFrame and
     the calibrated spCFrame. The corresponding data models are documented at:
