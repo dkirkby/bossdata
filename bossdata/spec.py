@@ -129,7 +129,7 @@ class SpecFile(object):
 
     def get_valid_data(self, exposure_index=None, camera=None, pixel_quality_mask=None,
                        include_wdisp=False, include_sky=False):
-        """Get the valid for a specified exposure or the combined coadd.
+        """Get the valid data for a specified exposure or the combined coadd.
 
         You will probably find yourself using this idiom often::
 
