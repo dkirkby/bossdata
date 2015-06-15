@@ -167,7 +167,7 @@ class Manager(object):
             raise RuntimeError('No local root specified (try setting BOSS_LOCAL_ROOT).')
         return os.path.abspath(os.path.join(self.local_root, remote_path.lstrip('/')))
 
-    def get(self, remote_path, progress_min_size=10):
+    def get(self, remote_path, progress_min_size=10, auto_download=True):
         """Get a local file that mirrors a remote file, downloading the file if necessary.
 
         Args:
@@ -177,13 +177,23 @@ class Manager(object):
             progress_min_size(int): Display a text progress bar for any downloads whose size
                 in Mb exceeds this value. No progress bar will ever be shown if this
                 value is None.
+            auto_download(bool): Automatically download the file to the local mirror
+                if necessary. If this is not set and the file is not already mirrored,
+                then a RuntimeError occurs.
 
         Returns:
             str: Absolute local path of the local file that mirrors the remote file.
+
+        Raises:
+            RuntimeError: File is not already mirrored and auto_download is False.
         """
         local_path = self.local_path(remote_path)
         if os.path.isfile(local_path):
             return local_path
+
+        if not auto_download:
+            raise RuntimeError('File not in mirror and auto_download is False: {}'.format(
+                remote_path))
 
         # If we get here, the file is not available locally so try to download it now.
         # Create local directories as needed.
