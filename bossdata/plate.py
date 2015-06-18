@@ -129,6 +129,19 @@ class Plan(object):
         return '{0}-{1}-{2:08d}.{3}'.format(prefix, spectrograph, exposure_id, ext)
 
 
+class TraceSet(object):
+    """Wavelength trace set interpolating function.
+    """
+    def __init__(self, hdu):
+        data = hdu.read()
+        if data.shape != (1,):
+            raise ValueError('TraceSet HDU has unexpected shape {}.'.format(data.shape))
+        data = data[0]
+        if data['FUNC'] != 'legendre':
+            raise ValueError('TraceSet has unexpected FUNC "{}"'.format(data['FUNC']))
+        print(data.dtype)
+
+
 class FrameFile(object):
     """A BOSS frame file containing a single exposure of one spectrograph (500 fibers).
 
@@ -241,7 +254,10 @@ class FrameFile(object):
         if self.ivar is None:
             self.ivar = self.hdulist[1].read()
         if self.loglam is None:
-            self.loglam = self.hdulist[3].read()
+            if self.calibrated:
+                self.loglam = self.hdulist[3].read()
+            else:
+                trace_set = TraceSet(self.hdulist[3])
         if self.flux is None:
             self.flux = self.hdulist[0].read()
         if include_wdisp and self.wdisp is None:
