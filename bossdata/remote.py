@@ -2,6 +2,21 @@
 # Licensed under a MIT style license - see LICENSE.rst
 
 """Download BOSS data files from a remote server.
+
+The remote module is responsible for downloading data files into a local filesystem
+using a directory layout that mirrors the remote data source.  Most scripts will
+create a single :class:`Manager` object using the default constructor for this
+purpose::
+
+    import bossdata.remote
+    mirror = bossdata.remote.Manager()
+
+This mirror object is configured by the `$BOSS_DATA_URL` and `$BOSS_LOCAL_ROOT`
+environment variables and no other modules uses these variables, except through a
+a :class:`Manager` object. :class:`Manager` objects have no knowledge of how
+data files are organized or named: use the :mod:`bossdata.path` module to
+build the paths of frequently used data files. See :doc:`/usage` for recommendations
+on using the :mod:`bossdata.path` and :mod:`bossdata.remote` modules together.
 """
 
 from __future__ import division, print_function

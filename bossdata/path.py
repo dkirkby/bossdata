@@ -2,6 +2,20 @@
 # Licensed under a MIT style license - see LICENSE.rst
 
 """Generate paths to BOSS data files.
+
+The path module provides convenience methods for building the paths of frequently used
+data files.  Most scripts will create a single :class:`Finder` object using the default
+constructor for this purpose::
+
+    import bossdata.path
+    finder = bossdata.path.Finder()
+
+This finder object is configured by the `$BOSS_SAS_PATH` and `$BOSS_REDUX_VERSION`
+environment variables and no other modules uses these variables, except through a
+a :class:`Finder` object.  :class:`Finder` objects never interact with any local or
+remote filesystems: use the :mod:`bossdata.remote` module to download data files
+and access them locally. See :doc:`/usage` for recommendations
+on using the :mod:`bossdata.path` and :mod:`bossdata.remote` modules together.
 """
 
 from __future__ import division, print_function
