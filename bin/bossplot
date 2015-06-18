@@ -53,8 +53,9 @@ def main():
         help = 'Plot the spectrum from an uncalibrated spFrame file.')
     parser.add_argument('--cframe', action='store_true',
         help = 'Plot the spectrum from a calibrated spCFrame file.')
-    parser.add_argument('--save-plot', type = str, default = None, metavar = 'FILE',
-        help = 'File name to save the generated plot to.')
+    parser.add_argument('--save-plot', type=str, default=None, const='', nargs='?', metavar='FILE',
+        help = ('Save the generated plot to specified name ' +
+            '(uses bossplot-{plate}-{mjd}-{fiber}.png if name omitted).'))
     parser.add_argument('--no-display', action = 'store_true',
         help = 'Do not display the image on screen (useful for batch processing).')
     parser.add_argument('--scatter', action = 'store_true',
@@ -215,8 +216,14 @@ def main():
     # The x-axis limits are reset by the twinx() function so we set them here.
     plt.xlim(wlen_min,wlen_max)
 
-    if args.save_plot:
-        figure.savefig(args.save_plot)
+    if args.save_plot is not None:
+        save_name = args.save_plot
+        if save_name == '':
+            save_name = 'bossplot-{plate}-{mjd}-{fiber}.png'.format(
+                plate=args.plate, mjd=args.mjd, fiber=args.fiber)
+        figure.savefig(save_name)
+        if args.verbose:
+            print('Saved plot to {}'.format(save_name))
     if not args.no_display:
         plt.show()
     plt.close()
