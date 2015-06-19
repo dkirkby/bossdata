@@ -10,6 +10,7 @@ import os.path
 
 import numpy as np
 import numpy.ma
+import numpy.polynomial.legendre
 
 import fitsio
 
@@ -131,6 +132,28 @@ class Plan(object):
 
 class TraceSet(object):
     """Wavelength trace set interpolating function.
+
+    This implementation is based on the original SDSS IDL code:
+    https://trac.sdss3.org/browser/repo/idlutils/trunk/pro/trace/traceset2xy.pro
+
+    Note that red and blue CCDs are handled differently, as described
+    [here](https://trac.sdss.org/ticket/880)::
+
+        The plan is to switch from 1-phase to 2-phase readout on
+        the red CCDs in summer 2010. This will effectively make
+        the pixels more uniform, and the flat-fields much better.
+
+        A problem introduced will be that the central two rows will
+        each be taller by 1/6 pix. That will flat-field, but there
+        will be a discontinuity of 1/3 pix across this point.
+        Technically, the PSF will also be different for those pixels,
+        and the resulting resolution function.
+
+    Args:
+        hdu: fitsio HDU containing the trace set data as a binary table.
+
+    Raises:
+        ValueError: Unable to initialize a trace set with this HDU.
     """
     def __init__(self, hdu):
         data = hdu.read()
@@ -138,9 +161,52 @@ class TraceSet(object):
             raise ValueError('TraceSet HDU has unexpected shape {}.'.format(data.shape))
         data = data[0]
         if data['FUNC'] != 'legendre':
-            raise ValueError('TraceSet has unexpected FUNC "{}"'.format(data['FUNC']))
-        print(data.dtype)
+            raise ValueError('TraceSet uses unsupported FUNC "{}"'.format(data['FUNC']))
 
+        # Are we including a jump for the 2-phase readout?
+        if 'XJUMPVAL' in hdu.get_colnames():
+            self.has_jump = True
+            self.xjump_lo = data['XJUMPLO']
+            self.xjump_hi = data['XJUMPHI']
+            self.xjump_val = data['XJUMPVAL']
+        else:
+            self.has_jump = False
+
+        coef_dims = data['COEFF'].shape
+        ncoef = coef_dims[0]
+        if len(coef_dims) > 1:
+            self.ntrace = coef_dims[1]
+            self.coefs = data['COEFF']
+        else:
+            self.ntrace = 1
+            self.coefs = data['COEFF'][:,np.newaxis]
+
+        xmin, xmax = round(data['XMIN']), round(data['XMAX'])
+        self.xmid = 0.5 * (xmin + xmax)
+        self.xrange = xmax - xmin
+        self.nx = int(self.xrange + 1)
+
+        # Prepare the default xpos used by get_xy()
+        one_trace = xmin + np.arange(self.nx)
+        self.default_xpos = np.tile(one_trace, (self.ntrace, 1))
+
+    def get_xy(self, ignore_jump=False, xpos=None):
+        """
+        """
+        if xpos is None:
+            xpos = self.default_xpos
+        ypos = np.zeros_like(xpos)
+        for i in range(self.ntrace):
+            x = np.copy(xpos[i])
+            if self.has_jump and not ignore_jump:
+                t = (x - self.xjump_lo)/(self.xjump_hi - self.xjump_lo)
+                below = x < self.xjump_hi
+                above = x >= self.xjump_lo
+                jump_frac = 1.0*(~above) + t*(below & above)
+                x += jump_frac*self.xjump_val
+            xvec = 2 * (x - self.xmid) / self.xrange
+            ypos[i] = numpy.polynomial.legendre.legval(xvec, self.coefs[i])
+        return xpos,ypos
 
 class FrameFile(object):
     """A BOSS frame file containing a single exposure of one spectrograph (500 fibers).
@@ -258,6 +324,8 @@ class FrameFile(object):
                 self.loglam = self.hdulist[3].read()
             else:
                 trace_set = TraceSet(self.hdulist[3])
+                xpos,ypos = trace_set.get_xy()
+                print('ypos.shape',ypos.shape)
         if self.flux is None:
             self.flux = self.hdulist[0].read()
         if include_wdisp and self.wdisp is None:
