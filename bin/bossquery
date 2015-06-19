@@ -33,7 +33,7 @@ def main():
     parser.add_argument('--no-clobber', action = 'store_true',
         help = 'Do not overwrite any existing save file with the same name.')
     parser.add_argument('--sort', type = str, default = None, metavar = 'SORT',
-        help = 'Sort; follows SQL syntaxt, columns listed in order of sort priority, DESC optionally specified to reverse order.')
+        help = 'Sort; follows SQL syntax, columns listed in order of sort priority, DESC optionally specified to reverse order.')
     args = parser.parse_args()
 
     try:

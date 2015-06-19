@@ -6,8 +6,7 @@
 
 from __future__ import division, print_function
 
-import datetime
-
+import sys
 import os
 import os.path
 import gzip
@@ -17,7 +16,7 @@ import numpy as np
 import astropy.table
 import fitsio
 
-from progressbar import ProgressBar, Percentage, Bar
+from progressbar import ProgressBar, Percentage, Bar, FormatLabel
 
 import bossdata.path
 import bossdata.remote
@@ -101,16 +100,15 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
             to be a gzipped ASCII data file.
         db_path(str): Local path where the corresponding sqlite3 database will be written.
     """
-    
-    #parameters controlling how parse/inserts are chunked
-    chunk_size_str = os.getenv('BOSS_CHUNK_SIZE')
-    chunk_size = 50000
-    if chunk_size_str is not None:
-        chunk_size = int(chunk_size_str)
-    #Ars using ascii.fixed_width_two_line format, but still have to specify
-    #skipping the first two lines when reading by chunks.
-    init_position = 2 
-    position=init_position    
+
+    # Hardcode to what I think is (quite) conservative value; smaller == slower.
+    # At 50k see memory peak ~2 GB, incldes holding ~750 MB of source in memory.
+    chunk_size = 20000
+
+    # Using ascii.fixed_width_two_line format, but still have to specify
+    # skipping the first two lines when reading by chunks.
+    init_position = 2
+    position = init_position
 
     '''
     Things that have been tried RE: speeding this up to no (or very little) effect:
@@ -123,20 +121,20 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
         and variations
     3.)  Explicitly setting transactions (which fails with an error, as this is
         being done implicitly)
-        
+
     Currently, the time split for each chunk of rows is about 12/58 : parsing/inserting
     '''
-    
+
     # Read the database into memory.
     if verbose:
-        print('Initializing the lite database...')      
-    
+        print('Initializing the lite database...')
+
     with gzip.open(sp_all_path, mode='r') as f:
         table = astropy.table.Table.read(f, data_start=position,
                                          data_end=position+chunk_size,
                                          format='ascii.fixed_width_two_line',
                                          guess=False)
-        
+
         # Create a new database file.
         rules = {}
         for i in range(5):
@@ -150,13 +148,20 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
 
         # Insert rows into the database.
         sql = 'INSERT INTO meta VALUES ({values})'.format(values=','.join('?' * num_cols))
+
+        if verbose:
+            # Don't know final count, can't do percentage, bar, etc. Display work done instead
+            widgets = [FormatLabel('Processed: %(value)d lines (in: %(elapsed)s)')]
+            progress_bar = ProgressBar(widgets=widgets, maxval=sys.maxint).start()
+
         while len(table) > 0:
             cursor.executemany(sql, table)
-            
-            if verbose:
-                print(position+chunk_size-init_position, "rows @", datetime.datetime.now())
-            
+
             position += chunk_size
+
+            if verbose:
+                progress_bar.update(position-init_position)
+
             table = astropy.table.Table.read(f, data_start=position,
                                              data_end=position+chunk_size,
                                              format='ascii.fixed_width_two_line',
@@ -241,7 +246,7 @@ class Database(object):
             finder = bossdata.path.Finder()
         if mirror is None:
             mirror = bossdata.remote.Manager()
-            
+
         # Get the local name of the metadata source file and the corresponding SQL
         # database name.
         remote_path = finder.get_sp_all_path(lite=lite)
