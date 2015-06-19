@@ -32,11 +32,13 @@ def main():
         help = 'Save results to the specified file, whose extension determines the format.')
     parser.add_argument('--no-clobber', action = 'store_true',
         help = 'Do not overwrite any existing save file with the same name.')
+    parser.add_argument('--sort', type = str, default = None, metavar = 'SORT',
+        help = 'Sort; follows SQL syntaxt, columns listed in order of sort priority, DESC optionally specified to reverse order.')
     args = parser.parse_args()
 
     try:
         meta_db = bossdata.meta.Database(lite = not args.full)
-        table = meta_db.select_all(args.what,args.where,max_rows = args.max_rows)
+        table = meta_db.select_all(args.what,args.where,args.sort,max_rows = args.max_rows)
     except (RuntimeError,ValueError) as e:
         print(e)
         return -1
