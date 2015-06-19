@@ -147,6 +147,7 @@ def main():
             for remote_path in remote_paths:
                 f.write(remote_path+'\n')
         print('Saved {0} remote file names to {1}.'.format(num_files,args.save))
+        return 0
 
     if args.dry_run:
         return 0
