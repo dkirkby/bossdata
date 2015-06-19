@@ -130,7 +130,7 @@ Version Update Checklist
     python setup.py sdist bdist_wheel upload
 
 New External Depencency Checklist
-------------------------
+---------------------------------
 
 These steps are not required for modules that are included with the python standard library.
 
