@@ -30,9 +30,23 @@ bossquery
 
 Query the meta data for BOSS observations. For example::
 
-    bossquery --what PLATE,MJD,FIBER,PLUG_RA,PLUG_DEC,Z --where 'OBJTYPE="QSO"' --save qso.dat
+    bossquery --what PLATE,MJD,FIBER,PLUG_RA,PLUG_DEC,Z --where 'OBJTYPE="QSO"' --sort Z --save qso.dat
 
-The save option supports `many different output formats <http://astropy.readthedocs.org/en/latest/io/unified.html#built-in-table-readers-writers>`_ that are automatically selected based on the file extension.  In addition, this program automatically maps the `.dat` and `.txt` extensions to the `ascii` format.
+The `--save` option supports `many different output formats <http://astropy.readthedocs.org/en/latest/io/unified.html#built-in-table-readers-writers>`_ that are automatically selected based on the file extension.  In addition, this program automatically maps the `.dat` and `.txt` extensions to the `ascii` format.
+
+The `--what`, `--where` and `--sort` options all use SQL syntax (these are in fact substituted into a SQL string).
+
+* `--what` takes a comma separated list of column names (like SQL SELECT) and defaults to PLATE,MJD,FIBER::
+
+    --what PLATE,MJD,FIBER,PLUG_RA,PLUG_DEC,Z
+    
+* `--where` takes a SQL 'WHERE' string::
+
+    --where '(OBJYPE="QSO" and Z > 0.1) or CLASS="QSO"'
+
+* `--sort` takes a list of columns with optional DESC keywork following columns to reverse their order (a la SQL ORDER BY)::
+
+    --sort 'CLASS, Z DESC'
 
 This command uses an sqlite3 database of metadata that will be created if necessary. By default, the "lite" version database will be used, which provides faster queries and a smaller database file.  However, the full `spAll data model <http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/spAll.html>`_ is also available with the `--full` option (resulting in slower queries and a larger database file).  The "lite" and "full" databases are separate files based on different downloads. Once either has been created the first time, it will be immediately available for future queries.  Note that it can take a while to create the initial database file: allow about 30 minutes for either version. Once the database has been created, you can safely delete the downloaded source file if you are short on disk space.
 

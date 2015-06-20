@@ -6,6 +6,7 @@
 
 from __future__ import division, print_function
 
+import os
 import os.path
 import gzip
 import sqlite3
@@ -98,11 +99,30 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
             to be a gzipped ASCII data file.
         db_path(str): Local path where the corresponding sqlite3 database will be written.
     """
+
+    '''
+    Things that have been tried RE: speeding this up to no (or very little) effect:
+    1.)  Removing the primary key from the table creation, doing all insets, and
+        then running SQL:
+            CREATE UNIQUE INDEX psuedo_primary_key_meta ON meta (PLATE,MJD,FIBER)
+        at very end.
+    2.)  PRAGMA synchronous = OFF
+        PRAGMA journal_mode = OFF
+        and variations
+    3.)  Explicitly setting transactions (which fails with an error, as this is
+        being done implicitly)
+    '''
+
     # Read the database into memory.
     if verbose:
         print('Initializing the lite database...')
-    with gzip.open(sp_all_path, mode='r') as f:
-        table = astropy.table.Table.read(f, format='ascii')
+
+    # Pass-1 uses only the first 100 lines to automatically determine the column names and types.
+    lines = ''
+    with gzip.open(sp_all_path) as f:
+        for i in range(100):
+            lines += f.readline()
+    table = astropy.table.Table.read(lines, format='ascii.fixed_width_two_line', guess=False)
 
     # Create a new database file.
     rules = {}
@@ -113,13 +133,16 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
     cursor.execute(sql)
+    connection.commit()
+
+    data = np.loadtxt(sp_all_path, skiprows=2, dtype=table.dtype)
 
     # Insert rows into the database.
-    sql = 'INSERT INTO meta VALUES ({})'.format(','.join('?' * num_cols))
+    sql = 'INSERT INTO meta VALUES ({values})'.format(values=','.join('?' * num_cols))
     if verbose:
         progress_bar = ProgressBar(
-            widgets=['Writing', ' ', Percentage(), Bar()], maxval=len(table)).start()
-    for i, row in enumerate(table):
+            widgets=['Writing', ' ', Percentage(), Bar()], maxval=len(data)).start()
+    for i, row in enumerate(data):
         cursor.execute(sql, row)
         if verbose:
             progress_bar.update(i + 1)
@@ -127,7 +150,6 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
     connection.close()
     if verbose:
         progress_bar.finish()
-
 
 def create_meta_full(sp_all_path, db_path, verbose=True):
     """Create the "full" meta database from a locally mirrored spAll file.
@@ -141,6 +163,7 @@ def create_meta_full(sp_all_path, db_path, verbose=True):
             a FITS file conforming to the spAll data model.
         db_path(str): Local path where the corresponding sqlite3 database will be written.
     """
+
     if verbose:
         print('Initializing the full database...')
 
@@ -310,7 +333,7 @@ class Database(object):
         for row in self.cursor:
             yield row
 
-    def select_all(self, what='*', where=None, max_rows=100000):
+    def select_all(self, what='*', where=None, sort=None, max_rows=100000):
         """Fetch all results of an SQL select query.
 
         Since this method loads all the results into memory, it is not suitable for queries
@@ -338,6 +361,8 @@ class Database(object):
         sql = 'SELECT {} from meta'.format(what)
         if where:
             sql += ' WHERE {}'.format(where)
+        if sort:
+            sql += ' ORDER BY {}'.format(sort)
         if max_rows:
             sql += ' LIMIT {:d}'.format(max_rows)
 
