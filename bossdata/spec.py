@@ -72,6 +72,9 @@ class SpecFile(object):
     def get_exposure_hdu(self, exposure_index=None, camera=None):
         """Lookup the HDU for one exposure.
 
+        This method will not work on "lite" files, which do not include individual
+        exposures.
+
         Args:
             exposure_index(int): Individual exposure to use, specified as a sequence number
                 starting from zero, for the first exposure, and increasing up to
@@ -83,13 +86,16 @@ class SpecFile(object):
 
         Raises:
             ValueError: Invalid exposure_index or camera.
-            RuntimeError: This camera is missing for this exposure.
+            RuntimeError: This camera is missing for this exposure or this is a lite
+                file with no individual exposures.
         """
         if exposure_index < 0 or exposure_index >= self.num_exposures:
-            raise ValueError('exposure index must be in the range 0-{0}'.format(
+            raise ValueError('exposure index must be in the range 0-{0}.'.format(
                 self.num_exposures - 1))
         if camera not in ('blue', 'red'):
             raise ValueError('camera must be either "blue" or "red".')
+        if self.lite:
+            raise RuntimeError('individual exposures not available in lite file.')
 
         info = self.exposure_table[exposure_index]
         if camera == 'blue':

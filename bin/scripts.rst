@@ -85,6 +85,13 @@ By default, downloading is split between two parallel subprocesses but you can c
 `--nproc` option.  For downloading "lite" files, using more than 2 subprocesses will probably not
 improve the overall performance.
 
+If you want to transfer large amounts of files, you should consider using `globus <https://www.globus.org>`_. To prepare a `globus` bulk data transfer file list, use the `--globus` option to specify the remote/local endpoint pair `remote#endpoint:local#endpoint`. Note that the `--save` option must also be used to specify an output filename. SDSS endpoints are documented at `here <http://www.sdss.org/dr12/data_access/bulk/>`_. 
+
+For example, to transfer files from `lbnl#sdss3` to `local#endpoint`::
+    
+    bossfetch qso.dat --globus lbnl#sdss3:username#endpoint --save globus-xfer.dat
+    ssh username@cli.globusonline.org transfer -s 1 < globus-xfer.dat
+
 .. _bossplot:
 
 bossplot
