@@ -117,7 +117,8 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
     if verbose:
         print('Initializing the lite database...')
 
-    # Pass-1 uses only the first 100 lines to automatically determine the column names and types.
+    # Pass-1 uses only the first 100 lines to automatically determine the column names and
+    # types.
     lines = ''
     with gzip.open(sp_all_path) as f:
         for i in range(100):
@@ -151,6 +152,7 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
     if verbose:
         progress_bar.finish()
 
+
 def create_meta_full(sp_all_path, db_path, verbose=True):
     """Create the "full" meta database from a locally mirrored spAll file.
 
@@ -167,11 +169,16 @@ def create_meta_full(sp_all_path, db_path, verbose=True):
     if verbose:
         print('Initializing the full database...')
 
+    chunk_size = 100000
+    position = 0
+
     # Open the FITs file.
     with fitsio.FITS(sp_all_path) as hdulist:
         # This just reads the headers but still takes 15-20 seconds.
         # The equivalent operation with astropy.io.fits takes 15-20 minutes!
-        table = hdulist[1].read()
+
+        # table = hdulist[1].read(rows=[position,position+chunk_size])
+        table = hdulist[1][position:(position+chunk_size)]
 
         # Create a new database file.
         sql, num_cols = sql_create_table(
@@ -181,29 +188,44 @@ def create_meta_full(sp_all_path, db_path, verbose=True):
         cursor = connection.cursor()
         cursor.execute(sql)
 
-    # Insert rows into the database.
-    sql = 'INSERT INTO meta VALUES ({})'.format(','.join('?' * num_cols))
-    if verbose:
-        progress_bar = ProgressBar(
-            widgets=['Writing', ' ', Percentage(), Bar()], maxval=len(table)).start()
-    for i, row in enumerate(table):
-        # Unroll columns with sub-arrays into a flat list to match the flat SQL schema,
-        # and convert numpy types to the native python types required by sqlite3.
-        values = []
-        for j, column_data in enumerate(row):
-            if column_data.dtype.kind == 'S':
-                values.append(column_data.rstrip())
-            elif isinstance(column_data, np.ndarray):
-                values.extend(column_data.flatten().tolist())
-            else:
-                values.append(column_data.item())
-        cursor.execute(sql, values)
+        sql = 'INSERT INTO meta VALUES ({})'.format(','.join('?' * num_cols))
         if verbose:
-            progress_bar.update(i + 1)
-    connection.commit()
-    connection.close()
-    if verbose:
-        progress_bar.finish()
+            maxcount = hdulist[1].get_nrows()
+            progress_bar = ProgressBar(
+                widgets=['Writing', ' ', Percentage(), Bar()], maxval=maxcount).start()
+            update_var = 1
+
+        while len(table) > 0:
+            # Insert rows into the database.
+            for row in table:
+                # Unroll columns with sub-arrays into a flat list to match the flat SQL schema,
+                # and convert numpy types to the native python types required by sqlite3.
+                values = []
+                for j, column_data in enumerate(row):
+                    if column_data.dtype.kind == 'S':
+                        values.append(column_data.rstrip())
+                    elif isinstance(column_data, np.ndarray):
+                        values.extend(column_data.flatten().tolist())
+                    else:
+                        values.append(column_data.item())
+                cursor.execute(sql, values)
+                if verbose:
+                    progress_bar.update(update_var)
+                    update_var += 1
+
+            position += chunk_size
+            end_position = position+chunk_size
+            if end_position > maxcount:
+                end_position = maxcount
+                if position > maxcount:
+                    position = maxcount
+            table = hdulist[1][position:end_position]
+
+        connection.commit()
+        connection.close()
+
+        if verbose:
+            progress_bar.finish()
 
 sql_type_map = {
     'INTEGER': np.integer,
