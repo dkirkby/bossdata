@@ -168,6 +168,8 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
                                              guess=False)
         connection.commit()
         connection.close()
+        if verbose:
+            progress_bar.finish()
 
 def create_meta_full(sp_all_path, db_path, verbose=True):
     """Create the "full" meta database from a locally mirrored spAll file.
