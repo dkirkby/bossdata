@@ -101,15 +101,6 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
         db_path(str): Local path where the corresponding sqlite3 database will be written.
     """
 
-    # Hardcode to what I think is (quite) conservative value; smaller == slower.
-    # At 50k see memory peak ~2 GB, incldes holding ~750 MB of source in memory.
-    chunk_size = 20000
-
-    # Using ascii.fixed_width_two_line format, but still have to specify
-    # skipping the first two lines when reading by chunks.
-    init_position = 2
-    position = init_position
-
     '''
     Things that have been tried RE: speeding this up to no (or very little) effect:
     1.)  Removing the primary key from the table creation, doing all insets, and
@@ -121,55 +112,45 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
         and variations
     3.)  Explicitly setting transactions (which fails with an error, as this is
         being done implicitly)
-
-    Currently, the time split for each chunk of rows is about 12/58 : parsing/inserting
     '''
 
     # Read the database into memory.
     if verbose:
         print('Initializing the lite database...')
 
-    with gzip.open(sp_all_path, mode='r') as f:
-        table = astropy.table.Table.read(f, data_start=position,
-                                         data_end=position+chunk_size,
-                                         format='ascii.fixed_width_two_line',
-                                         guess=False)
+    # Pass-1 uses only the first 100 lines to automatically determine the column names and types.
+    lines = ''
+    with gzip.open(sp_all_path) as f:
+        for i in range(100):
+            lines += f.readline()
+    table = astropy.table.Table.read(lines, format='ascii.fixed_width_two_line', guess=False)
 
-        # Create a new database file.
-        rules = {}
-        for i in range(5):
-            rules['MODELFLUX{}'.format(i)] = 'MODELFLUX_{}'.format(i)
-        sql, num_cols = sql_create_table(
-            'meta', table.dtype, renaming_rules=rules, primary_key='(PLATE,MJD,FIBER)')
-        connection = sqlite3.connect(db_path)
-        cursor = connection.cursor()
-        cursor.execute(sql)
-        connection.commit()
+    # Create a new database file.
+    rules = {}
+    for i in range(5):
+        rules['MODELFLUX{}'.format(i)] = 'MODELFLUX_{}'.format(i)
+    sql, num_cols = sql_create_table(
+        'meta', table.dtype, renaming_rules=rules, primary_key='(PLATE,MJD,FIBER)')
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+    cursor.execute(sql)
+    connection.commit()
 
-        # Insert rows into the database.
-        sql = 'INSERT INTO meta VALUES ({values})'.format(values=','.join('?' * num_cols))
+    data = np.loadtxt(sp_all_path, skiprows=2, dtype=table.dtype)
 
+    # Insert rows into the database.
+    sql = 'INSERT INTO meta VALUES ({values})'.format(values=','.join('?' * num_cols))
+    if verbose:
+        progress_bar = ProgressBar(
+            widgets=['Writing', ' ', Percentage(), Bar()], maxval=len(data)).start()
+    for i, row in enumerate(data):
+        cursor.execute(sql, row)
         if verbose:
-            # Don't know final count, can't do percentage, bar, etc. Display work done instead
-            widgets = [FormatLabel('Processed: %(value)d lines (in: %(elapsed)s)')]
-            progress_bar = ProgressBar(widgets=widgets, maxval=sys.maxint).start()
-
-        while len(table) > 0:
-            cursor.executemany(sql, table)
-
-            position += chunk_size
-
-            if verbose:
-                progress_bar.update(position-init_position)
-
-            table = astropy.table.Table.read(f, data_start=position,
-                                             data_end=position+chunk_size,
-                                             format='ascii.fixed_width_two_line',
-                                             guess=False)
-        connection.commit()
-        connection.close()
-        if verbose:
-            progress_bar.finish()
+            progress_bar.update(i + 1)
+    connection.commit()
+    connection.close()
+    if verbose:
+        progress_bar.finish()
 
 def create_meta_full(sp_all_path, db_path, verbose=True):
     """Create the "full" meta database from a locally mirrored spAll file.
