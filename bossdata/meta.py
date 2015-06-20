@@ -6,7 +6,6 @@
 
 from __future__ import division, print_function
 
-import sys
 import os
 import os.path
 import gzip
@@ -16,7 +15,7 @@ import numpy as np
 import astropy.table
 import fitsio
 
-from progressbar import ProgressBar, Percentage, Bar, FormatLabel
+from progressbar import ProgressBar, Percentage, Bar
 
 import bossdata.path
 import bossdata.remote
@@ -164,6 +163,7 @@ def create_meta_full(sp_all_path, db_path, verbose=True):
             a FITS file conforming to the spAll data model.
         db_path(str): Local path where the corresponding sqlite3 database will be written.
     """
+
     if verbose:
         print('Initializing the full database...')
 
