@@ -204,6 +204,7 @@ def main():
             print('Saved data to {}'.format(save_name))
 
     wlen_min,wlen_max = +1e6,-1e6
+    flux_lo, flux_hi = np.array([], dtype=float), np.array([], dtype=float)
     for data,plot_color in zip(spectra,plot_colors):
 
         wlen,dflux = data['wavelength'][:],data['dflux'][:]
@@ -237,8 +238,15 @@ def main():
         wlen_min = min(wlen_min,np.ma.min(wlen))
         wlen_max = max(wlen_max,np.ma.max(wlen))
 
+        # Update the list of fluxes that we will use to auto-range the vertical scale.
+        flux_lo = np.append(flux_lo, flux - dflux)
+        flux_hi = np.append(flux_hi, flux + dflux)
+
     # The x-axis limits are reset by the twinx() function so we set them here.
     plt.xlim(wlen_min,wlen_max)
+
+    # Set the flux scale.
+    left_axis.set_ylim(np.percentile(flux_lo, 0.5), np.percentile(flux_hi, 99.5))
 
     if args.save_plot is not None:
         save_name = args.save_plot
