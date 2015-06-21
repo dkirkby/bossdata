@@ -14,6 +14,7 @@ import os.path
 import numpy as np
 import numpy.ma
 import matplotlib.pyplot as plt
+import astropy.table
 
 import bossdata.path
 import bossdata.remote
@@ -56,6 +57,9 @@ def main():
     parser.add_argument('--save-plot', type=str, default=None, const='', nargs='?', metavar='FILE',
         help = ('Save the generated plot to specified name ' +
             '(uses bossplot-{plate}-{mjd}-{fiber}.png if name omitted).'))
+    parser.add_argument('--save-data', type=str, default=None, const='', nargs='?', metavar='FILE',
+        help = ('Save the spectrum data to specified name ' +
+            '(uses bossplot-{plate}-{mjd}-{fiber}.dat if name omitted).'))
     parser.add_argument('--no-display', action = 'store_true',
         help = 'Do not display the image on screen (useful for batch processing).')
     parser.add_argument('--scatter', action = 'store_true',
@@ -184,6 +188,19 @@ def main():
             plot_colors.append('red')
             if args.verbose:
                 print_mask_summary('Red',specfile.get_pixel_mask(args.exposure,'red'))
+
+    # Save the spectrum data, if requested.
+    if args.save_data:
+        if len(spectra) > 1:
+            print('WARNING: saving data for the first spectrum only.')
+        save_name = args.save_data
+        if save_name == '':
+            save_name = 'bossplot-{plate}-{mjd}-{fiber}.dat'.format(
+                plate=args.plate, mjd=args.mjd, fiber=args.fiber)
+        table = astropy.table.Table(spectra[0])
+        table.write(save_name, format='ascii.basic')
+        if args.verbose:
+            print('Saved data to {}'.format(save_name))
 
     wlen_min,wlen_max = +1e6,-1e6
     for data,plot_color in zip(spectra,plot_colors):
