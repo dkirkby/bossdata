@@ -101,10 +101,10 @@ class Manager(object):
         try:
             request = requests.get(url, stream=True, timeout=(3.05, 27))
             if request.status_code != requests.codes.ok:
-                raise RuntimeError('HTTP request returned error code {0}.'.format(
-                    request.status_code))
+                raise RuntimeError('HTTP request returned error code {} for {}.'.format(
+                    request.status_code, url))
         except requests.exceptions.RequestException as e:
-            raise RuntimeError('HTTP request failed: {}.'.format(str(e)))
+            raise RuntimeError('HTTP request failed for {}: {}.'.format(url,str(e)))
 
         # Check that there is enough free space, if possible.
         progress_bar = None
@@ -138,9 +138,9 @@ class Manager(object):
             # Move the temporary file to its permanent location.
             os.rename(local_path + '.downloading', local_path)
         except requests.exceptions.RequestException as e:
-            raise RuntimeError('HTTP streaming failed: {}.'.format(str(e)))
+            raise RuntimeError('HTTP streaming failed for {}: {}.'.format(url, str(e)))
         except IOError as e:
-            raise RuntimeError('Streaming IO error: {}.'.format(str(e)))
+            raise RuntimeError('Streaming IO error for {}: {}.'.format(url, str(e)))
 
         if progress_bar:
             progress_bar.finish()
