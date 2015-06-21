@@ -108,7 +108,6 @@ def main():
                 if red_name is None:
                     print('Red camera data not available.')
                     return -1
-                print(os.path.join(frame_path, red_name))
                 frames['red'] = bossdata.plate.FrameFile(
                     mirror.get(os.path.join(frame_path, red_name)),
                     index=1 + (args.fiber-1)//500, calibrated=args.cframe)
@@ -197,7 +196,9 @@ def main():
         if save_name == '':
             save_name = 'bossplot-{plate}-{mjd}-{fiber}.dat'.format(
                 plate=args.plate, mjd=args.mjd, fiber=args.fiber)
-        table = astropy.table.Table(spectra[0])
+        # Only save un-masked rows.
+        valid = ~(spectra[0]['wavelength'].mask)
+        table = astropy.table.Table(spectra[0][valid])
         table.write(save_name, format='ascii.basic')
         if args.verbose:
             print('Saved data to {}'.format(save_name))
