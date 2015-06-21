@@ -169,7 +169,6 @@ class TraceSet(object):
             self.xjump_lo = data['XJUMPLO']
             self.xjump_hi = data['XJUMPHI']
             self.xjump_val = data['XJUMPVAL']
-            print(self.xjump_lo,self.xjump_hi,self.xjump_val)
         else:
             self.has_jump = False
 
