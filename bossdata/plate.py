@@ -137,7 +137,7 @@ class TraceSet(object):
     https://trac.sdss3.org/browser/repo/idlutils/trunk/pro/trace/traceset2xy.pro
 
     Note that red and blue CCDs are handled differently, as described
-    [here](https://trac.sdss.org/ticket/880)::
+    `here <https://trac.sdss.org/ticket/880>`_::
 
         The plan is to switch from 1-phase to 2-phase readout on
         the red CCDs in summer 2010. This will effectively make
@@ -169,17 +169,15 @@ class TraceSet(object):
             self.xjump_lo = data['XJUMPLO']
             self.xjump_hi = data['XJUMPHI']
             self.xjump_val = data['XJUMPVAL']
+            print(self.xjump_lo,self.xjump_hi,self.xjump_val)
         else:
             self.has_jump = False
 
-        coef_dims = data['COEFF'].shape
-        ncoef = coef_dims[0]
-        if len(coef_dims) > 1:
-            self.ntrace = coef_dims[1]
-            self.coefs = data['COEFF']
-        else:
-            self.ntrace = 1
-            self.coefs = data['COEFF'][:,np.newaxis]
+        self.coefs = data['COEFF']
+        if len(self.coefs.shape) != 2:
+            raise ValueError('TraceSet coefficients have unexpected shape {}.'.format(
+                self.coefs.shape))
+        self.ntrace = self.coefs.shape[0]
 
         xmin, xmax = round(data['XMIN']), round(data['XMAX'])
         self.xmid = 0.5 * (xmin + xmax)
@@ -190,23 +188,37 @@ class TraceSet(object):
         one_trace = xmin + np.arange(self.nx)
         self.default_xpos = np.tile(one_trace, (self.ntrace, 1))
 
-    def get_xy(self, ignore_jump=False, xpos=None):
+    def get_log10wavelength(self, xpos=None, ignore_jump=False):
         """
+        Evaluate the wavelength solution for each trace.
+
+        Args:
+            xpos(numpy.ndarray): Numpy array of shape (500,nx) with x-pixel coordinates
+                along each trace that should be converted into wavelengths. If this
+                argument is not set, ``self.default_xpos`` will be used, which consists
+                of 500 identical traces with x-pixel coordinates at each integer pixel
+                value covering the full allowed range (nominally 0,1,...,4111).
+            ignore_jump(bool): Should a jump be included if this is a 2-phase readout.
+
+        Returns:
+            numpy.ndarray: Numpy arrays with shape (500,nx) that matches the input ``xpos``
+                or the default ``self.default_xpos``.  ``ypos[[i,x]]`` gives the value of
+                log10(wavelength) for x-pixel ``xpos[[i,x]]`` of trace i.
         """
         if xpos is None:
             xpos = self.default_xpos
-        ypos = np.zeros_like(xpos)
+        loglam = np.zeros_like(xpos)
         for i in range(self.ntrace):
             x = np.copy(xpos[i])
             if self.has_jump and not ignore_jump:
                 t = (x - self.xjump_lo)/(self.xjump_hi - self.xjump_lo)
                 below = x < self.xjump_hi
                 above = x >= self.xjump_lo
-                jump_frac = 1.0*(~above) + t*(below & above)
-                x += jump_frac*self.xjump_val
+                jump_frac = 1.0 * (~below) + t * (below & above)
+                x += jump_frac * self.xjump_val
             xvec = 2 * (x - self.xmid) / self.xrange
-            ypos[i] = numpy.polynomial.legendre.legval(xvec, self.coefs[i])
-        return xpos,ypos
+            loglam[i] = numpy.polynomial.legendre.legval(xvec, self.coefs[i])
+        return loglam
 
 class FrameFile(object):
     """A BOSS frame file containing a single exposure of one spectrograph (500 fibers).
@@ -323,9 +335,12 @@ class FrameFile(object):
             if self.calibrated:
                 self.loglam = self.hdulist[3].read()
             else:
+                # Expand the traceset solution.
                 trace_set = TraceSet(self.hdulist[3])
-                xpos,ypos = trace_set.get_xy()
-                print('ypos.shape',ypos.shape)
+                self.loglam = trace_set.get_log10wavelength()
+                if self.loglam.shape != self.ivar.shape:
+                    raise RuntimeError('Traceset solution has unexpected shape: {}.'.format(
+                        self.loglam.shape))
         if self.flux is None:
             self.flux = self.hdulist[0].read()
         if include_wdisp and self.wdisp is None:
@@ -346,11 +361,7 @@ class FrameFile(object):
         if include_sky:
             dtype.append(('sky', np.float32))
         data = np.empty((num_fibers, num_pixels), dtype=dtype)
-        if self.calibrated:
-            data['wavelength'][:] = np.power(10.0, self.loglam[offsets])
-        else:
-            print('Un-calibrated wavelength HDU3 not supported.')
-            data['wavelength'][:] = np.arange(num_pixels)
+        data['wavelength'][:] = np.power(10.0, self.loglam[offsets])
         data['flux'][:] = self.flux[offsets]
         data['dflux'][:][good_pixels] = 1.0 / np.sqrt(self.ivar[offsets][good_pixels])
         if include_wdisp:
