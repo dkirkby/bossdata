@@ -186,9 +186,9 @@ class Manager(object):
         """Get a local file that mirrors a remote file, downloading the file if necessary.
 
         Args:
-            remote_path(str): The full path to the remote file relative to the remote
+            remote_path(str,list): The full path to the remote file relative to the remote
                 server root, which should normally be obtained using :class:`bossdata.path`
-                methods.
+                methods; OR a list of such paths.
             progress_min_size(int): Display a text progress bar for any downloads whose size
                 in Mb exceeds this value. No progress bar will ever be shown if this
                 value is None.
@@ -202,9 +202,18 @@ class Manager(object):
         Raises:
             RuntimeError: File is not already mirrored and auto_download is False.
         """
-        local_path = self.local_path(remote_path)
-        if os.path.isfile(local_path):
-            return local_path
+        
+        # Don't test if its a string; maybe later it won't be.  Test if it's a list
+        remote_paths = []
+        if not isinstance(remote_path, list):
+            remote_paths = [remote_path]
+        else:
+            repote_paths = remote_path
+
+        for path in remote_paths:
+            local_path = self.local_path(path)
+            if os.path.isfile(local_path):
+                return local_path
 
         if not auto_download:
             raise RuntimeError('File not in mirror and auto_download is False: {}'.format(
@@ -212,6 +221,10 @@ class Manager(object):
 
         # If we get here, the file is not available locally so try to download it now.
         # Create local directories as needed.
+        
+        # We get the file for first path is there are more than one
+        if len(remote_paths) > 1:
+            local_path = self.local_path(remote_paths[0])
         parent_path = os.path.dirname(local_path)
         if not os.path.exists(parent_path):
             # There is a potential race condition if other processes are running.

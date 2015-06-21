@@ -252,26 +252,33 @@ class Database(object):
         if mirror is None:
             mirror = bossdata.remote.Manager()
 
-        # Get the local name of the metadata source file and the corresponding SQL
-        # database name.
-        remote_path = finder.get_sp_all_path(lite=lite)
-        local_path = mirror.local_path(remote_path)
-        if lite:
-            assert local_path.endswith('.dat.gz'), 'Expected .dat.gz extension for {}.'.format(
-                local_path)
-            db_path = local_path.replace('.dat.gz', '-lite.db')
-        else:
-            assert local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
-                local_path)
-            db_path = local_path.replace('.fits', '.db')
+        # Pre-build all our paths, test for (and store) the existence of the DB files
+        remote_paths = [finder.get_sp_all_path(lite=True), finder.get_sp_all_path(lite=False)]
+        local_paths = [mirror.local_path(path) for path in remote_paths]
+        db_paths = [_db_path_helper(local_paths[0], lite=True), _db_path_helper(local_paths[1], lite=False)]
+        db_paths_exist = [os.path.isfile(path) for path in db_paths]
+
+        db_path = None
+        local_path = None
 
         # Create the database if necessary.
-        if not os.path.isfile(db_path):
-            local_path = mirror.get(remote_path)
-            if lite:
+        # Could make this more compact now that all the logic is foiled out.
+        # lite is [0], full is [1]
+        if lite and db_paths_exist[0]:          # lite branch, and lite DB exists
+            db_path = db_paths[0]
+        elif not lite and db_paths_exist[1]:    # full branch, and full DB exists
+            db_path = db_paths[1]
+        elif lite and not db_paths_exist[0]:    # lite branch and lite DB NOT exists
+            if db_paths_exist[1]:               # ...but full does
+                db_path = db_paths[1]
+            else:                               # Neither DB's exist, so get files, create DB
+                db_path = db_paths[0]
+                local_path = mirror.get(remote_paths[0])
                 create_meta_lite(local_path, db_path)
-            else:
-                create_meta_full(local_path, db_path)
+        else:                                   # full branch and full DB NOT exists
+            db_path = db_paths[1]
+            local_path = mirror.get(remote_paths[1])
+            create_meta_full(local_path, db_path)
 
         # Connect to the database.
         self.connection = sqlite3.connect(db_path)
@@ -292,6 +299,16 @@ class Database(object):
         # Look up and save the number of rows in the database.
         self.cursor.execute('SELECT COUNT(*) FROM meta')
         self.num_rows = self.cursor.fetchone()[0]
+        
+    def _db_path_helper(self, path=None, lite=True):
+        if lite:
+            assert path.endswith('.dat.gz'), 'Expected .dat.gz extension for {}.'.format(
+                path)
+            return path.replace('.dat.gz', '-lite.db')
+        else:
+            assert path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
+                path)
+            return path.replace('.fits', '.db')
 
     def prepare_columns(self, column_names):
         """Validate column names and lookup their types.
