@@ -131,9 +131,11 @@ class Plan(object):
 
 
 class TraceSet(object):
-    """Wavelength trace set interpolating function.
+    """A set of interpolating functions along each trace of a half plate.
 
-    This implementation is based on the original SDSS IDL code:
+    TraceSets use the terminology that x is the pixel coordinate along the nominal
+    wavelength direction and y is some quantity to be interpolated as a function
+    of x. This implementation is based on the original SDSS IDL code:
     https://trac.sdss3.org/browser/repo/idlutils/trunk/pro/trace/traceset2xy.pro
 
     Note that red and blue CCDs are handled differently, as described
@@ -187,27 +189,29 @@ class TraceSet(object):
         one_trace = xmin + np.arange(self.nx)
         self.default_xpos = np.tile(one_trace, (self.ntrace, 1))
 
-    def get_log10wavelength(self, xpos=None, ignore_jump=False):
+    def get_y(self, xpos=None, ignore_jump=False):
         """
-        Evaluate the wavelength solution for each trace.
+        Evaluate the interpolating function for each trace.
 
         Args:
             xpos(numpy.ndarray): Numpy array of shape (500,nx) with x-pixel coordinates
-                along each trace that should be converted into wavelengths. If this
+                along each trace where y(x) should be evaluated. If this
                 argument is not set, ``self.default_xpos`` will be used, which consists
                 of 500 identical traces with x-pixel coordinates at each integer pixel
                 value covering the full allowed range (nominally 0-4111 for blue, 0-4127
                 for red).
-            ignore_jump(bool): Should a jump be included if this is a 2-phase readout.
+            ignore_jump(bool): Include a jump when this is set and this is a 2-phase readout.
+                There is probably no good reason to set this False, but it is included
+                for compatibility with the original IDL code.
 
         Returns:
-            numpy.ndarray: Numpy arrays with shape (500,nx) that matches the input ``xpos``
-                or the default ``self.default_xpos``.  ``ypos[[i,x]]`` gives the value of
-                log10(wavelength) for x-pixel ``xpos[[i,x]]`` of trace i.
+            numpy.ndarray: Numpy array ``y`` with shape (500,nx) that matches the input
+                ``xpos`` or else the default ``self.default_xpos``.  ``ypos[[i,x]]`` gives
+                the value of the interpolated y(x) with x equal to ``xpos[[i,x]]``.
         """
         if xpos is None:
             xpos = self.default_xpos
-        loglam = np.zeros_like(xpos)
+        y = np.zeros_like(xpos)
         for i in range(self.ntrace):
             x = np.copy(xpos[i])
             if self.has_jump and not ignore_jump:
@@ -217,8 +221,8 @@ class TraceSet(object):
                 jump_frac = 1.0 * (~below) + t * (below & above)
                 x += jump_frac * self.xjump_val
             xvec = 2 * (x - self.xmid) / self.xrange
-            loglam[i] = numpy.polynomial.legendre.legval(xvec, self.coefs[i])
-        return loglam
+            y[i] = numpy.polynomial.legendre.legval(xvec, self.coefs[i])
+        return y
 
 class FrameFile(object):
     """A BOSS frame file containing a single exposure of one spectrograph (500 fibers).
@@ -336,8 +340,8 @@ class FrameFile(object):
                 self.loglam = self.hdulist[3].read()
             else:
                 # Expand the traceset solution. Wavelengths are stored as log10(lambda).
-                trace_set = TraceSet(self.hdulist[3])
-                self.loglam = trace_set.get_log10wavelength()
+                self.wavelength_trace_set = TraceSet(self.hdulist[3])
+                self.loglam = self.wavelength_trace_set.get_y()
                 if self.loglam.shape != self.ivar.shape:
                     raise RuntimeError('HDU3 traceset has unexpected shape: {}.'.format(
                         self.loglam.shape))
@@ -349,7 +353,7 @@ class FrameFile(object):
             else:
                 # Expand the traceset solution. Dispersions are in units of Angstroms.
                 trace_set = TraceSet(self.hdulist[4])
-                self.wdisp = trace_set.get_log10wavelength()
+                self.wdisp = trace_set.get_y()
                 if self.wdisp.shape != self.ivar.shape:
                     raise RuntimeError('HDU4 traceset has unexpected shape: {}.'.format(
                         self.wdisp.shape))
