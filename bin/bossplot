@@ -136,11 +136,11 @@ def main():
     figure = plt.figure(figsize=(12,8))
     left_axis = plt.gca()
     figure.set_facecolor('white')
-    plt.xlabel('Wavelength (Angstrom)')
+    plt.xlabel('Wavelength ($\AA$)')
     if args.frame:
         left_axis.set_ylabel('Flux (electrons)')
     else:
-        left_axis.set_ylabel('Flux (1e-17 erg/s/cm**2)')
+        left_axis.set_ylabel('Flux ($10^{-17}$ erg/s/cm$^2$)')
     if args.show_dispersion:
         right_axis = left_axis.twinx()
         right_axis.set_ylabel(left_axis.get_ylabel().replace('Flux','Dispersion'))
