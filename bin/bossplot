@@ -14,6 +14,7 @@ import os.path
 import numpy as np
 import numpy.ma
 import matplotlib.pyplot as plt
+import astropy.table
 
 import bossdata.path
 import bossdata.remote
@@ -56,6 +57,9 @@ def main():
     parser.add_argument('--save-plot', type=str, default=None, const='', nargs='?', metavar='FILE',
         help = ('Save the generated plot to specified name ' +
             '(uses bossplot-{plate}-{mjd}-{fiber}.png if name omitted).'))
+    parser.add_argument('--save-data', type=str, default=None, const='', nargs='?', metavar='FILE',
+        help = ('Save the spectrum data to specified name ' +
+            '(uses bossplot-{plate}-{mjd}-{fiber}.dat if name omitted).'))
     parser.add_argument('--no-display', action = 'store_true',
         help = 'Do not display the image on screen (useful for batch processing).')
     parser.add_argument('--scatter', action = 'store_true',
@@ -91,51 +95,55 @@ def main():
         print(e)
         return -1
 
-    if args.frame or args.cframe:
-        frames = {}
-        frame_path = finder.get_plate_path(plate=args.plate)
-        plan_path = finder.get_plate_plan_path(plate=args.plate, mjd=args.mjd)
-        plan = bossdata.plate.Plan(mirror.get(plan_path))
-        if args.camera in ('red','both'):
-            red_name = plan.get_exposure_name(
-                args.exposure, 'red', args.fiber, calibrated=args.cframe)
-            if red_name is None:
-                print('Red camera data not available.')
-                return -1
-            frames['red'] = bossdata.plate.FrameFile(
-                mirror.get(os.path.join(frame_path, red_name)),
-                index=1 + (args.fiber-1)//500, calibrated=args.cframe)
-        if args.camera in ('blue','both'):
-            blue_name = plan.get_exposure_name(
-                args.exposure, 'blue', args.fiber, calibrated=args.cframe)
-            if blue_name is None:
-                print('Blue camera data not available.')
-                return -1
-            frames['blue'] = bossdata.plate.FrameFile(
-                mirror.get(os.path.join(frame_path, blue_name)),
-                index=1 + (args.fiber-1)//500, calibrated=args.cframe)
-    else:
-        remote_path = finder.get_spec_path(plate=args.plate, mjd=args.mjd, fiber=args.fiber,
-            lite=(args.exposure is None))
-        local_path = mirror.get(remote_path)
-        specfile = bossdata.spec.SpecFile(local_path)
-        if args.verbose:
-            print('Exposure summary:')
-            print(specfile.exposure_table)
+    # Load spectra into memory, downloading if necessary.
+    try:
+        if args.frame or args.cframe:
+            frames = {}
+            frame_path = finder.get_plate_path(plate=args.plate)
+            plan_path = finder.get_plate_plan_path(plate=args.plate, mjd=args.mjd)
+            plan = bossdata.plate.Plan(mirror.get(plan_path))
+            if args.camera in ('red','both'):
+                red_name = plan.get_exposure_name(
+                    args.exposure, 'red', args.fiber, calibrated=args.cframe)
+                if red_name is None:
+                    print('Red camera data not available.')
+                    return -1
+                frames['red'] = bossdata.plate.FrameFile(
+                    mirror.get(os.path.join(frame_path, red_name)),
+                    index=1 + (args.fiber-1)//500, calibrated=args.cframe)
+            if args.camera in ('blue','both'):
+                blue_name = plan.get_exposure_name(
+                    args.exposure, 'blue', args.fiber, calibrated=args.cframe)
+                if blue_name is None:
+                    print('Blue camera data not available.')
+                    return -1
+                frames['blue'] = bossdata.plate.FrameFile(
+                    mirror.get(os.path.join(frame_path, blue_name)),
+                    index=1 + (args.fiber-1)//500, calibrated=args.cframe)
+        else:
+            remote_path = finder.get_spec_path(plate=args.plate, mjd=args.mjd, fiber=args.fiber,
+                lite=(args.exposure is None))
+            local_path = mirror.get(remote_path)
+            specfile = bossdata.spec.SpecFile(local_path)
+            if args.verbose:
+                print('Exposure summary:')
+                print(specfile.exposure_table)
+    except RuntimeError as e:
+        print(str(e))
+        return -1
 
     # Initialize the plot.
     figure = plt.figure(figsize=(12,8))
     left_axis = plt.gca()
     figure.set_facecolor('white')
+    plt.xlabel('Wavelength ($\AA$)')
     if args.frame:
-        plt.xlabel('Wavelength index')
         left_axis.set_ylabel('Flux (electrons)')
     else:
-        plt.xlabel('Wavelength (Angstrom)')
-        left_axis.set_ylabel('Flux (1e-17 erg/s/cm**2)')
+        left_axis.set_ylabel('Flux ($\\times 10^{-17}$ erg/s/cm$^{2}$/$\AA$)')
     if args.show_dispersion:
         right_axis = left_axis.twinx()
-        right_axis.set_ylabel('Dispersion (Angstrom)')
+        right_axis.set_ylabel('Dispersion (pixels)')
 
     # We will potentially plot two spectra.
     spectra = [ ]
@@ -150,7 +158,8 @@ def main():
     elif args.frame or args.cframe:
         fibers = np.array([args.fiber],dtype=int)
         if args.verbose:
-            print('Showing exposure {0}.'.format(plan.exposures['science'][args.exposure]['EXPID']))
+            print('Showing exposure {:08d}.'.format(
+                plan.exposures['science'][args.exposure]['EXPID']))
         if args.camera in ('blue','both'):
             spectra.append(frames['blue'].get_valid_data(fibers,
                 pixel_quality_mask=pixel_quality_mask, **data_args)[0])
@@ -165,7 +174,8 @@ def main():
                 print_mask_summary('Red',frames['red'].get_pixel_masks(fibers)[0])
     else:
         if args.verbose:
-            print('Showing exposure {0}.'.format(specfile.exposure_table[args.exposure]['exp']))
+            print('Showing exposure {:08d}.'.format(
+                specfile.exposure_table[args.exposure]['exp']))
         if args.camera in ('blue','both'):
             spectra.append(specfile.get_valid_data(args.exposure,'blue',
                 pixel_quality_mask=pixel_quality_mask, **data_args))
@@ -179,7 +189,23 @@ def main():
             if args.verbose:
                 print_mask_summary('Red',specfile.get_pixel_mask(args.exposure,'red'))
 
+    # Save the spectrum data, if requested.
+    if args.save_data:
+        if len(spectra) > 1:
+            print('WARNING: saving data for the first spectrum only.')
+        save_name = args.save_data
+        if save_name == '':
+            save_name = 'bossplot-{plate}-{mjd}-{fiber}.dat'.format(
+                plate=args.plate, mjd=args.mjd, fiber=args.fiber)
+        # Only save un-masked rows.
+        valid = ~(spectra[0]['wavelength'].mask)
+        table = astropy.table.Table(spectra[0][valid])
+        table.write(save_name, format='ascii.basic')
+        if args.verbose:
+            print('Saved data to {}'.format(save_name))
+
     wlen_min,wlen_max = +1e6,-1e6
+    flux_lo, flux_hi = np.array([], dtype=float), np.array([], dtype=float)
     for data,plot_color in zip(spectra,plot_colors):
 
         wlen,dflux = data['wavelength'][:],data['dflux'][:]
@@ -213,8 +239,16 @@ def main():
         wlen_min = min(wlen_min,np.ma.min(wlen))
         wlen_max = max(wlen_max,np.ma.max(wlen))
 
+        # Update the list of fluxes that we will use to auto-range the vertical scale.
+        flux_lo = numpy.ma.append(flux_lo, flux - dflux)
+        flux_hi = numpy.ma.append(flux_hi, flux + dflux)
+
     # The x-axis limits are reset by the twinx() function so we set them here.
     plt.xlim(wlen_min,wlen_max)
+
+    # Set the flux scale to show 99% of the valid flux +/- dflux range.
+    valid = ~flux_lo.mask & ~flux_hi.mask
+    left_axis.set_ylim(np.percentile(flux_lo[valid], 0.5), np.percentile(flux_hi[valid], 99.5))
 
     if args.save_plot is not None:
         save_name = args.save_plot
