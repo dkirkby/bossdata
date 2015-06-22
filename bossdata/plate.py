@@ -351,9 +351,13 @@ class FrameFile(object):
             if self.calibrated:
                 self.wdisp = self.hdulist[4].read()
             else:
-                # Expand the traceset solution. Dispersions are in units of Angstroms.
-                trace_set = TraceSet(self.hdulist[4])
-                self.wdisp = trace_set.get_y()
+                # Expand the traceset solution. Dispersions are in units of 1e4*d(lambda)/dx.
+                xpos = self.wavelength_trace_set.default_xpos
+                loglam_hi = self.wavelength_trace_set.get_y(xpos + 0.5)
+                loglam_lo = self.wavelength_trace_set.get_y(xpos - 0.5)
+                dlambda_by_dx = np.abs(loglam_hi - loglam_lo)
+                dispersion_trace_set = TraceSet(self.hdulist[4])
+                self.wdisp = 1e4 * dlambda_by_dx * dispersion_trace_set.get_y()
                 if self.wdisp.shape != self.ivar.shape:
                     raise RuntimeError('HDU4 traceset has unexpected shape: {}.'.format(
                         self.wdisp.shape))
