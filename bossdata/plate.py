@@ -321,7 +321,7 @@ class FrameFile(object):
                 the following named fields: wavelength in Angstroms, flux and dflux in 1e-17
                 ergs/s/cm2/Angstrom. Wavelength values are strictly increasing and dflux is
                 calculated as ivar**-0.5 for pixels with valid data. Optional fields are
-                wdisp in Angstroms and sky in 1e-17 ergs/s/cm2/Angstrom.
+                wdisp in constant-log10-lambda pixels and sky in 1e-17 ergs/s/cm2/Angstrom.
         """
         offsets = self.get_fiber_offsets(fibers)
         num_fibers = len(offsets)

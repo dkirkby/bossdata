@@ -164,7 +164,7 @@ class SpecFile(object):
                 named fields: wavelength in Angstroms, flux and dflux in 1e-17
                 ergs/s/cm2/Angstrom. Wavelength values are strictly increasing and dflux is
                 calculated as ivar**-0.5 for pixels with valid data. Optional fields are
-                wdisp in Angstroms and sky in 1e-17 ergs/s/cm2/Angstrom.
+                wdisp in constant-log10-lambda pixels and sky in 1e-17 ergs/s/cm2/Angstrom.
         """
         # Look up the HDU for this spectrum and its pixel quality bitmap.
         if exposure_index is None:

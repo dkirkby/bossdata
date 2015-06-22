@@ -143,7 +143,7 @@ def main():
         left_axis.set_ylabel('Flux ($\\times 10^{-17}$ erg/s/cm$^{2}$/$\AA$)')
     if args.show_dispersion:
         right_axis = left_axis.twinx()
-        right_axis.set_ylabel('Dispersion ($\AA$)')
+        right_axis.set_ylabel('Dispersion (pixels)')
 
     # We will potentially plot two spectra.
     spectra = [ ]
