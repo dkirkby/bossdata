@@ -338,12 +338,20 @@ class FrameFile(object):
                 trace_set = TraceSet(self.hdulist[3])
                 self.loglam = trace_set.get_log10wavelength()
                 if self.loglam.shape != self.ivar.shape:
-                    raise RuntimeError('Traceset solution has unexpected shape: {}.'.format(
+                    raise RuntimeError('HDU3 traceset has unexpected shape: {}.'.format(
                         self.loglam.shape))
         if self.flux is None:
             self.flux = self.hdulist[0].read()
         if include_wdisp and self.wdisp is None:
-            self.wdisp = self.hdulist[4].read()
+            if self.calibrated:
+                self.wdisp = self.hdulist[4].read()
+            else:
+                # Expand the traceset solution.
+                trace_set = TraceSet(self.hdulist[4])
+                self.wdisp = trace_set.get_log10wavelength()
+                if self.wdisp.shape != self.ivar.shape:
+                    raise RuntimeError('HDU4 traceset has unexpected shape: {}.'.format(
+                        self.wdisp.shape))
         if include_sky and self.sky is None:
             self.sky = self.hdulist[6].read()
         num_pixels = self.flux.shape[1]
