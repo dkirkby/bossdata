@@ -158,7 +158,8 @@ def main():
     elif args.frame or args.cframe:
         fibers = np.array([args.fiber],dtype=int)
         if args.verbose:
-            print('Showing exposure {0}.'.format(plan.exposures['science'][args.exposure]['EXPID']))
+            print('Showing exposure {:08d}.'.format(
+                plan.exposures['science'][args.exposure]['EXPID']))
         if args.camera in ('blue','both'):
             spectra.append(frames['blue'].get_valid_data(fibers,
                 pixel_quality_mask=pixel_quality_mask, **data_args)[0])
@@ -173,7 +174,8 @@ def main():
                 print_mask_summary('Red',frames['red'].get_pixel_masks(fibers)[0])
     else:
         if args.verbose:
-            print('Showing exposure {0}.'.format(specfile.exposure_table[args.exposure]['exp']))
+            print('Showing exposure {:08d}.'.format(
+                specfile.exposure_table[args.exposure]['exp']))
         if args.camera in ('blue','both'):
             spectra.append(specfile.get_valid_data(args.exposure,'blue',
                 pixel_quality_mask=pixel_quality_mask, **data_args))
