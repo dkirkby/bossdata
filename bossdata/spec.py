@@ -197,7 +197,7 @@ class SpecFile(object):
         data['dflux'][good_pixels] = 1.0 / np.sqrt(ivar[good_pixels])
         data['dflux'][bad_pixels] = 0.0
         if include_wdisp:
-            data['wdisp'][:] = np.power(10., hdu['wdisp'][:])
+            data['wdisp'][:] = hdu['wdisp'][:]
         if include_sky:
             data['sky'][:] = hdu['sky'][:]
 

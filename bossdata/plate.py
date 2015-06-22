@@ -335,7 +335,7 @@ class FrameFile(object):
             if self.calibrated:
                 self.loglam = self.hdulist[3].read()
             else:
-                # Expand the traceset solution.
+                # Expand the traceset solution. Wavelengths are stored as log10(lambda).
                 trace_set = TraceSet(self.hdulist[3])
                 self.loglam = trace_set.get_log10wavelength()
                 if self.loglam.shape != self.ivar.shape:
@@ -347,7 +347,7 @@ class FrameFile(object):
             if self.calibrated:
                 self.wdisp = self.hdulist[4].read()
             else:
-                # Expand the traceset solution.
+                # Expand the traceset solution. Dispersions are in units of Angstroms.
                 trace_set = TraceSet(self.hdulist[4])
                 self.wdisp = trace_set.get_log10wavelength()
                 if self.wdisp.shape != self.ivar.shape:
@@ -373,7 +373,7 @@ class FrameFile(object):
         data['flux'][:] = self.flux[offsets]
         data['dflux'][:][good_pixels] = 1.0 / np.sqrt(self.ivar[offsets][good_pixels])
         if include_wdisp:
-            data['wdisp'][:] = np.power(10., self.wdisp[offsets])
+            data['wdisp'][:] = self.wdisp[offsets]
         if include_sky:
             data['sky'][:] = self.sky[offsets]
 
