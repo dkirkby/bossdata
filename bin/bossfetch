@@ -150,6 +150,24 @@ def main():
         return 0
 
     if args.dry_run:
+        # Compile statistics on the number of files and bytes involved in this fetch.
+        Mb = 1 << 20
+        num_local = 0
+        local_bytes = 0
+        for remote_path in remote_paths:
+            local_path = mirror.local_path(remote_path)
+            if os.path.isfile(local_path):
+                num_local += 1
+                try:
+                    local_bytes += os.path.getsize(local_path)
+                except os.error:
+                    print('Unable to get size of local {}.'.format(local_path))
+        print('{} / {} = {:.1f}% of files are already local and using {:.1f} Mb.'.format(
+            num_local, num_files, 100 * num_local / num_files, local_bytes / Mb))
+        print('This command would download {} new files.'.format(num_files - num_local))
+        if num_local < num_files and num_local > 0:
+            fetch_bytes = (local_bytes/num_local) * (num_files - num_local)
+            print('Estimated total download size is {:.1f} Mb.'.format(fetch_bytes / Mb))
         return 0
 
     if args.verbose:
