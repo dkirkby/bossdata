@@ -208,7 +208,7 @@ class Manager(object):
         if not isinstance(remote_path, list):
             remote_paths = [remote_path]
         else:
-            repote_paths = remote_path
+            remote_paths = remote_path
 
         for path in remote_paths:
             local_path = self.local_path(path)
@@ -223,8 +223,7 @@ class Manager(object):
         # Create local directories as needed.
         
         # We get the file for first path is there are more than one
-        if len(remote_paths) > 1:
-            local_path = self.local_path(remote_paths[0])
+        local_path = self.local_path(remote_paths[0])
         parent_path = os.path.dirname(local_path)
         if not os.path.exists(parent_path):
             # There is a potential race condition if other processes are running.
@@ -235,4 +234,4 @@ class Manager(object):
             except OSError as e:
                 if e.errno != 17:
                     raise e
-        return self.download(remote_path, local_path, progress_min_size=progress_min_size)
+        return self.download(remote_paths[0], local_path, progress_min_size=progress_min_size)

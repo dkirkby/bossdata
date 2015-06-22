@@ -283,9 +283,13 @@ class Database(object):
             if db_paths_exist[1]:               # ...but full does
                 db_path = db_paths[1]
             else:                               # Neither DB's exist, so get files, create DB
-                db_path = db_paths[0]
-                local_path = mirror.get(remote_paths[0])
-                create_meta_lite(local_path, db_path)
+                local_path = mirror.get(remote_paths)
+                if local_path == local_paths[0]:    # lite
+                    db_path = db_paths[0]
+                    create_meta_lite(local_path, db_path)
+                else:                               # full
+                    db_path = db_paths[1]
+                    create_meta_full(local_path, db_path)
         else:                                   # full branch and full DB NOT exists
             db_path = db_paths[1]
             local_path = mirror.get(remote_paths[1])
