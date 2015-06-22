@@ -238,14 +238,15 @@ def main():
         wlen_max = max(wlen_max,np.ma.max(wlen))
 
         # Update the list of fluxes that we will use to auto-range the vertical scale.
-        flux_lo = np.append(flux_lo, flux - dflux)
-        flux_hi = np.append(flux_hi, flux + dflux)
+        flux_lo = numpy.ma.append(flux_lo, flux - dflux)
+        flux_hi = numpy.ma.append(flux_hi, flux + dflux)
 
     # The x-axis limits are reset by the twinx() function so we set them here.
     plt.xlim(wlen_min,wlen_max)
 
-    # Set the flux scale.
-    left_axis.set_ylim(np.percentile(flux_lo, 0.5), np.percentile(flux_hi, 99.5))
+    # Set the flux scale to show 99% of the valid flux +/- dflux range.
+    valid = ~flux_lo.mask & ~flux_hi.mask
+    left_axis.set_ylim(np.percentile(flux_lo[valid], 0.5), np.percentile(flux_hi[valid], 99.5))
 
     if args.save_plot is not None:
         save_name = args.save_plot

@@ -196,7 +196,8 @@ class TraceSet(object):
                 along each trace that should be converted into wavelengths. If this
                 argument is not set, ``self.default_xpos`` will be used, which consists
                 of 500 identical traces with x-pixel coordinates at each integer pixel
-                value covering the full allowed range (nominally 0,1,...,4111).
+                value covering the full allowed range (nominally 0-4111 for blue, 0-4127
+                for red).
             ignore_jump(bool): Should a jump be included if this is a 2-phase readout.
 
         Returns:
