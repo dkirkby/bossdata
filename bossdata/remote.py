@@ -202,7 +202,7 @@ class Manager(object):
         Raises:
             RuntimeError: File is not already mirrored and auto_download is False.
         """
-        
+
         # Don't test if its a string; maybe later it won't be.  Test if it's a list
         remote_paths = []
         if not isinstance(remote_path, list):
@@ -221,7 +221,7 @@ class Manager(object):
 
         # If we get here, the file is not available locally so try to download it now.
         # Create local directories as needed.
-        
+
         # We get the file for first path is there are more than one
         local_path = self.local_path(remote_paths[0])
         parent_path = os.path.dirname(local_path)
