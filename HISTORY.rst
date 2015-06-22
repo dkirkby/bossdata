@@ -26,3 +26,15 @@ History
 
 * Really fix issues #9 #13.
 * Add support for finding and fetching spFrame and spCFrame files (#17).
+
+0.2.3 (2015-06-22)
+------------------
+
+* Fix issues #2 #10 #16 #18 #19 #21 #24
+* New command-line options include:
+
+ * bossfetch: --globus, --dry-run
+ * bossplot: --save-data
+ * bossquery: --sort
+
+* The main new library functionality is support for using wavelengths and dispersions encoded as "trace sets" in spFrame files via :class:`bossdata.plate.TraceSet`.
