@@ -34,10 +34,12 @@ def main():
         help = 'Do not overwrite any existing save file with the same name.')
     parser.add_argument('--sort', type = str, default = None, metavar = 'SORT',
         help = 'Sort; follows SQL syntax, columns listed in order of sort priority, DESC optionally specified to reverse order.')
+    parser.add_argument('--quasar-catalog', action='store_true',
+        help='Query quasar catalog instead of spAll.')
     args = parser.parse_args()
 
     try:
-        meta_db = bossdata.meta.Database(lite=(not args.full))
+        meta_db = bossdata.meta.Database(lite=(not args.full), quasar_catalog=args.quasar_catalog)
         table = meta_db.select_all(args.what, args.where, args.sort, max_rows=args.max_rows)
     except (RuntimeError,ValueError) as e:
         print(e)
