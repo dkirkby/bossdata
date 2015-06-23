@@ -186,9 +186,12 @@ class Manager(object):
         """Get a local file that mirrors a remote file, downloading the file if necessary.
 
         Args:
-            remote_path(str,list): The full path to the remote file relative to the remote
-                server root, which should normally be obtained using :class:`bossdata.path`
-                methods; OR a list of such paths.
+            remote_path(str,iterable): if str, then it must be the full path to the remote
+                file relative to the remote server root, which should normally be obtained
+                using :class:`bossdata.path` methods.  If an interable instead, then the first
+                item (in iteration order) that is an existing file is used; if not such file
+                exists, the first item is used to create a local file and download (see
+                auto_download).
             progress_min_size(int): Display a text progress bar for any downloads whose size
                 in Mb exceeds this value. No progress bar will ever be shown if this
                 value is None.
@@ -203,12 +206,18 @@ class Manager(object):
             RuntimeError: File is not already mirrored and auto_download is False.
         """
 
-        # Don't test if its a string; maybe later it won't be.  Test if it's a list
+        # Don't test if its a string; maybe later it won't be.  Test if it's a iterable.  If
+        # not, we'll just assume it is a single path (e.g. a single string)
         remote_paths = []
-        if not isinstance(remote_path, list):
+        if not hasattr(remote_path, '__iter__'):
             remote_paths = [remote_path]
         else:
-            remote_paths = remote_path
+            # It's some kind of iterable; this is small, so lets make life easy and make it a
+            # list.
+            if isinstance(remote_path, list):
+                remote_paths = remote_path
+            else:
+                remote_paths = [path for path in remote_path]
 
         for path in remote_paths:
             local_path = self.local_path(path)
@@ -222,7 +231,7 @@ class Manager(object):
         # If we get here, the file is not available locally so try to download it now.
         # Create local directories as needed.
 
-        # We get the file for first path is there are more than one
+        # We get the file for first path if there are more than one
         local_path = self.local_path(remote_paths[0])
         parent_path = os.path.dirname(local_path)
         if not os.path.exists(parent_path):
