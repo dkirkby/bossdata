@@ -52,6 +52,7 @@ class Finder(object):
         if redux_version is None:
             raise ValueError('No redux version specifed: try setting $BOSS_REDUX_VERSION.')
 
+        self.sas_root = sas_root
         self.redux_version = redux_version
         self.redux_base = os.path.join(sas_root, 'spectro', 'redux', redux_version)
 
@@ -122,6 +123,22 @@ class Finder(object):
         else:
             name = 'spAll-{}.fits'.format(self.redux_version)
         return os.path.join(self.redux_base, name)
+
+    def get_quasar_catalog_path(self):
+        """Get the location of the quasar catalog file.
+
+        The data model of the quasar catalog is at
+        http://data.sdss3.org/datamodel/files/BOSS_QSO/DR12Q/DR12Q.html
+        As of DR12, the file size is about 513Mb.
+
+        Additional information is available at
+        http://www.sdss.org/dr12/algorithms/boss-dr12-quasar-catalog/
+        """
+        # How do we want to specify this? 
+        #    function arg, env var, guess from sas_path?
+        catalog_name = 'DR12Q'
+        filename = '{}.fits'.format(catalog_name)
+        return os.path.join(self.sas_root, 'qso', catalog_name, filename)
 
     def get_spec_path(self, plate, mjd, fiber, lite=True):
         """Get the location of the spectrum file for the specified observation.
