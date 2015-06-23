@@ -37,8 +37,8 @@ def main():
     args = parser.parse_args()
 
     try:
-        meta_db = bossdata.meta.Database(lite = not args.full)
-        table = meta_db.select_all(args.what,args.where,args.sort,max_rows = args.max_rows)
+        meta_db = bossdata.meta.Database(lite=(not args.full))
+        table = meta_db.select_all(args.what, args.where, args.sort, max_rows=args.max_rows)
     except (RuntimeError,ValueError) as e:
         print(e)
         return -1
@@ -61,10 +61,10 @@ def main():
     if args.save:
         root,ext = os.path.splitext(args.save)
         if ext in ('.dat','.txt'):
-             table.write(args.save,format = 'ascii')
+             table.write(args.save, format='ascii')
         else:
             try:
-                table.write(args.save,overwrite = not args.no_clobber)
+                table.write(args.save, overwrite=(not args.no_clobber))
                 if args.verbose:
                     print('Results saved to {}.'.format(args.save))
             except Exception,e:
