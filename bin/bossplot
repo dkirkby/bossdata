@@ -115,10 +115,7 @@ def main():
                 mirror.get(os.path.join(frame_path, blue_name)),
                 index=1 + (args.fiber-1)//500, calibrated=args.cframe)
     else:
-        # Need to implement changes here:  if we don't have a lite file but we DO have the
-        # full plate file, use that.
         lite=(args.exposure is None)
-
         remote_paths = [finder.get_spec_path(plate=args.plate, mjd=args.mjd,fiber=args.fiber,
                                             lite=lite)]
         if lite:    # If lite, we can use the Full file if it exists but lite does not
