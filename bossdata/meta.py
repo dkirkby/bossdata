@@ -93,9 +93,9 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
     names in the full database after sub-array un-rolling.
 
     The DR12 spAll lite file is ~115Mb and converts to a ~470Mb SQL database file.
-    The conversion takes about 3 minutes on a laptop with sufficient memory. During the
-    conversion, the file being written has the extension `.building` appended, then
-    this extension is removed (and the file is made read only) once the conversion
+    The conversion takes about 3 minutes on a laptop with sufficient memory (~4 Gb).
+    During the conversion, the file being written has the extension `.building` appended,
+    then this extension is removed (and the file is made read only) once the conversion
     successfully completes.  This means that if the conversion is interrupted for any
     reason, it will be restarted the next time this function is called and you are
     unlikely to end up with an invalid database file.
@@ -170,7 +170,12 @@ def create_meta_full(sp_all_path, db_path, verbose=True):
 
     The created database renames FIBERID to FIBER and has a composite primary index on the
     (PLATE,MJD,FIBER) columns. Sub-array columns are also unrolled: see
-    :func:`sql_create_table` for details.
+    :func:`sql_create_table` for details. The conversion takes about 24 minutes on a laptop
+    with sufficient memory (~4 Gb). During the conversion, the file being written has the
+    extension `.building` appended, then this extension is removed (and the file is made read
+    only) once the conversion successfully completes.  This means that if the conversion is
+    interrupted for any reason, it will be restarted the next time this function is called
+    and you are unlikely to end up with an invalid database file.
 
     Args:
         sp_all_path(str): Absolute local path of the "full" spAll file, which is expected to be
@@ -196,7 +201,7 @@ def create_meta_full(sp_all_path, db_path, verbose=True):
         sql, num_cols = sql_create_table(
             'meta', table.dtype, renaming_rules={'FIBERID': 'FIBER'},
             primary_key='(PLATE,MJD,FIBER)')
-        connection = sqlite3.connect(db_path)
+        connection = sqlite3.connect(db_path + '.building')
         cursor = connection.cursor()
         cursor.execute(sql)
 
@@ -235,6 +240,11 @@ def create_meta_full(sp_all_path, db_path, verbose=True):
 
         connection.commit()
         connection.close()
+
+        # Make the temporary file read only by anyone.
+        os.chmod(db_path + '.building', stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
+        # Move the temporary file to its permanent location.
+        os.rename(db_path + '.building', db_path)
 
         if verbose:
             progress_bar.finish()
