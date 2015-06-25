@@ -165,8 +165,8 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
         progress_bar.finish()
 
 
-def create_meta_full(sp_all_path, db_path, verbose=True):
-    """Create the "full" meta database from a locally mirrored spAll file.
+def create_meta_full(catalog_path, db_path, verbose=True):
+    """Create the "full" meta database from a locally mirrored catalog file.
 
     The created database renames FIBERID to FIBER and has a composite primary index on the
     (PLATE,MJD,FIBER) columns. Sub-array columns are also unrolled: see
@@ -178,7 +178,7 @@ def create_meta_full(sp_all_path, db_path, verbose=True):
     and you are unlikely to end up with an invalid database file.
 
     Args:
-        sp_all_path(str): Absolute local path of the "full" spAll file, which is expected to be
+        catalog_path(str): Absolute local path of the "full" catalog file, which is expected to be
             a FITS file conforming to the spAll data model.
         db_path(str): Local path where the corresponding sqlite3 database will be written.
     """
@@ -190,7 +190,7 @@ def create_meta_full(sp_all_path, db_path, verbose=True):
     position = 0
 
     # Open the FITs file.
-    with fitsio.FITS(sp_all_path) as hdulist:
+    with fitsio.FITS(catalog_path) as hdulist:
         # This just reads the headers but still takes 15-20 seconds.
         # The equivalent operation with astropy.io.fits takes 15-20 minutes!
 
