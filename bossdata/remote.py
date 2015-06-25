@@ -186,9 +186,25 @@ class Manager(object):
         """Get a local file that mirrors a remote file, downloading the file if necessary.
 
         Args:
-            remote_path(str): The full path to the remote file relative to the remote
-                server root, which should normally be obtained using :class:`bossdata.path`
-                methods.
+            remote_path(str,iterable): if str, then it must be the full path to the remote
+                file relative to the remote server root, which should normally be obtained
+                using :class:`bossdata.path` methods.  If an interable instead, then the first
+                item (in iteration order) that is an existing file is used; if not such file
+                exists, the first item is used to create a local file and download (see
+                auto_download).  In general, a caller can determine which path is being
+                returned for with something like::
+
+                    mirror = bossdata.remote.Manager()
+                    remote_paths = [the_preferred_path, a_backup_path]
+                    local_path = mirror.get(remote_paths)
+                    
+                    ...
+                    
+                    relative_local_path = local_path.replace(mirror.local_root, '', 1)
+                    if relative_local_path != remote_paths[0]:
+                        print("A substitution was made:\\n\\t{}\\nwas substituted for\\n\\t{}.".format(
+                            relative_local_path, remote_paths[0]))
+
             progress_min_size(int): Display a text progress bar for any downloads whose size
                 in Mb exceeds this value. No progress bar will ever be shown if this
                 value is None.
@@ -202,9 +218,24 @@ class Manager(object):
         Raises:
             RuntimeError: File is not already mirrored and auto_download is False.
         """
-        local_path = self.local_path(remote_path)
-        if os.path.isfile(local_path):
-            return local_path
+
+        # Don't test if its a string; maybe later it won't be.  Test if it's a iterable.  If
+        # not, we'll just assume it is a single path (e.g. a single string)
+        remote_paths = []
+        if not hasattr(remote_path, '__iter__'):
+            remote_paths = [remote_path]
+        else:
+            # It's some kind of iterable; this is small, so lets make life easy and make it a
+            # list.
+            if isinstance(remote_path, list):
+                remote_paths = remote_path
+            else:
+                remote_paths = [path for path in remote_path]
+
+        for path in remote_paths:
+            local_path = self.local_path(path)
+            if os.path.isfile(local_path):
+                return local_path
 
         if not auto_download:
             raise RuntimeError('File not in mirror and auto_download is False: {}'.format(
@@ -212,6 +243,9 @@ class Manager(object):
 
         # If we get here, the file is not available locally so try to download it now.
         # Create local directories as needed.
+
+        # We get the file for first path if there are more than one
+        local_path = self.local_path(remote_paths[0])
         parent_path = os.path.dirname(local_path)
         if not os.path.exists(parent_path):
             # There is a potential race condition if other processes are running.
@@ -222,4 +256,4 @@ class Manager(object):
             except OSError as e:
                 if e.errno != 17:
                     raise e
-        return self.download(remote_path, local_path, progress_min_size=progress_min_size)
+        return self.download(remote_paths[0], local_path, progress_min_size=progress_min_size)

@@ -121,13 +121,22 @@ def main():
                     mirror.get(os.path.join(frame_path, blue_name)),
                     index=1 + (args.fiber-1)//500, calibrated=args.cframe)
         else:
-            remote_path = finder.get_spec_path(plate=args.plate, mjd=args.mjd, fiber=args.fiber,
-                lite=(args.exposure is None))
-            local_path = mirror.get(remote_path)
+            lite=(args.exposure is None)
+            remote_paths = [finder.get_spec_path(plate=args.plate, mjd=args.mjd,fiber=args.fiber,
+                                            lite=lite)]
+            if lite:    # If lite, we can use the Full file if it exists but lite does not
+                remote_paths.append(finder.get_spec_path(plate=args.plate, mjd=args.mjd,
+                                fiber=args.fiber, lite=False))
+
+            local_path = mirror.get(remote_paths)
             specfile = bossdata.spec.SpecFile(local_path)
             if args.verbose:
                 print('Exposure summary:')
                 print(specfile.exposure_table)
+                relative_local_path = local_path.replace(mirror.local_root, '', 1)
+                if relative_local_path != remote_paths[0]:
+                    print("A substitution was made:\n\t{}\nwas substituted for\n\t{}.".format(
+                        relative_local_path, remote_paths[0]))
     except RuntimeError as e:
         print(str(e))
         return -1
