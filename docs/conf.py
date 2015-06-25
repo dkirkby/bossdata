@@ -44,6 +44,8 @@ MOCK_MODULES = [
     'astropy.table',
     'numpy',
     'numpy.ma',
+    'numpy.polynomial',
+    'numpy.polynomial.legendre',
     'fitsio',
 ]
 if on_rtd:

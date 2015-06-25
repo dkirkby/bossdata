@@ -75,14 +75,14 @@ would be downloaded to::
 
     $BOSS_LOCAL_ROOT/sas/dr12/boss/spectro/redux/v5_7_0/spectra/lite/3586/spec-3586-55181-0190.fits
 
-By default, the "lite" format of each spectrum data file is downloaded, which is sufficient for many purposes and signficantly (about 8x) smaller. The "lite" format contains HDUs 0-3 of the `full spectrum data file <http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/spectra/PLATE4/spec.html>`_ and does not include the spectra of individual exposures.  To download the full files instead, use the `--full` option. Both types of files can co-exist in your local mirror.
+By default, the "lite" format of each spectrum data file is downloaded, which is sufficient for many purposes and signficantly (about 8x) smaller. The "lite" format contains HDUs 0-3 of the `full spectrum data file <http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/spectra/PLATE4/spec.html>`_ and does not include the spectra of individual exposures.  To download the full files instead, use the ``--full`` option. Both types of files can co-exist in your local mirror. You can also load the plate ``spFrame`` or flux-calibrated ``spCFrame`` files using the ``--frame`` or ``--cframe`` options, respectively.  These files contain an entire half plate (500) spectra for a single camera (blue/red) and exposure.  See the :doc:`/overview` for details.
 
-The `--verbose` option displays a progress bar showing the fraction of files already locally available. Any files that were previously fetched will not be downloaded again so it is safe and efficient to run `bossfetch` for overlapping lists of observations.  Note that the progress bar may appear to update unevenly if some files are already mirrored and others need to be downloaded.
+The ``--verbose`` option displays a progress bar showing the fraction of files already locally available. Any files that were previously fetched will not be downloaded again so it is safe and efficient to run ``bossfetch`` for overlapping lists of observations.  Note that the progress bar may appear to update unevenly if some files are already mirrored and others need to be downloaded.
 
-Each data file download is streamed to a temporary files with `.downloading` appended to their name then renamed to remove this extension after the download completes normally. If a download is interrupted or fails for some reason, the partially downloaded file will remain in the local mirror.  Re-running a `bossfetch` command will automatically re-download any partially downloaded file.
+Each data file download is streamed to a temporary files with ``.downloading`` appended to their name then renamed to remove this extension after the download completes normally. If a download is interrupted or fails for some reason, the partially downloaded file will remain in the local mirror.  Re-running a ``bossfetch`` command will automatically re-download any partially downloaded file.
 
 By default, downloading is split between two parallel subprocesses but you can change this with the
-`--nproc` option.  For downloading "lite" files, using more than 2 subprocesses will probably not
+``--nproc`` option.  For downloading "lite" files, using more than 2 subprocesses will probably not
 improve the overall performance.
 
 If you want to transfer large amounts of files, you should consider using `globus <https://www.globus.org>`_. To prepare a `globus` bulk data transfer file list, use the `--globus` option to specify the remote/local endpoint pair `remote#endpoint:local#endpoint`. Note that the `--save` option must also be used to specify an output filename. SDSS endpoints are documented at `here <http://www.sdss.org/dr12/data_access/bulk/>`_. 
@@ -101,8 +101,12 @@ Plot the spectrum of a single BOSS observation, identified by its PLATE, MJD of 
 
     bosplot --plate 6641 --mjd 56383 --fiber 30
 
-This should open a new window containing the plot that you will need to close in order to exit the program.  To also save your plot, add the `--save` option with a filename that has a standard graphics format extension (pdf,png,...).  To save plots directly without displaying them, also use the `--no-display` option.
+This should open a new window containing the plot that you will need to close in order to exit the program.  To also save your plot, add the ``--save-plot`` option with a filename that has a standard graphics format extension (pdf,png,...).  If you omit the filename, ``--save-plot`` uses the name ``bossplot-{plate}-{mjd}-{fiber}.png``. To save plots directly without displaying them, also use the ``--no-display`` option.
 
-The `bossplot` command will automatically download the appropriate data file if necessary.
+You can also save the data shown in a plot using ``--save-data`` with an optional filename (the default is ``bossplot-{plate}-{mjd}-{fiber}.dat``).  Data is saved using the `ascii.basic <http://docs.astropy.org/en/latest/api/astropy.io.ascii.Basic.html#astropy.io.ascii.Basic>`_ format and only wavelengths with valid data are included in the output.
 
-This script uses the `matplotlib` python library, which is not required for the `bossdata` package and therefore not automatically installed.
+The ``bossplot`` command will automatically download the appropriate data file if necessary.
+
+Different versions of the spectrum can be plotted. By default the spec-lite data file is used for a coadd or the spec file for an individual exposure.  Use the ``--frame`` or ``--cframe`` to plot the spectrum from a plate ``spFrame`` file or its flux-calibrated equivalent ``spCFrame`` file.
+
+This script uses the `matplotlib <http://matplotlib.org>`_ python library, which is not required for the ``bossdata`` package and therefore not automatically installed.
