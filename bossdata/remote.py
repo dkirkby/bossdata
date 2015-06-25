@@ -116,10 +116,10 @@ class Manager(object):
         try:
             request = requests.get(url, stream=True, timeout=(3.05, 27))
             if request.status_code != requests.codes.ok:
-                raise RuntimeError('HTTP request returned error code {0}.'.format(
-                    request.status_code))
+                raise RuntimeError('HTTP request returned error code {} for {}.'.format(
+                    request.status_code, url))
         except requests.exceptions.RequestException as e:
-            raise RuntimeError('HTTP request failed: {}.'.format(str(e)))
+            raise RuntimeError('HTTP request failed for {}: {}.'.format(url,str(e)))
 
         # Check that there is enough free space, if possible.
         progress_bar = None
@@ -153,9 +153,9 @@ class Manager(object):
             # Move the temporary file to its permanent location.
             os.rename(local_path + '.downloading', local_path)
         except requests.exceptions.RequestException as e:
-            raise RuntimeError('HTTP streaming failed: {}.'.format(str(e)))
+            raise RuntimeError('HTTP streaming failed for {}: {}.'.format(url, str(e)))
         except IOError as e:
-            raise RuntimeError('Streaming IO error: {}.'.format(str(e)))
+            raise RuntimeError('Streaming IO error for {}: {}.'.format(url, str(e)))
 
         if progress_bar:
             progress_bar.finish()
@@ -200,7 +200,8 @@ class Manager(object):
                 then a RuntimeError occurs.
 
         Returns:
-            str: Absolute local path of the local file that mirrors the remote file.
+            str, int: Absolute local path of the local file that mirrors the remote file, and
+                the index of the remote_path (if more than one was passed, or 0) used.
 
         Raises:
             RuntimeError: File is not already mirrored and auto_download is False.
@@ -219,10 +220,10 @@ class Manager(object):
             else:
                 remote_paths = [path for path in remote_path]
 
-        for path in remote_paths:
+        for i, path in enumerate(remote_paths):
             local_path = self.local_path(path)
             if os.path.isfile(local_path):
-                return local_path
+                return local_path, i
 
         if not auto_download:
             raise RuntimeError('File not in mirror and auto_download is False: {}'.format(
@@ -243,4 +244,4 @@ class Manager(object):
             except OSError as e:
                 if e.errno != 17:
                     raise e
-        return self.download(remote_paths[0], local_path, progress_min_size=progress_min_size)
+        return self.download(remote_paths[0], local_path, progress_min_size=progress_min_size), 0

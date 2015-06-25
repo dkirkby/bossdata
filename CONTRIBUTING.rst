@@ -86,16 +86,12 @@ To later revert back to a system-installed version of the package, un-install yo
 
    Now you can make your changes locally.
 
-5. When you're done making changes, check that your changes pass flake8 and the tests, including testing other Python versions with tox::
+5. When you're done making changes, check that your changes pass flake8 and the unit tests::
 
     flake8 --doctests --exclude bossdata/bits.py --max-line-length 95 bossdata
     py.test --doctest-modules --verbose bossdata
 
-   Note that `--doctest-modules` will require that all external modules imported from our modules are installed, so omit that option if you only want to run the unit tests.
-
-   To get flake8 and tox, just pip install them into your virtualenv.  If you don't already have a python-2.6 environment installed, try this if you are using conda::
-
-    conda create -n py26 python=2.6 anaconda
+   Note that `--doctest-modules` will require that all external modules imported from our modules are installed, so omit that option if you only want to run the unit tests.  If you don't already have flake8, you can pip install it.
 
 6. Commit your changes and push your branch to GitHub::
 
@@ -134,7 +130,7 @@ Version Update Checklist
     python setup.py sdist bdist_wheel upload
 
 New External Depencency Checklist
-------------------------
+---------------------------------
 
 These steps are not required for modules that are included with the python standard library.
 

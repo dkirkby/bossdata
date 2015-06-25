@@ -44,12 +44,16 @@ def main():
         return -1
 
     if args.verbose:
+        if not args.full and not meta_db.lite:
+            print("Using --full databse as lite files were not available.")
         print('Database contains {:d} rows.'.format(meta_db.num_rows))
-        print('Query returned {:d} rows.'.format(len(table)))
 
     if table is None:
         print('No rows found for this query.')
         return 0
+
+    if args.verbose:
+        print('Query returned {:d} rows.'.format(len(table)))
 
     if args.print:
         print(table)

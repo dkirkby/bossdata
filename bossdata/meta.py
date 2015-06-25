@@ -10,6 +10,7 @@ import os
 import os.path
 import gzip
 import sqlite3
+import stat
 
 import numpy as np
 import astropy.table
@@ -92,7 +93,12 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
     names in the full database after sub-array un-rolling.
 
     The DR12 spAll lite file is ~115Mb and converts to a ~470Mb SQL database file.
-    The conversion takes about 24 minutes on a laptop.
+    The conversion takes about 3 minutes on a laptop with sufficient memory (~4 Gb).
+    During the conversion, the file being written has the extension `.building` appended,
+    then this extension is removed (and the file is made read only) once the conversion
+    successfully completes.  This means that if the conversion is interrupted for any
+    reason, it will be restarted the next time this function is called and you are
+    unlikely to end up with an invalid database file.
 
     Args:
         sp_all_path(str): Absolute local path of the "lite" spAll file, which is expected
@@ -131,7 +137,7 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
         rules['MODELFLUX{}'.format(i)] = 'MODELFLUX_{}'.format(i)
     sql, num_cols = sql_create_table(
         'meta', table.dtype, renaming_rules=rules, primary_key='(PLATE,MJD,FIBER)')
-    connection = sqlite3.connect(db_path)
+    connection = sqlite3.connect(db_path + '.building')
     cursor = connection.cursor()
     cursor.execute(sql)
     connection.commit()
@@ -149,6 +155,12 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
             progress_bar.update(i + 1)
     connection.commit()
     connection.close()
+
+    # Make the temporary file read only by anyone.
+    os.chmod(db_path + '.building', stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
+    # Move the temporary file to its permanent location.
+    os.rename(db_path + '.building', db_path)
+
     if verbose:
         progress_bar.finish()
 
@@ -158,7 +170,12 @@ def create_meta_full(sp_all_path, db_path, verbose=True):
 
     The created database renames FIBERID to FIBER and has a composite primary index on the
     (PLATE,MJD,FIBER) columns. Sub-array columns are also unrolled: see
-    :func:`sql_create_table` for details.
+    :func:`sql_create_table` for details. The conversion takes about 24 minutes on a laptop
+    with sufficient memory (~4 Gb). During the conversion, the file being written has the
+    extension `.building` appended, then this extension is removed (and the file is made read
+    only) once the conversion successfully completes.  This means that if the conversion is
+    interrupted for any reason, it will be restarted the next time this function is called
+    and you are unlikely to end up with an invalid database file.
 
     Args:
         sp_all_path(str): Absolute local path of the "full" spAll file, which is expected to be
@@ -184,7 +201,7 @@ def create_meta_full(sp_all_path, db_path, verbose=True):
         sql, num_cols = sql_create_table(
             'meta', table.dtype, renaming_rules={'FIBERID': 'FIBER'},
             primary_key='(PLATE,MJD,FIBER)')
-        connection = sqlite3.connect(db_path)
+        connection = sqlite3.connect(db_path + '.building')
         cursor = connection.cursor()
         cursor.execute(sql)
 
@@ -223,6 +240,11 @@ def create_meta_full(sp_all_path, db_path, verbose=True):
 
         connection.commit()
         connection.close()
+
+        # Make the temporary file read only by anyone.
+        os.chmod(db_path + '.building', stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
+        # Move the temporary file to its permanent location.
+        os.rename(db_path + '.building', db_path)
 
         if verbose:
             progress_bar.finish()
@@ -272,6 +294,7 @@ class Database(object):
 
         db_path = None
         local_path = None
+        lite_db_used = True
 
         # Create the database if necessary.
         # Could make this more compact now that all the logic is foiled out.
@@ -280,9 +303,11 @@ class Database(object):
             db_path = db_paths[0]
         elif not lite and db_paths_exist[1]:    # full branch, and full DB exists
             db_path = db_paths[1]
+            lite_db_used = False
         elif lite and not db_paths_exist[0]:    # lite branch and lite DB NOT exists
             if db_paths_exist[1]:               # ...but full does
                 db_path = db_paths[1]
+                lite_db_used = False
             else:                               # Neither DB's exist, so get files, create DB
                 local_path = mirror.get(remote_paths)
                 if local_path == local_paths[0]:    # lite
@@ -290,9 +315,11 @@ class Database(object):
                     create_meta_lite(local_path, db_path)
                 else:                               # full
                     db_path = db_paths[1]
+                    lite_db_used = False
                     create_meta_full(local_path, db_path)
         else:                                   # full branch and full DB NOT exists
             db_path = db_paths[1]
+            lite_db_used = False
             local_path = mirror.get(remote_paths[1])
             create_meta_full(local_path, db_path)
 
@@ -315,6 +342,7 @@ class Database(object):
         # Look up and save the number of rows in the database.
         self.cursor.execute('SELECT COUNT(*) FROM meta')
         self.num_rows = self.cursor.fetchone()[0]
+        self.lite = lite_db_used
 
     def prepare_columns(self, column_names):
         """Validate column names and lookup their types.
