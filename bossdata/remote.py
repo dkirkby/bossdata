@@ -191,7 +191,20 @@ class Manager(object):
                 using :class:`bossdata.path` methods.  If an interable instead, then the first
                 item (in iteration order) that is an existing file is used; if not such file
                 exists, the first item is used to create a local file and download (see
-                auto_download).
+                auto_download).  In general, a caller can determine which path is being
+                returned for with something like::
+
+                    mirror = bossdata.remote.Manager()
+                    remote_paths = [the_preferred_path, a_backup_path]
+                    local_path = mirror.get(remote_paths)
+                    
+                    ...
+                    
+                    relative_local_path = local_path.replace(mirror.local_root, '', 1)
+                    if relative_local_path != remote_paths[0]:
+                        print("A substitution was made:\\n\\t{}\\nwas substituted for\\n\\t{}.".format(
+                            relative_local_path, remote_paths[0]))
+
             progress_min_size(int): Display a text progress bar for any downloads whose size
                 in Mb exceeds this value. No progress bar will ever be shown if this
                 value is None.
@@ -200,8 +213,7 @@ class Manager(object):
                 then a RuntimeError occurs.
 
         Returns:
-            str, int: Absolute local path of the local file that mirrors the remote file, and
-                the index of the remote_path (if more than one was passed, or 0) used.
+            str: Absolute local path of the local file that mirrors the remote file.
 
         Raises:
             RuntimeError: File is not already mirrored and auto_download is False.
@@ -220,10 +232,10 @@ class Manager(object):
             else:
                 remote_paths = [path for path in remote_path]
 
-        for i, path in enumerate(remote_paths):
+        for path in remote_paths:
             local_path = self.local_path(path)
             if os.path.isfile(local_path):
-                return local_path, i
+                return local_path
 
         if not auto_download:
             raise RuntimeError('File not in mirror and auto_download is False: {}'.format(
@@ -244,4 +256,4 @@ class Manager(object):
             except OSError as e:
                 if e.errno != 17:
                     raise e
-        return self.download(remote_paths[0], local_path, progress_min_size=progress_min_size), 0
+        return self.download(remote_paths[0], local_path, progress_min_size=progress_min_size)

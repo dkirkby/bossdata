@@ -128,13 +128,15 @@ def main():
                 remote_paths.append(finder.get_spec_path(plate=args.plate, mjd=args.mjd,
                                 fiber=args.fiber, lite=False))
 
-            local_path, ind = mirror.get(remote_paths)
+            local_path = mirror.get(remote_paths)
             specfile = bossdata.spec.SpecFile(local_path)
             if args.verbose:
                 print('Exposure summary:')
                 print(specfile.exposure_table)
-                if lite and ind > 0:
-                    print("Substituted full file {} for non-local lite file".format(local_path))
+                relative_local_path = local_path.replace(mirror.local_root, '', 1)
+                if relative_local_path != remote_paths[0]:
+                    print("A substitution was made:\n\t{}\nwas substituted for\n\t{}.".format(
+                        relative_local_path, remote_paths[0]))
     except RuntimeError as e:
         print(str(e))
         return -1
