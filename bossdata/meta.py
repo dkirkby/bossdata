@@ -11,6 +11,7 @@ import os.path
 import gzip
 import sqlite3
 import stat
+import re
 
 import numpy as np
 import astropy.table
@@ -381,7 +382,7 @@ class Database(object):
             return self.column_names, self.column_dtypes
 
         names, dtypes = [], []
-        for name in column_names.split(','):
+        for name in re.split('\s*,\s*',column_names.strip()):
             try:
                 index = self.column_names.index(name)
             except ValueError:
@@ -407,7 +408,7 @@ class Database(object):
             what(str): Comma separated list of column names to return or '*' to return
                 all columns.
             where(str): SQL selection clause or None for no filtering. Reserved column
-                names such as PRIMARY must be `escaped` in this clause.
+                names such as PRIMARY must be escaped with backticks in this clause.
 
         Raises:
             sqlite3.OperationalError: failed to execute query.
@@ -435,7 +436,7 @@ class Database(object):
             what(str): Comma separated list of column names to return or '*' to return all
                 columns.
             where(str): SQL selection clause or None for no filtering. Reserved column names
-                such as PRIMARY must be `escaped` in this clause.
+                such as PRIMARY must be escaped with backticks in this clause.
             max_rows(int): Maximum number of rows that will be returned.
 
         Returns:
