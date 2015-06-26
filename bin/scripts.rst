@@ -58,6 +58,9 @@ In the case where a query is made without specifying `--full` but the lite datab
 
 Note that specifying `--full` will only (and always) use the full DB or catalog file.
 
+The `--quasar-catalog` option can be used to query the `BOSS quasar catalog <http://www.sdss.org/dr12/algorithms/boss-dr12-quasar-catalog/>`_ instead of spAll. By default, the current version of the catalog will be used; use the `--quasar-catalog-name` option to specify an earlier version.
+
+
 .. _bossfetch:
 
 bossfetch
