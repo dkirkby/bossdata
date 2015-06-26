@@ -40,8 +40,12 @@ def main():
         help='Use the specified BOSS quasar catalog name.')
     args = parser.parse_args()
 
+    # Use the "lite" version of spAll unless --full is requested.
+    # There is no "lite" version of the quasar catalog.
+    use_lite = not (args.full or args.quasar_catalog)
+
     try:
-        meta_db = bossdata.meta.Database(lite=(not (args.full or args.quasar_catalog)), quasar_catalog=args.quasar_catalog,
+        meta_db = bossdata.meta.Database(lite=use_lite, quasar_catalog=args.quasar_catalog,
             quasar_catalog_name=args.quasar_catalog_name)
         table = meta_db.select_all(args.what, args.where, args.sort, max_rows=args.max_rows)
     except (RuntimeError,ValueError) as e:
@@ -49,8 +53,8 @@ def main():
         return -1
 
     if args.verbose:
-        if not args.full and not meta_db.lite:
-            print("Using --full database as lite files were not available.")
+        if use_lite and not meta_db.lite:
+            print('Using the --full database since it is already downloaded.')
         print('Database contains {:d} rows.'.format(meta_db.num_rows))
 
     if table is None:
