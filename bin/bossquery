@@ -36,7 +36,7 @@ def main():
         help = 'Sort; follows SQL syntax, columns listed in order of sort priority, DESC optionally specified to reverse order.')
     parser.add_argument('--quasar-catalog', action='store_true',
         help='Query quasar catalog instead of spAll.')
-    parser.add_argument('--quasar-catalog-name', type=str, default=None,
+    parser.add_argument('--quasar-catalog-name', type=str, default=bossdata.path.Finder.default_quasar_catalog_name,
         help='Use the specified BOSS quasar catalog name.')
     args = parser.parse_args()
 
