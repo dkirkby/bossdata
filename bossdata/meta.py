@@ -296,7 +296,8 @@ class Database(object):
             local_path = mirror.local_path(remote_path)
             assert local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
                 local_path)
-                db_path = local_path.replace('.fits', '.db')
+            db_path = local_path.replace('.fits', '.db')
+            lite_db_used = False
             # Create the database if necessary.
             if not os.path.isfile(db_path):
                 local_path = mirror.get(remote_path)
