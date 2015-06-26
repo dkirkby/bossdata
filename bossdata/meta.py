@@ -299,8 +299,8 @@ class Database(object):
             remote_paths = [finder.get_sp_all_path(lite=True),
                             finder.get_sp_all_path(lite=False)]
             local_paths = [mirror.local_path(path) for path in remote_paths]
-            db_paths = [Database.db_path_helper(local_paths[0], lite=True),
-                        Database.db_path_helper(local_paths[1], lite=False)]
+            db_paths = [Database._db_path_helper(local_paths[0], lite=True),
+                        Database._db_path_helper(local_paths[1], lite=False)]
             db_paths_exist = [os.path.isfile(path) for path in db_paths]
 
             db_path = None
@@ -465,7 +465,7 @@ class Database(object):
         return astropy.table.Table(rows=rows, names=names)
 
     @staticmethod
-    def db_path_helper(path=None, lite=True):
+    def _db_path_helper(path=None, lite=True):
         if lite:
             assert path.endswith('.dat.gz'), 'Expected .dat.gz extension for {}.'.format(
                 path)
