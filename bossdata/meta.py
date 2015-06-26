@@ -269,8 +269,8 @@ class Database(object):
             provides a subset of the most commonly accessed fields.
         quasar_catalog(bool): Initialize database using the BOSS quasar catalog instead of
             spAll.
-        quasar_catalog_name(str): The name of the BOSS quasar catalog or None to use the
-            default specified by :attr:`bossdata.path.Finder.default_quasar_catalog_name`.
+        quasar_catalog_name(str): The name of the BOSS quasar catalog to use, or use the
+            :attr:`default <bossdata.path.Finder.default_quasar_catalog_name>` if this is None.
     """
     def __init__(self, finder=None, mirror=None, lite=True, quasar_catalog=False,
                  quasar_catalog_name=None):
