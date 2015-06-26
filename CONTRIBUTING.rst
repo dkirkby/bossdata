@@ -49,6 +49,8 @@ articles, and such.  We use the `sphinx napolean extension <http://sphinx-doc.or
  * methods ``:meth:`bosdata.module.Class.method```
  * functions ``:func:`bossdata.module.func```
 
+* You can override the default link text by changing ``:role:`target``` to ``:role:`text <target>```.
+
 Submit Feedback
 ~~~~~~~~~~~~~~~
 

@@ -119,7 +119,7 @@ class Manager(object):
                 raise RuntimeError('HTTP request returned error code {} for {}.'.format(
                     request.status_code, url))
         except requests.exceptions.RequestException as e:
-            raise RuntimeError('HTTP request failed for {}: {}.'.format(url,str(e)))
+            raise RuntimeError('HTTP request failed for {}: {}.'.format(url, str(e)))
 
         # Check that there is enough free space, if possible.
         progress_bar = None
@@ -197,13 +197,8 @@ class Manager(object):
                     mirror = bossdata.remote.Manager()
                     remote_paths = [the_preferred_path, a_backup_path]
                     local_path = mirror.get(remote_paths)
-                    
-                    ...
-                    
-                    relative_local_path = local_path.replace(mirror.local_root, '', 1)
-                    if relative_local_path != remote_paths[0]:
-                        print("A substitution was made:\\n\\t{}\\nwas substituted for\\n\\t{}.".format(
-                            relative_local_path, remote_paths[0]))
+                    if local_path != remote_paths[0]:
+                        print('substituted {} for {}.'.format(local_path, remote_paths[0]))
 
             progress_min_size(int): Display a text progress bar for any downloads whose size
                 in Mb exceeds this value. No progress bar will ever be shown if this

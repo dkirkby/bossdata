@@ -11,6 +11,7 @@ import os.path
 import gzip
 import sqlite3
 import stat
+import re
 
 import numpy as np
 import astropy.table
@@ -165,8 +166,8 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
         progress_bar.finish()
 
 
-def create_meta_full(sp_all_path, db_path, verbose=True):
-    """Create the "full" meta database from a locally mirrored spAll file.
+def create_meta_full(catalog_path, db_path, verbose=True):
+    """Create the "full" meta database from a locally mirrored catalog file.
 
     The created database renames FIBERID to FIBER and has a composite primary index on the
     (PLATE,MJD,FIBER) columns. Sub-array columns are also unrolled: see
@@ -178,8 +179,8 @@ def create_meta_full(sp_all_path, db_path, verbose=True):
     and you are unlikely to end up with an invalid database file.
 
     Args:
-        sp_all_path(str): Absolute local path of the "full" spAll file, which is expected to be
-            a FITS file conforming to the spAll data model.
+        catalog_path(str): Absolute local path of the "full" catalog file, which is expected
+            to be a FITS file.
         db_path(str): Local path where the corresponding sqlite3 database will be written.
     """
 
@@ -190,7 +191,7 @@ def create_meta_full(sp_all_path, db_path, verbose=True):
     position = 0
 
     # Open the FITs file.
-    with fitsio.FITS(sp_all_path) as hdulist:
+    with fitsio.FITS(catalog_path) as hdulist:
         # This just reads the headers but still takes 15-20 seconds.
         # The equivalent operation with astropy.io.fits takes 15-20 minutes!
 
@@ -257,17 +258,6 @@ sql_type_map = {
 
 
 class Database(object):
-    @staticmethod
-    def db_path_helper(path=None, lite=True):
-        if lite:
-            assert path.endswith('.dat.gz'), 'Expected .dat.gz extension for {}.'.format(
-                path)
-            return path.replace('.dat.gz', '-lite.db')
-        else:
-            assert path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
-                path)
-            return path.replace('.fits', '.db')
-
     """Initialize a searchable database of BOSS observation metadata.
 
     Args:
@@ -277,51 +267,72 @@ class Database(object):
             data. If not specified, the default Manager constructor is used.
         lite(bool): Use the "lite" metadata format, which is considerably faster but only
             provides a subset of the most commonly accessed fields.
+        quasar_catalog(bool): Initialize database using the BOSS quasar catalog instead of
+            spAll.
+        quasar_catalog_name(str): The name of the BOSS quasar catalog to use, or use the
+            :attr:`default <bossdata.path.Finder.default_quasar_catalog_name>` if this is None.
     """
-    def __init__(self, finder=None, mirror=None, lite=True):
+    def __init__(self, finder=None, mirror=None, lite=True, quasar_catalog=False,
+                 quasar_catalog_name=None):
 
         if finder is None:
             finder = bossdata.path.Finder()
         if mirror is None:
             mirror = bossdata.remote.Manager()
 
-        # Pre-build all our paths, test for (and store) the existence of the DB files
-        remote_paths = [finder.get_sp_all_path(lite=True), finder.get_sp_all_path(lite=False)]
-        local_paths = [mirror.local_path(path) for path in remote_paths]
-        db_paths = [Database.db_path_helper(local_paths[0], lite=True),
-                    Database.db_path_helper(local_paths[1], lite=False)]
-        db_paths_exist = [os.path.isfile(path) for path in db_paths]
-
-        db_path = None
-        local_path = None
-        lite_db_used = True
-
-        # Create the database if necessary.
-        # Could make this more compact now that all the logic is foiled out.
-        # lite is [0], full is [1]
-        if lite and db_paths_exist[0]:          # lite branch, and lite DB exists
-            db_path = db_paths[0]
-        elif not lite and db_paths_exist[1]:    # full branch, and full DB exists
-            db_path = db_paths[1]
+        # Get the local name of the metadata source file and the corresponding SQL
+        # database name.
+        if quasar_catalog:
+            assert not lite, 'No lite format available of BOSS quasar catalog.'
+            remote_path = finder.get_quasar_catalog_path(quasar_catalog_name)
+            local_path = mirror.local_path(remote_path)
+            assert local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
+                local_path)
+            db_path = local_path.replace('.fits', '.db')
             lite_db_used = False
-        elif lite and not db_paths_exist[0]:    # lite branch and lite DB NOT exists
-            if db_paths_exist[1]:               # ...but full does
+            # Create the database if necessary.
+            if not os.path.isfile(db_path):
+                local_path = mirror.get(remote_path)
+                create_meta_full(local_path, db_path)
+        else:
+            # Pre-build all our paths, test for (and store) the existence of the DB files
+            remote_paths = [finder.get_sp_all_path(lite=True),
+                            finder.get_sp_all_path(lite=False)]
+            local_paths = [mirror.local_path(path) for path in remote_paths]
+            db_paths = [Database._db_path_helper(local_paths[0], lite=True),
+                        Database._db_path_helper(local_paths[1], lite=False)]
+            db_paths_exist = [os.path.isfile(path) for path in db_paths]
+
+            db_path = None
+            local_path = None
+            lite_db_used = True
+
+            # Create the database if necessary.
+            # Could make this more compact now that all the logic is foiled out.
+            # lite is [0], full is [1]
+            if lite and db_paths_exist[0]:        # lite branch, and lite DB exists
+                db_path = db_paths[0]
+            elif not lite and db_paths_exist[1]:  # full branch, and full DB exists
                 db_path = db_paths[1]
                 lite_db_used = False
-            else:                               # Neither DB's exist, so get files, create DB
-                local_path = mirror.get(remote_paths)
-                if local_path == local_paths[0]:    # lite
-                    db_path = db_paths[0]
-                    create_meta_lite(local_path, db_path)
-                else:                               # full
+            elif lite and not db_paths_exist[0]:  # lite branch and lite DB NOT exists
+                if db_paths_exist[1]:             # ...but full does
                     db_path = db_paths[1]
                     lite_db_used = False
-                    create_meta_full(local_path, db_path)
-        else:                                   # full branch and full DB NOT exists
-            db_path = db_paths[1]
-            lite_db_used = False
-            local_path = mirror.get(remote_paths[1])
-            create_meta_full(local_path, db_path)
+                else:                             # Neither DB's exist, so get files, create DB
+                    local_path = mirror.get(remote_paths)
+                    if local_path == local_paths[0]:    # lite
+                        db_path = db_paths[0]
+                        create_meta_lite(local_path, db_path)
+                    else:                               # full
+                        db_path = db_paths[1]
+                        lite_db_used = False
+                        create_meta_full(local_path, db_path)
+            else:                                   # full branch and full DB NOT exists
+                db_path = db_paths[1]
+                lite_db_used = False
+                local_path = mirror.get(remote_paths[1])
+                create_meta_full(local_path, db_path)
 
         # Connect to the database.
         self.connection = sqlite3.connect(db_path)
@@ -363,7 +374,7 @@ class Database(object):
             return self.column_names, self.column_dtypes
 
         names, dtypes = [], []
-        for name in column_names.split(','):
+        for name in re.split('\s*,\s*', column_names.strip()):
             try:
                 index = self.column_names.index(name)
             except ValueError:
@@ -389,7 +400,7 @@ class Database(object):
             what(str): Comma separated list of column names to return or '*' to return
                 all columns.
             where(str): SQL selection clause or None for no filtering. Reserved column
-                names such as PRIMARY must be `escaped` in this clause.
+                names such as PRIMARY must be escaped with backticks in this clause.
 
         Raises:
             sqlite3.OperationalError: failed to execute query.
@@ -417,7 +428,7 @@ class Database(object):
             what(str): Comma separated list of column names to return or '*' to return all
                 columns.
             where(str): SQL selection clause or None for no filtering. Reserved column names
-                such as PRIMARY must be `escaped` in this clause.
+                such as PRIMARY must be escaped with backticks in this clause.
             max_rows(int): Maximum number of rows that will be returned.
 
         Returns:
@@ -452,3 +463,14 @@ class Database(object):
         # Return a table of the results, letting astropy.table.Table infer the columns types
         # from the data itself.
         return astropy.table.Table(rows=rows, names=names)
+
+    @staticmethod
+    def _db_path_helper(path=None, lite=True):
+        if lite:
+            assert path.endswith('.dat.gz'), 'Expected .dat.gz extension for {}.'.format(
+                path)
+            return path.replace('.dat.gz', '-lite.db')
+        else:
+            assert path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
+                path)
+            return path.replace('.fits', '.db')

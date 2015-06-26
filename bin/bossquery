@@ -34,18 +34,27 @@ def main():
         help = 'Do not overwrite any existing save file with the same name.')
     parser.add_argument('--sort', type = str, default = None, metavar = 'SORT',
         help = 'Sort; follows SQL syntax, columns listed in order of sort priority, DESC optionally specified to reverse order.')
+    parser.add_argument('--quasar-catalog', action='store_true',
+        help='Query quasar catalog instead of spAll.')
+    parser.add_argument('--quasar-catalog-name', type=str, default=bossdata.path.Finder.default_quasar_catalog_name,
+        help='Use the specified BOSS quasar catalog name.')
     args = parser.parse_args()
 
+    # Use the "lite" version of spAll unless --full is requested.
+    # There is no "lite" version of the quasar catalog.
+    use_lite = not (args.full or args.quasar_catalog)
+
     try:
-        meta_db = bossdata.meta.Database(lite = not args.full)
-        table = meta_db.select_all(args.what,args.where,args.sort,max_rows = args.max_rows)
+        meta_db = bossdata.meta.Database(lite=use_lite, quasar_catalog=args.quasar_catalog,
+            quasar_catalog_name=args.quasar_catalog_name)
+        table = meta_db.select_all(args.what, args.where, args.sort, max_rows=args.max_rows)
     except (RuntimeError,ValueError) as e:
         print(e)
         return -1
 
     if args.verbose:
-        if not args.full and not meta_db.lite:
-            print("Using --full database as lite files were not available.")
+        if use_lite and not meta_db.lite:
+            print('Using the --full database since it is already downloaded.')
         print('Database contains {:d} rows.'.format(meta_db.num_rows))
 
     if table is None:
@@ -61,10 +70,10 @@ def main():
     if args.save:
         root,ext = os.path.splitext(args.save)
         if ext in ('.dat','.txt'):
-             table.write(args.save,format = 'ascii')
+             table.write(args.save, format='ascii')
         else:
             try:
-                table.write(args.save,overwrite = not args.no_clobber)
+                table.write(args.save, overwrite=(not args.no_clobber))
                 if args.verbose:
                     print('Results saved to {}.'.format(args.save))
             except Exception,e:

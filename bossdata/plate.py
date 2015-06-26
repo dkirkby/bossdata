@@ -224,6 +224,7 @@ class TraceSet(object):
             y[i] = numpy.polynomial.legendre.legval(xvec, self.coefs[i])
         return y
 
+
 class FrameFile(object):
     """A BOSS frame file containing a single exposure of one spectrograph (500 fibers).
 
