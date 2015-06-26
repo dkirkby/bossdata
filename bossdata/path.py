@@ -124,14 +124,12 @@ class Finder(object):
             name = 'spAll-{}.fits'.format(self.redux_version)
         return os.path.join(self.redux_base, name)
 
-    @staticmethod
-    def get_default_quasar_catalog_name():
-        """Get the default quasar catalog name.
+    default_quasar_catalog_name = 'DR12Q'
+    """Default quasar catalog name.
 
-        For more info about the BOSS quasar catalog, see
-        http://www.sdss.org/dr12/algorithms/boss-dr12-quasar-catalog/
-        """
-        return 'DR12Q'
+    For more info about the BOSS quasar catalog, see
+    http://www.sdss.org/dr12/algorithms/boss-dr12-quasar-catalog/
+    """
 
     def get_quasar_catalog_path(self, catalog_name=None):
         """Get the location of the quasar catalog file.
@@ -148,7 +146,7 @@ class Finder(object):
                 :meth:`get_default_quasar_catalog_name` method if this is not set.
         """
         if catalog_name is None:
-            catalog_name = self.get_default_quasar_catalog_name()
+            catalog_name = self.default_quasar_catalog_name
         filename = '{}.fits'.format(catalog_name)
         return os.path.join(self.sas_root, 'qso', catalog_name, filename)
 
