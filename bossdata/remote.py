@@ -180,7 +180,7 @@ class Manager(object):
         """
         if self.local_root is None:
             raise RuntimeError('No local root specified (try setting BOSS_LOCAL_ROOT).')
-        return os.path.abspath(os.path.join(self.local_root, remote_path.lstrip('/')))
+        return os.path.abspath(os.path.join(self.local_root, *remote_path.split('/')))
 
     def get(self, remote_path, progress_min_size=10, auto_download=True):
         """Get a local file that mirrors a remote file, downloading the file if necessary.
