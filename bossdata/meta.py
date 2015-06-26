@@ -179,8 +179,8 @@ def create_meta_full(catalog_path, db_path, verbose=True):
     and you are unlikely to end up with an invalid database file.
 
     Args:
-        catalog_path(str): Absolute local path of the "full" catalog file, which is expected to be
-            a FITS file conforming to the spAll data model.
+        catalog_path(str): Absolute local path of the "full" catalog file, which is expected
+            to be a FITS file.
         db_path(str): Local path where the corresponding sqlite3 database will be written.
     """
 
@@ -258,17 +258,6 @@ sql_type_map = {
 
 
 class Database(object):
-    @staticmethod
-    def db_path_helper(path=None, lite=True):
-        if lite:
-            assert path.endswith('.dat.gz'), 'Expected .dat.gz extension for {}.'.format(
-                path)
-            return path.replace('.dat.gz', '-lite.db')
-        else:
-            assert path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
-                path)
-            return path.replace('.fits', '.db')
-
     """Initialize a searchable database of BOSS observation metadata.
 
     Args:
@@ -278,11 +267,13 @@ class Database(object):
             data. If not specified, the default Manager constructor is used.
         lite(bool): Use the "lite" metadata format, which is considerably faster but only
             provides a subset of the most commonly accessed fields.
-        quasar_catalog(bool): Initialize database using the BOSS quasar catalog instead of spAll.
-        quasar_catalog_name(str): The name of the BOSS quasar catalog or None to use the default
-            defined in :mod:`bossdata.path.Finder`.
+        quasar_catalog(bool): Initialize database using the BOSS quasar catalog instead of
+            spAll.
+        quasar_catalog_name(str): The name of the BOSS quasar catalog or None to use the
+            default specified by :attr:`bossdata.path.Finder.default_quasar_catalog_name`.
     """
-    def __init__(self, finder=None, mirror=None, lite=True, quasar_catalog=False, quasar_catalog_name=None):
+    def __init__(self, finder=None, mirror=None, lite=True, quasar_catalog=False,
+                 quasar_catalog_name=None):
 
         if finder is None:
             finder = bossdata.path.Finder()
@@ -305,7 +296,8 @@ class Database(object):
                 create_meta_full(local_path, db_path)
         else:
             # Pre-build all our paths, test for (and store) the existence of the DB files
-            remote_paths = [finder.get_sp_all_path(lite=True), finder.get_sp_all_path(lite=False)]
+            remote_paths = [finder.get_sp_all_path(lite=True),
+                            finder.get_sp_all_path(lite=False)]
             local_paths = [mirror.local_path(path) for path in remote_paths]
             db_paths = [Database.db_path_helper(local_paths[0], lite=True),
                         Database.db_path_helper(local_paths[1], lite=False)]
@@ -318,16 +310,16 @@ class Database(object):
             # Create the database if necessary.
             # Could make this more compact now that all the logic is foiled out.
             # lite is [0], full is [1]
-            if lite and db_paths_exist[0]:          # lite branch, and lite DB exists
+            if lite and db_paths_exist[0]:        # lite branch, and lite DB exists
                 db_path = db_paths[0]
-            elif not lite and db_paths_exist[1]:    # full branch, and full DB exists
+            elif not lite and db_paths_exist[1]:  # full branch, and full DB exists
                 db_path = db_paths[1]
                 lite_db_used = False
-            elif lite and not db_paths_exist[0]:    # lite branch and lite DB NOT exists
-                if db_paths_exist[1]:               # ...but full does
+            elif lite and not db_paths_exist[0]:  # lite branch and lite DB NOT exists
+                if db_paths_exist[1]:             # ...but full does
                     db_path = db_paths[1]
                     lite_db_used = False
-                else:                               # Neither DB's exist, so get files, create DB
+                else:                             # Neither DB's exist, so get files, create DB
                     local_path = mirror.get(remote_paths)
                     if local_path == local_paths[0]:    # lite
                         db_path = db_paths[0]
@@ -382,7 +374,7 @@ class Database(object):
             return self.column_names, self.column_dtypes
 
         names, dtypes = [], []
-        for name in re.split('\s*,\s*',column_names.strip()):
+        for name in re.split('\s*,\s*', column_names.strip()):
             try:
                 index = self.column_names.index(name)
             except ValueError:
@@ -471,3 +463,14 @@ class Database(object):
         # Return a table of the results, letting astropy.table.Table infer the columns types
         # from the data itself.
         return astropy.table.Table(rows=rows, names=names)
+
+    @staticmethod
+    def db_path_helper(path=None, lite=True):
+        if lite:
+            assert path.endswith('.dat.gz'), 'Expected .dat.gz extension for {}.'.format(
+                path)
+            return path.replace('.dat.gz', '-lite.db')
+        else:
+            assert path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
+                path)
+            return path.replace('.fits', '.db')

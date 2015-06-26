@@ -142,7 +142,7 @@ class Finder(object):
         http://www.sdss.org/dr12/algorithms/boss-dr12-quasar-catalog/
 
         Args:
-            catalog_name(str): BOSS quasar catalog name. Will use the 
+            catalog_name(str): BOSS quasar catalog name. Will use the
                 :meth:`get_default_quasar_catalog_name` method if this is not set.
         """
         if catalog_name is None:
