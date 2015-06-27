@@ -21,7 +21,7 @@ on using the :mod:`bossdata.path` and :mod:`bossdata.remote` modules together.
 from __future__ import division, print_function
 
 import os
-import os.path
+import posixpath
 
 
 class Finder(object):
@@ -54,7 +54,7 @@ class Finder(object):
 
         self.sas_root = sas_root
         self.redux_version = redux_version
-        self.redux_base = os.path.join(sas_root, 'spectro', 'redux', redux_version)
+        self.redux_base = posixpath.join(sas_root, 'spectro', 'redux', redux_version)
 
     def get_plate_path(self, plate):
         """Get the path to the specified plate.
@@ -76,7 +76,7 @@ class Finder(object):
         if plate < 0:
             raise ValueError('Invalid plate number ({}) must be > 0.'.format(plate))
 
-        return os.path.join(self.redux_base, str(plate))
+        return posixpath.join(self.redux_base, str(plate))
 
     def get_plate_plan_path(self, plate, mjd, combined=True):
         """Get the path to the specified plate plan file.
@@ -104,7 +104,7 @@ class Finder(object):
             filename = 'spPlancomb-{plate:4d}-{mjd:5d}.par'.format(plate=plate, mjd=mjd)
         else:
             filename = 'spPlan2d-{plate:4d}-{mjd:5d}.par'.format(plate=plate, mjd=mjd)
-        return os.path.join(self.get_plate_path(plate), filename)
+        return posixpath.join(self.get_plate_path(plate), filename)
 
     def get_sp_all_path(self, lite=True):
         """Get the location of the metadata summary file.
@@ -122,7 +122,7 @@ class Finder(object):
             name = 'spAll-{}.dat.gz'.format(self.redux_version)
         else:
             name = 'spAll-{}.fits'.format(self.redux_version)
-        return os.path.join(self.redux_base, name)
+        return posixpath.join(self.redux_base, name)
 
     default_quasar_catalog_name = 'DR12Q'
     """Default quasar catalog name.
@@ -148,7 +148,7 @@ class Finder(object):
         if catalog_name is None:
             catalog_name = self.default_quasar_catalog_name
         filename = '{}.fits'.format(catalog_name)
-        return os.path.join(self.sas_root, 'qso', catalog_name, filename)
+        return posixpath.join(self.sas_root, 'qso', catalog_name, filename)
 
     def get_spec_path(self, plate, mjd, fiber, lite=True):
         """Get the location of the spectrum file for the specified observation.
@@ -186,7 +186,7 @@ class Finder(object):
 
         path = 'spectra'
         if lite:
-            path = os.path.join(path, 'lite')
+            path = posixpath.join(path, 'lite')
         name = 'spec-{plate:4d}-{mjd:5d}-{fiber:04d}.fits'.format(
             plate=plate, mjd=mjd, fiber=fiber)
-        return os.path.join(self.redux_base, path, str(plate), name)
+        return posixpath.join(self.redux_base, path, str(plate), name)
