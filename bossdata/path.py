@@ -76,7 +76,7 @@ class Finder(object):
         if plate < 0:
             raise ValueError('Invalid plate number ({}) must be > 0.'.format(plate))
 
-        return posixpath.join(self.redux_base, str(plate))
+        return posixpath.join(self.redux_base, '{:04d}'.format(plate))
 
     def get_plate_plan_path(self, plate, mjd, combined=True):
         """Get the path to the specified plate plan file.
@@ -185,8 +185,9 @@ class Finder(object):
             raise ValueError('Invalid fiber ({}) must be 1-1000.'.format(fiber))
 
         path = 'spectra'
+        plate_label = '{:04d}'.format(plate)
         if lite:
             path = posixpath.join(path, 'lite')
-        name = 'spec-{plate:4d}-{mjd:5d}-{fiber:04d}.fits'.format(
-            plate=plate, mjd=mjd, fiber=fiber)
-        return posixpath.join(self.redux_base, path, str(plate), name)
+        name = 'spec-{plate}-{mjd:5d}-{fiber:04d}.fits'.format(
+            plate=plate_label, mjd=mjd, fiber=fiber)
+        return posixpath.join(self.redux_base, path, plate_label, name)
