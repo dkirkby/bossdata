@@ -114,7 +114,10 @@ Version Update Checklist
 2. Update the `version` in `setup.py`
 3. Update the `__version__` in `__init__.py`
 4. Create a pull request on github for this branch (its ok that it doesn't have any new code yet).
-5. Iterate on changes.
+5. Iterate on changes. You can get a list of merges to master since the last tagged release using::
+
+    git log --oneline --merges `git describe --tags --abbrev=0`..HEAD
+
 6. Add a brief description of the changes to `HISTORY.rst`
 7. Push changes to github, which will trigger a Travis integration test of the release-candidate branch.
 8. Merge the pull request.
