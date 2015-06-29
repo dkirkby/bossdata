@@ -75,8 +75,8 @@ def main():
     table = astropy.table.Table.read(args.observations,format=input_format)
 
     try:
-        finder = bossdata.path.Finder()
-        mirror = bossdata.remote.Manager()
+        finder = bossdata.path.Finder(verbose=args.verbose)
+        mirror = bossdata.remote.Manager(verbose=args.verbose)
     except ValueError as e:
         print(e)
         return -1

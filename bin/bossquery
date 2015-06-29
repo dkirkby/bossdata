@@ -46,7 +46,7 @@ def main():
 
     try:
         meta_db = bossdata.meta.Database(lite=use_lite, quasar_catalog=args.quasar_catalog,
-            quasar_catalog_name=args.quasar_catalog_name)
+            quasar_catalog_name=args.quasar_catalog_name, verbose=args.verbose)
         table = meta_db.select_all(args.what, args.where, args.sort, max_rows=args.max_rows)
     except (RuntimeError,ValueError) as e:
         print(e)
