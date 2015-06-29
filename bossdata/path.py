@@ -10,9 +10,13 @@ constructor for this purpose::
     import bossdata.path
     finder = bossdata.path.Finder()
 
-This finder object is configured by the `$BOSS_SAS_PATH` and `$BOSS_REDUX_VERSION`
+This finder object is normally configured by the `$BOSS_SAS_PATH` and `$BOSS_REDUX_VERSION`
 environment variables and no other modules uses these variables, except through a
-a :class:`Finder` object.  :class:`Finder` objects never interact with any local or
+a :class:`Finder` object.  These parameters can also be set by :class:`Finder` constructor
+arguments. When neither the environment variables nor the constructor arguments are set,
+defaults appropriate for the most recent public data release (DR12) are used.
+
+:class:`Finder` objects never interact with any local or
 remote filesystems: use the :mod:`bossdata.remote` module to download data files
 and access them locally. See :doc:`/usage` for recommendations
 on using the :mod:`bossdata.path` and :mod:`bossdata.remote` modules together.
@@ -31,7 +35,7 @@ class Finder(object):
     BOSS_SAS_PATH or BOSS_REDUX_VERSION is not set.
 
     Args:
-        sas_root(str): Location of the SAS root path to use, e.g., /sas/dr12. Will use the
+        sas_path(str): Location of the SAS root path to use, e.g., /sas/dr12. Will use the
             value of the BOSS_SAS_PATH environment variable if this is not set.
         redux_version(str): String tag specifying the BOSS spectro reduction version to use,
             e.g., v5_7_0. Will use the value of the BOSS_REDUX_VERSION environment variable
@@ -41,20 +45,35 @@ class Finder(object):
         ValueError: No SAS root or redux version specified on the command line or via
             environment variables.
     """
-    def __init__(self, sas_root=None, redux_version=None):
-        if sas_root is None:
-            sas_root = os.getenv('BOSS_SAS_PATH')
-        if sas_root is None:
-            raise ValueError('No SAS root specified: try setting $BOSS_SAS_PATH.')
+    def __init__(self, sas_path=None, redux_version=None, verbose=True):
+        # Environment variables override the constructor args if they are set.
+        self.sas_path = os.getenv('BOSS_SAS_PATH', sas_path)
+        if self.sas_path is None:
+            self.sas_path = Finder.default_sas_path
+            if verbose:
+                print('Using the default "{}" since $BOSS_SAS_PATH is not set.'.format(
+                    self.sas_path))
 
-        if redux_version is None:
-            redux_version = os.getenv('BOSS_REDUX_VERSION', None)
-        if redux_version is None:
-            raise ValueError('No redux version specifed: try setting $BOSS_REDUX_VERSION.')
+        self.redux_version = os.getenv('BOSS_REDUX_VERSION', redux_version)
+        if self.redux_version is None:
+            self.redux_version = Finder.default_redux_version
+            if verbose:
+                print('Using the default "{}" since $BOSS_REDUX_VERSION is not set.'.format(
+                    self.redux_version))
 
-        self.sas_root = sas_root
-        self.redux_version = redux_version
-        self.redux_base = posixpath.join(sas_root, 'spectro', 'redux', redux_version)
+        self.redux_base = posixpath.join(self.sas_path, 'spectro', 'redux', self.redux_version)
+
+    default_sas_path = '/sas/dr12/boss'
+    """Default to use when $BOSS_SAS_PATH is not set.
+
+    See :doc:`/scripts` and :doc:`/usage` for details.
+    """
+
+    default_redux_version = 'v5_7_0'
+    """Default to use when $BOSS_REDUX_VERSION is not set.
+
+    See :doc:`/scripts` and :doc:`/usage` for details.
+    """
 
     def get_plate_path(self, plate):
         """Get the path to the specified plate.
@@ -148,7 +167,7 @@ class Finder(object):
         if catalog_name is None:
             catalog_name = self.default_quasar_catalog_name
         filename = '{}.fits'.format(catalog_name)
-        return posixpath.join(self.sas_root, 'qso', catalog_name, filename)
+        return posixpath.join(self.sas_path, 'qso', catalog_name, filename)
 
     def get_spec_path(self, plate, mjd, fiber, lite=True):
         """Get the location of the spectrum file for the specified observation.
