@@ -59,6 +59,12 @@ class Manager(object):
             self.data_url = os.getenv('BOSS_DATA_URL')
         if self.data_url is None:
             raise ValueError('No data URL specified: try setting $BOSS_DATA_URL.')
+        # Do we have a plain URL or a URL:username:password triplet?
+        try:
+            self.data_url, username, password = self.data_url.split('%')
+            self.authorization = username, password
+        except ValueError as e:
+            self.authorization = None
         self.data_url = self.data_url.rstrip('/')
 
         self.local_root = local_root
@@ -114,7 +120,8 @@ class Manager(object):
         # http://docs.python-requests.org/en/latest/user/advanced/#timeouts
         url = self.data_url + '/' + remote_path.lstrip('/')
         try:
-            request = requests.get(url, stream=True, timeout=(3.05, 27))
+            request = requests.get(url, stream=True, auth = self.authorization,
+                timeout=(3.05, 27))
             if request.status_code != requests.codes.ok:
                 raise RuntimeError('HTTP request returned error code {} for {}.'.format(
                     request.status_code, url))
