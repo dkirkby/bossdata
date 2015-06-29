@@ -38,3 +38,14 @@ History
  * bossquery: --sort
 
 * The main new library functionality is support for using wavelengths and dispersions encoded as "trace sets" in spFrame files via :class:`bossdata.plate.TraceSet`.
+
+0.2.4 (2015-05-29)
+------------------
+
+* Fix issues #11, #36, #41, #43, #45, #50
+* New command-line options include:
+
+ * bossfetch: --plate-name, --mjd-name, --fiber-name
+ * bosscatalog: --quasar-catalog, --quasar-catalog-name
+
+* The main new functionality is support for querying the quasar catalog, using different data sources, and built-in defaults for any of the four environment variables that is not set.
