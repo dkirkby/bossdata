@@ -42,7 +42,7 @@ articles, and such.  We use the `sphinx napolean extension <http://sphinx-doc.or
 
 * Use ```text <http://url>`_`` to embed external links (don't forget the space!)
 * Add ``.. _scriptname:`` before the heading for new scripts in `bin/scripts.rst`.  You can refer to these from other markup as ``:ref:`scriptname```.
-* Refer to another markup document `otherdoc.rst` as ``:doc:`otherdoc```.
+* Refer to another markup document `docs/otherdoc.rst` as ``:doc:`/otherdoc```.
 * Add cross references to locally defined API entities using:
 
  * classes ``:class:`bossdata.module.Class```

@@ -14,17 +14,12 @@ To use the `bossdata` package in a project, you will normally start with::
         print(e)
         return -1
 
-This code will use the environment variables `$BOSS_SAS_PATH`, `$BOSS_REDUX_VERSION`,
-`$BOSS_DATA_URL` and `$BOSS_LOCAL_ROOT` to configure your access to BOSS data files.
-For details on setting these environment variables, see :doc:`scripts`. The `finder`
-and `mirror` objects can be used together to access locally mirrored copies
-of BOSS data files. For example::
+This code will use the environment variables ```$BOSS_SAS_PATH``, ```$BOSS_REDUX_VERSION``, ``$BOSS_DATA_URL`` and ``$BOSS_LOCAL_ROOT`` to configure your access to BOSS data files: see :doc:`/envvar` for details. The ``finder`` and ``mirror`` objects can be used together to access locally mirrored copies of BOSS data files. For example::
 
     remote_path = finder.get_spec_path(plate=4567, mdj=55589, fiber=88, lite=True)
     local_path = mirror.get(remote_path)
 
-Refer to the API documentation for details on using the :mod:`bossdata.path` and
-:mod:`bossdata.remote` modules.
+Refer to the API documentation for details on using the :mod:`bossdata.path` and :mod:`bossdata.remote` modules.
 
 Certain data files have a helper class for accessing their contents:
  * spec,spec-lite: :class:`bossdata.spec.SpecFile`
@@ -37,5 +32,4 @@ For example, to open the spec-lite file used in the example above, use::
 
     spec = bossdata.spec.SpecFile(local_path)
 
-The pattern for accessing the large `spAll` metadata file is somewhat different, and
-handled by the :class:`bossdata.meta.Database` class.
+The pattern for accessing large metadata files is somewhat different, and handled by the :class:`bossdata.meta.Database` class.
