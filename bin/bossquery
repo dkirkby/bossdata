@@ -22,7 +22,7 @@ def main():
         help = 'Use the full meta database instead of the lite version.')
     parser.add_argument('--what', type = str, default = 'PLATE,MJD,FIBER', metavar = 'COLS',
         help = 'List of comma-separated columns to return from the query.')
-    parser.add_argument('--where', type = str, default = 'OBJTYPE="QSO"', metavar = 'SEL',
+    parser.add_argument('--where', type = str, default = None, metavar = 'SEL',
         help = 'Selections to restrict the query results.')
     parser.add_argument('--max-rows', type = int, default = 1000, metavar = 'N',
         help = 'Maximum number of query result rows to process.')
@@ -46,7 +46,7 @@ def main():
 
     try:
         meta_db = bossdata.meta.Database(lite=use_lite, quasar_catalog=args.quasar_catalog,
-            quasar_catalog_name=args.quasar_catalog_name)
+            quasar_catalog_name=args.quasar_catalog_name, verbose=args.verbose)
         table = meta_db.select_all(args.what, args.where, args.sort, max_rows=args.max_rows)
     except (RuntimeError,ValueError) as e:
         print(e)

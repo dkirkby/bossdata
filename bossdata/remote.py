@@ -11,9 +11,14 @@ purpose::
     import bossdata.remote
     mirror = bossdata.remote.Manager()
 
-This mirror object is configured by the `$BOSS_DATA_URL` and `$BOSS_LOCAL_ROOT`
+This mirror object is normally configured by the `$BOSS_DATA_URL` and `$BOSS_LOCAL_ROOT`
 environment variables and no other modules uses these variables, except through a
-a :class:`Manager` object. :class:`Manager` objects have no knowledge of how
+a :class:`Manager` object. These parameters can also be set by :class:`Manager` constructor
+arguments. When neither the environment variables nor the constructor arguments are set,
+a default data URL appropriate for the most recent public data release (DR12) is used, and
+a temporary directory is created and used for the local root.
+
+:class:`Manager` objects have no knowledge of how
 data files are organized or named: use the :mod:`bossdata.path` module to
 build the paths of frequently used data files. See :doc:`/usage` for recommendations
 on using the :mod:`bossdata.path` and :mod:`bossdata.remote` modules together.
@@ -25,6 +30,7 @@ import os
 import stat
 import os.path
 import math
+import tempfile
 
 import requests
 
@@ -52,23 +58,37 @@ class Manager(object):
     Raises:
         ValueError: No such directory local_root or missing data_url.
     """
-    def __init__(self, data_url=None, local_root=None):
-
-        self.data_url = data_url
+    def __init__(self, data_url=None, local_root=None, verbose=True):
+        # Environment variables override the constructor args if they are set.
+        self.data_url = os.getenv('BOSS_DATA_URL', data_url)
         if self.data_url is None:
-            self.data_url = os.getenv('BOSS_DATA_URL')
-        if self.data_url is None:
-            raise ValueError('No data URL specified: try setting $BOSS_DATA_URL.')
+            self.data_url = Manager.default_data_url
+            if verbose:
+                print('Using the default "{}" since $BOSS_DATA_URL is not set.'.format(
+                    self.data_url))
+        # Do we have a plain URL or a URL:username:password triplet?
+        try:
+            self.data_url, username, password = self.data_url.split('%')
+            self.authorization = username, password
+        except ValueError:
+            self.authorization = None
         self.data_url = self.data_url.rstrip('/')
 
-        self.local_root = local_root
+        self.local_root = os.getenv('BOSS_LOCAL_ROOT', local_root)
         if self.local_root is None:
-            self.local_root = os.getenv('BOSS_LOCAL_ROOT')
-            if self.local_root is None:
-                raise ValueError('No local root specified: try setting $BOSS_LOCAL_ROOT.')
+            # Create a temporary directory to use.
+            self.local_root = tempfile.mkdtemp(suffix='_bossdata')
+            print('Using a temporary directory for locally mirrored data.',
+                  'Set $BOSS_LOCAL_ROOT to specify a permanent location.')
         if not os.path.isdir(self.local_root):
             raise ValueError('Cannot use non-existent path "{}" as local root.'.format(
                 self.local_root))
+
+    default_data_url = 'http://dr12.sdss3.org'
+    """Default to use when $BOSS_DATA_URL is not set.
+
+    See :doc:`/scripts` and :doc:`/usage` for details.
+    """
 
     def download(self, remote_path, local_path, chunk_size=4096, progress_min_size=10):
         """Download a single BOSS data file.
@@ -114,7 +134,8 @@ class Manager(object):
         # http://docs.python-requests.org/en/latest/user/advanced/#timeouts
         url = self.data_url + '/' + remote_path.lstrip('/')
         try:
-            request = requests.get(url, stream=True, timeout=(3.05, 27))
+            request = requests.get(url, stream=True, auth=self.authorization,
+                                   timeout=(3.05, 27))
             if request.status_code != requests.codes.ok:
                 raise RuntimeError('HTTP request returned error code {} for {}.'.format(
                     request.status_code, url))

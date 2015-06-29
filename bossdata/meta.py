@@ -273,12 +273,12 @@ class Database(object):
             :attr:`default <bossdata.path.Finder.default_quasar_catalog_name>` if this is None.
     """
     def __init__(self, finder=None, mirror=None, lite=True, quasar_catalog=False,
-                 quasar_catalog_name=None):
+                 quasar_catalog_name=None, verbose=False):
 
         if finder is None:
-            finder = bossdata.path.Finder()
+            finder = bossdata.path.Finder(verbose=verbose)
         if mirror is None:
-            mirror = bossdata.remote.Manager()
+            mirror = bossdata.remote.Manager(verbose=verbose)
 
         # Get the local name of the metadata source file and the corresponding SQL
         # database name.

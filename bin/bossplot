@@ -89,8 +89,8 @@ def main():
             bossdata.bits.SPPIXMASK,args.allow_mask)
 
     try:
-        finder = bossdata.path.Finder()
-        mirror = bossdata.remote.Manager()
+        finder = bossdata.path.Finder(verbose=args.verbose)
+        mirror = bossdata.remote.Manager(verbose=args.verbose)
     except ValueError as e:
         print(e)
         return -1

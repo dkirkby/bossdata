@@ -50,6 +50,12 @@ def main():
         help='Number of subprocesses to use to parallelize downloads (1-5).')
     parser.add_argument('--globus', type=str, default=None,
         help='Globus transfer endpoints (remote#endpoint:local#endpoint).')
+    parser.add_argument('--plate-name', type=str, default='PLATE',
+        help='Name of PLATE column in the input file.')
+    parser.add_argument('--mjd-name', type=str, default='MJD',
+        help='Name of MJD column in the input file.')
+    parser.add_argument('--fiber-name', type=str, default='FIBER',
+        help='Name of FIBER column in the input file.')
     args = parser.parse_args()
 
     if args.nproc < 1 or args.nproc > 5:
@@ -69,8 +75,8 @@ def main():
     table = astropy.table.Table.read(args.observations,format=input_format)
 
     try:
-        finder = bossdata.path.Finder()
-        mirror = bossdata.remote.Manager()
+        finder = bossdata.path.Finder(verbose=args.verbose)
+        mirror = bossdata.remote.Manager(verbose=args.verbose)
     except ValueError as e:
         print(e)
         return -1
@@ -86,32 +92,32 @@ def main():
             if args.cframe:
                 calibrated['spCFrame'] = True
             for row in table:
-                tag = (row['PLATE'], row['MJD'])
+                tag = (row[args.plate_name], row[args.mjd_name])
                 if tag in plans:
                     plan = plans[tag]
                 else:
                     plan_remote_path = finder.get_plate_plan_path(
-                        plate=row['PLATE'], mjd=row['MJD'])
+                        plate=row[args.plate_name], mjd=row[args.mjd_name])
                     # The next line downloads the small plan file, if necessary.
                     plan_local_path = mirror.get(plan_remote_path)
                     plan = bossdata.plate.Plan(plan_local_path)
                     plans[tag] = plan
-                plate_path = finder.get_plate_path(plate=row['PLATE'])
+                plate_path = finder.get_plate_path(plate=row[args.plate_name])
                 for i in range(plan.num_science_exposures):
                     # Add the names of spFrame and/or spCFrame files, if they are available.
                     for name,cal in calibrated.iteritems():
                         blue_path = plan.get_exposure_name(
-                            i, 'blue', row['FIBER'], calibrated=cal)
+                            i, 'blue', row[args.fiber_name], calibrated=cal)
                         if blue_path:
                             remote_paths.add(os.path.join(plate_path, blue_path))
                         red_path = plan.get_exposure_name(
-                            i, 'red', row['FIBER'], calibrated=cal)
+                            i, 'red', row[args.fiber_name], calibrated=cal)
                         if red_path:
                             remote_paths.add(os.path.join(plate_path, red_path))
         else:
             for row in table:
                 remote_paths.add(finder.get_spec_path(
-                    plate=row['PLATE'], mjd=row['MJD'], fiber=row['FIBER'], lite=not args.full))
+                    plate=row[args.plate_name], mjd=row[args.mjd_name], fiber=row[args.fiber_name], lite=not args.full))
     except RuntimeError as e:
         print('Error while preparing paths: {}'.format(str(e)))
         return -1

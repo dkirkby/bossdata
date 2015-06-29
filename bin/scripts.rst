@@ -1,27 +1,11 @@
 Executable scripts
 ==================
 
-Before running any scripts, you will normally need to establish your local configuration with some environment variables:
-
-* BOSS_LOCAL_ROOT: The top-level directory where all downloaded data files will be locally mirrored. Make sure there is enough space here for the files you plan to use locally. You might want to exclude this directory from your backups since it can get large and can be easily recreated.
-* BOSS_DATA_URL: The top-level URL for downloading BOSS data. This should normally be `http://dr12.sdss3.org` for publicly accessible data.
-* BOSS_SAS_PATH: This identifies the top-level path under SAS of the data you want to work with, and should normally begin with "/sas". For the final BOSS Data Release 12, use "/sas/dr12/boss".
-* BOSS_REDUX_VERSION: This is the pipeline reconstruction version that you want to work with. This should normally be either v5_7_0, which corresponds to the final processing of all BOSS data, or v5_7_2 for SEQUELS data.
-
-As a sanity check of your configuration, the following shell command::
-
-    echo $BOSS_DATA_URL/$BOSS_SAS_PATH/boss/spectro/redux/$BOSS_REDUX_VERSION/
-
-should print a valid URL that displays a directory listing in any browser, without requiring any authentication. For bash users, the following lines added to your `~/.bashrc` file should be a good starting point::
-
-    export BOSS_LOCAL_ROOT=...some suitable local path...
-    export BOSS_DATA_URL=http://dr12.sdss3.org
-    export BOSS_SAS_PATH=/sas/dr12/boss
-    export BOSS_REDUX_VERSION=v5_7_0
-
 For complete documentation on the command-line options of any script use the `--help` option, for example::
 
     bossquery --help
+
+You will normally want to configure ``bossdata`` by setting some :doc:`environment variables </envvar>`.
 
 .. _bossquery:
 
@@ -39,10 +23,10 @@ The `--what`, `--where` and `--sort` options all use SQL syntax (these are in fa
 * `--what` takes a comma separated list of column names (like SQL SELECT) and defaults to PLATE,MJD,FIBER::
 
     --what PLATE,MJD,FIBER,PLUG_RA,PLUG_DEC,Z
-    
+
 * `--where` takes a SQL 'WHERE' string::
 
-    --where '(OBJYPE="QSO" and Z > 0.1) or CLASS="QSO"'
+    --where '(OBJTYPE="QSO" and Z > 0.1) or CLASS="QSO"'
 
 * `--sort` takes a list of columns with optional DESC keywork following columns to reverse their order (a la SQL ORDER BY)::
 
@@ -92,10 +76,10 @@ By default, downloading is split between two parallel subprocesses but you can c
 ``--nproc`` option.  For downloading "lite" files, using more than 2 subprocesses will probably not
 improve the overall performance.
 
-If you want to transfer large amounts of files, you should consider using `globus <https://www.globus.org>`_. To prepare a `globus` bulk data transfer file list, use the `--globus` option to specify the remote/local endpoint pair `remote#endpoint:local#endpoint`. Note that the `--save` option must also be used to specify an output filename. SDSS endpoints are documented at `here <http://www.sdss.org/dr12/data_access/bulk/>`_. 
+If you want to transfer large amounts of files, you should consider using `globus <https://www.globus.org>`_. To prepare a `globus` bulk data transfer file list, use the `--globus` option to specify the remote/local endpoint pair `remote#endpoint:local#endpoint`. Note that the `--save` option must also be used to specify an output filename. SDSS endpoints are documented at `here <http://www.sdss.org/dr12/data_access/bulk/>`_.
 
 For example, to transfer files from `lbnl#sdss3` to `local#endpoint`::
-    
+
     bossfetch qso.dat --globus lbnl#sdss3:username#endpoint --save globus-xfer.dat
     ssh username@cli.globusonline.org transfer -s 1 < globus-xfer.dat
 

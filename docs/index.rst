@@ -15,6 +15,7 @@ Contents:
    installation
    overview
    scripts
+   envvar
    usage
    contributing
    authors
