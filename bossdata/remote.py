@@ -70,7 +70,7 @@ class Manager(object):
         try:
             self.data_url, username, password = self.data_url.split('%')
             self.authorization = username, password
-        except ValueError as e:
+        except ValueError:
             self.authorization = None
         self.data_url = self.data_url.rstrip('/')
 
@@ -79,7 +79,7 @@ class Manager(object):
             # Create a temporary directory to use.
             self.local_root = tempfile.mkdtemp(suffix='_bossdata')
             print('Using a temporary directory for locally mirrored data.',
-                'Set $BOSS_LOCAL_ROOT to specify a permanent location.')
+                  'Set $BOSS_LOCAL_ROOT to specify a permanent location.')
         if not os.path.isdir(self.local_root):
             raise ValueError('Cannot use non-existent path "{}" as local root.'.format(
                 self.local_root))
@@ -134,8 +134,8 @@ class Manager(object):
         # http://docs.python-requests.org/en/latest/user/advanced/#timeouts
         url = self.data_url + '/' + remote_path.lstrip('/')
         try:
-            request = requests.get(url, stream=True, auth = self.authorization,
-                timeout=(3.05, 27))
+            request = requests.get(url, stream=True, auth=self.authorization,
+                                   timeout=(3.05, 27))
             if request.status_code != requests.codes.ok:
                 raise RuntimeError('HTTP request returned error code {} for {}.'.format(
                     request.status_code, url))
