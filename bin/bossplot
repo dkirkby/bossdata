@@ -107,6 +107,14 @@ def main():
         help = 'Show the subtracted sky flux instead of the object flux.')
     parser.add_argument('--add-sky', action = 'store_true',
         help = 'Add the subtracted sky to the object flux (overrides show-sky).')
+    parser.add_argument('--flux-range', type=str, default='0.5%:99.5%',
+        help='Force y axis limits.')
+    parser.add_argument('--wlen-range', type=str, default=None,
+            help='Force y axis limits.')
+    parser.add_argument('--wdisp-range', type=str, default=None,
+            help='Force y axis limits.')
+    parser.add_argument('--figsize', type=str, default='12,8',
+        help='Figure dimension in inches.')
     args = parser.parse_args()
 
     if args.exposure is None:
@@ -250,6 +258,7 @@ def main():
 
     wlen_min,wlen_max = +1e6,-1e6
     flux_lo, flux_hi = np.array([], dtype=float), np.array([], dtype=float)
+    wdisp_data = np.array([], dtype=float)
     for data,plot_color in zip(spectra,plot_colors):
 
         wlen,dflux = data['wavelength'][:],data['dflux'][:]
@@ -278,6 +287,7 @@ def main():
 
         if args.show_dispersion:
             right_axis.plot(wlen,data['wdisp'][:],ls='-',color=plot_color)
+            wdisp_data = numpy.ma.append(wdisp_data, data['wdisp'][:])
 
         # Update the plot wavelength limits to include this data.
         wlen_min = min(wlen_min,np.ma.min(wlen))
@@ -288,11 +298,20 @@ def main():
         flux_hi = numpy.ma.append(flux_hi, flux + dflux)
 
     # The x-axis limits are reset by the twinx() function so we set them here.
-    plt.xlim(wlen_min,wlen_max)
+    plt.xlim(wlen_min, wlen_max)
+    # Adjust wlen axis range, if requested
+    if args.wlen_range:
+        set_xaxis_limits(left_axis, args.wlen_range)
 
-    # Set the flux scale to show 99% of the valid flux +/- dflux range.
-    valid = ~flux_lo.mask & ~flux_hi.mask
-    left_axis.set_ylim(np.percentile(flux_lo[valid], 0.5), np.percentile(flux_hi[valid], 99.5))
+    # Adjust flux axis range, if requested
+    if args.flux_range:
+        valid = ~flux_lo.mask & ~flux_hi.mask
+        set_yaxis_limits(left_axis, args.flux_range, data_lo=flux_lo[valid], data_hi=flux_hi[valid])
+
+    # Adjust dispersion axis range, if requested
+    if args.show_dispersion and args.wdisp_range is not None:
+        valid = ~wdisp_data.mask
+        set_yaxis_limits(right_axis, args.wdisp_range, wdisp_data[valid])
 
     if args.save_plot is not None:
         save_name = args.save_plot
