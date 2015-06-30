@@ -90,34 +90,7 @@ class SpecFile(object):
         self.header = self.hdulist[0].read_header()
         # Look up the available exposures.
         self.num_exposures = self.header['NEXP']
-        exposures = {}
-        expid_pattern = re.compile('([br][12])-([0-9]{8})-([0-9]{8})-([0-9]{8})')
-        for i in range(self.num_exposures):
-            spec_id, exp_num, flat_num, arc_num = expid_pattern.match(
-                self.header['EXPID{0:02d}'.format(i + 1)]).groups()
-            if exp_num in exposures:
-                info = exposures[exp_num]
-                # Check that the arc and flat exposure numbers agree.
-                if info['arc'] != arc_num:
-                    raise RuntimeError(
-                        'Found different red/blue arcs for expid {}.'.format(exp_num))
-                if info['flat'] != flat_num:
-                    raise RuntimeError(
-                        'Found different red/blue flats for expid {}.'.format(exp_num))
-            else:
-                # Initialize a new record with zeros to indicate a missing camera.
-                info = dict(arc=arc_num, flat=flat_num, bhdu=0, rhdu=0)
-            # Record the HDU number for this camera.
-            info[spec_id[0]+'hdu'] = 4 + i
-            exposures[exp_num] = info
-        # Build a table of exposure info sorted by exposure number.
-        self.exposure_table = astropy.table.Table(
-            names=('exp', 'arc', 'flat', 'bhdu', 'rhdu'),
-            dtype=('i4', 'i4', 'i4', 'i4', 'i4'))
-        for exp_num in sorted(exposures.keys()):
-            info = exposures[exp_num]
-            self.exposure_table.add_row(
-                (exp_num, info['arc'], info['flat'], info['bhdu'], info['rhdu']))
+        self.exposure_table = get_exposures(self.header)
 
     def get_exposure_hdu(self, exposure_index=None, camera=None):
         """Lookup the HDU for one exposure.
@@ -149,9 +122,9 @@ class SpecFile(object):
 
         info = self.exposure_table[exposure_index]
         if camera == 'blue':
-            hdu_index = info['bhdu']
+            hdu_index = 3 + info['b1'] + info['b2']
         else:
-            hdu_index = info['rhdu']
+            hdu_index = 3 + info['r1'] + info['r2']
         if hdu_index == 0:
             raise RuntimeError('Missing {0} camera for exposure {1}.'.format(
                 camera, info['exp']))
