@@ -137,7 +137,9 @@ def main():
             remote_path = finder.get_plate_spec_path(plate=args.plate, mjd=args.mjd)
             local_path = mirror.get(remote_path)
             platefile = bossdata.plate.PlateFile(local_path)
-            return 0
+            if args.verbose:
+                print('Exposure summary:')
+                print(platefile.exposure_table)
         else:
             lite=(args.exposure is None)
             remote_paths = [finder.get_spec_path(plate=args.plate, mjd=args.mjd,
@@ -175,13 +177,25 @@ def main():
     # We will potentially plot two spectra.
     spectra = [ ]
     plot_colors = [ ]
-    data_args = dict(include_wdisp=args.show_dispersion, include_sky=args.show_sky or args.add_sky)
+    data_args = dict(include_wdisp=args.show_dispersion,
+        include_sky=args.show_sky or args.add_sky)
     if args.exposure is None:
-        spectra.append(specfile.get_valid_data(pixel_quality_mask=pixel_quality_mask, **data_args))
-        plot_colors.append('black')
-        if args.verbose:
-            print('Showing coadd of {0:d} exposures:'.format(specfile.num_exposures))
-            print_mask_summary('Coadd (AND)',specfile.get_pixel_mask())
+        if args.platefile:
+            fibers = np.array([args.fiber],dtype=int)
+            #spectra.append(platefile.get_valid_data(pixel_quality_mask=pixel_quality_mask,
+            #    **data_args))
+            plot_colors.append('black')
+            if args.verbose:
+                print('Showing coadd of {:d} exposures.'.format(platefile.num_exposures))
+                print_mask_summary('Coadd (AND)', platefile.get_pixel_masks(fibers)[0])
+            return 0
+        else:
+            spectra.append(specfile.get_valid_data(pixel_quality_mask=pixel_quality_mask,
+                **data_args))
+            plot_colors.append('black')
+            if args.verbose:
+                print('Showing coadd of {:d} exposures.'.format(specfile.num_exposures))
+                print_mask_summary('Coadd (AND)',specfile.get_pixel_mask())
     elif args.frame or args.cframe:
         fibers = np.array([args.fiber],dtype=int)
         if args.verbose:

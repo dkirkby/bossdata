@@ -14,6 +14,8 @@ import numpy.polynomial.legendre
 
 import fitsio
 
+from bossdata.spec import get_exposures
+
 
 class Plan(object):
     """The plan file for configuring the BOSS pipeline to combine exposures of a single plate.
@@ -239,6 +241,50 @@ class PlateFile(object):
     """
     def __init__(self, path):
         self.hdulist = fitsio.FITS(path, mode=fitsio.READONLY)
+        self.header = self.hdulist[0].read_header()
+        # Look up the number of exposures used for this coadd.
+        self.num_exposures = self.header['NEXP']
+        self.exposure_table = get_exposures(self.header)
+        self.masks = None
+
+    def get_fiber_offsets(self, fiber):
+        """Convert fiber numbers to array offsets.
+
+        Args:
+            fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000.  Fibers do not
+                need to be sorted and repetitions are ok.
+
+        Returns:
+            numpy.ndarray: Numpy array of offsets 0-999.
+
+        Raises:
+            ValueError: Fiber number is out of the valid range for this plate.
+        """
+        offset = fiber - 1
+        if np.any((offset < 0) | (offset > 999)):
+            raise ValueError('Fiber number out of range for this plate.')
+        return offset
+
+    def get_pixel_masks(self, fibers):
+        """Get the pixel masks for specified fibers.
+
+        The entire mask is returned for each fiber, including any pixels with zero
+        inverse variance. Returns the 'and_mask' and ignores the 'or_mask'.
+
+        Args:
+            fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000. Fibers do not
+                need to be sorted and repetitions are ok.
+
+        Returns:
+            numpy.ndarray: Integer numpy array of shape (nfibers,npixels) where (i,j)
+                encodes the mask bits defined in :attr:`bossdata.bits.SPPIXMASK` (see also
+                http://www.sdss3.org/dr10/algorithms/bitmask_sppixmask.php) for pixel-j
+                of the fiber with index fibers[i].
+        """
+        offsets = self.get_fiber_offsets(fibers)
+        if self.masks is None:
+            self.masks = self.hdulist[2].read()
+        return self.masks[offsets]
 
 
 class FrameFile(object):
