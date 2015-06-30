@@ -166,7 +166,7 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
         progress_bar.finish()
 
 
-def create_meta_full(catalog_path, db_path, verbose=True):
+def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJD,FIBER)'):
     """Create the "full" meta database from a locally mirrored catalog file.
 
     The created database renames FIBERID to FIBER and has a composite primary index on the
@@ -201,7 +201,7 @@ def create_meta_full(catalog_path, db_path, verbose=True):
         # Create a new database file.
         sql, num_cols = sql_create_table(
             'meta', table.dtype, renaming_rules={'FIBERID': 'FIBER'},
-            primary_key='(PLATE,MJD,FIBER)')
+            primary_key=primary_key)
         connection = sqlite3.connect(db_path + '.building')
         cursor = connection.cursor()
         cursor.execute(sql)
@@ -273,7 +273,7 @@ class Database(object):
             :attr:`default <bossdata.path.Finder.default_quasar_catalog_name>` if this is None.
     """
     def __init__(self, finder=None, mirror=None, lite=True, quasar_catalog=False,
-                 quasar_catalog_name=None, verbose=False):
+                 quasar_catalog_name=None, platelist=False, verbose=False):
 
         if finder is None:
             finder = bossdata.path.Finder(verbose=verbose)
@@ -294,6 +294,18 @@ class Database(object):
             if not os.path.isfile(db_path):
                 local_path = mirror.get(remote_path)
                 create_meta_full(local_path, db_path)
+        elif platelist:
+            assert not lite, 'Lite format parsing not implemented for platelist catalog'
+            remote_path = finder.get_platelist_path()
+            local_path = mirror.local_path(remote_path)
+            local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
+                local_path)
+            db_path = local_path.replace('.fits', '.db')
+            lite_db_used = False
+            # Create the database if necessary.
+            if not os.path.isfile(db_path):
+                local_path = mirror.get(remote_path)
+                create_meta_full(local_path, db_path, primary_key='(PLATE,MJD)')
         else:
             # Pre-build all our paths, test for (and store) the existence of the DB files
             remote_paths = [finder.get_sp_all_path(lite=True),
