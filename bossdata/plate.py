@@ -245,7 +245,15 @@ class PlateFile(object):
         # Look up the number of exposures used for this coadd.
         self.num_exposures = self.header['NEXP']
         self.exposure_table = get_exposure_table(self.header)
+        # Calculate the common wavelength grid from header keywords.
+        num_pixels, min_loglam = self.header['NAXIS1'], self.header['CRVAL1']
+        self.loglam = min_loglam + 1e-4*np.arange(num_pixels)
+        # Do not read arrays until we have to.
         self.masks = None
+        self.ivar = None
+        self.flux = None
+        self.wdisp = None
+        self.sky = None
 
     def get_fiber_offsets(self, fiber):
         """Convert fiber numbers to array offsets.
@@ -285,6 +293,72 @@ class PlateFile(object):
         if self.masks is None:
             self.masks = self.hdulist[2].read()
         return self.masks[offsets]
+
+    def get_valid_data(self, fibers, pixel_quality_mask=None,
+                       include_wdisp=False, include_sky=False):
+        """Get the valid for the specified fibers.
+
+        Args:
+            fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000. Fibers do not
+                need to be sorted and repetitions are ok.
+            pixel_quality_mask(int): An integer value interpreted as a bit pattern using the
+                bits defined in :attr:`bossdata.bits.SPPIXMASK` (see also
+                http://www.sdss3.org/dr10/algorithms/bitmask_sppixmask.php). Any bits set in
+                this mask are considered harmless and the corresponding spectrum pixels are
+                assumed to contain valid data. This mask is applied to the AND of the masks
+                for each individual exposure. No mask is applied if this value is None.
+            include_wdisp: Include a wavelength dispersion column in the returned data.
+            include_sky: Include a sky flux column in the returned data.
+
+        Returns:
+            numpy.ma.MaskedArray: Masked array of shape (nfibers,npixels). Pixels with no
+                valid data are included but masked. The record for each pixel has at least
+                the following named fields: wavelength in Angstroms, flux and dflux in 1e-17
+                ergs/s/cm2/Angstrom. Wavelength values are strictly increasing and dflux is
+                calculated as ivar**-0.5 for pixels with valid data. Optional fields are
+                wdisp in constant-log10-lambda pixels and sky in 1e-17 ergs/s/cm2/Angstrom.
+        """
+        offsets = self.get_fiber_offsets(fibers)
+        num_fibers = len(offsets)
+
+        # Apply the pixel quality mask, if any.
+        pixel_bits = self.get_pixel_masks(fibers)
+        if pixel_quality_mask is not None:
+            clear_allowed = np.bitwise_not(np.uint32(pixel_quality_mask))
+            pixel_bits = np.bitwise_and(pixel_bits, clear_allowed)
+
+        # Read arrays from the FITS file if necessary.
+        if self.ivar is None:
+            self.ivar = self.hdulist[1].read()
+        if self.flux is None:
+            self.flux = self.hdulist[0].read()
+        if include_wdisp and self.wdisp is None:
+            self.wdisp = self.hdulist[4].read()
+        if include_sky and self.sky is None:
+            self.sky = self.hdulist[6].read()
+        num_pixels = self.flux.shape[1]
+
+        # Identify the pixels with valid data.
+        ivar = self.ivar[offsets]
+        bad_pixels = (pixel_bits != 0) | (ivar <= 0.0)
+        good_pixels = ~bad_pixels
+
+        # Create and fill the unmasked structured array of data.
+        dtype = [('wavelength', np.float32), ('flux', np.float32), ('dflux', np.float32)]
+        if include_wdisp:
+            dtype.append(('wdisp', np.float32))
+        if include_sky:
+            dtype.append(('sky', np.float32))
+        data = np.empty((num_fibers, num_pixels), dtype=dtype)
+        data['wavelength'][:] = np.power(10.0, self.loglam)
+        data['flux'][:] = self.flux[offsets]
+        data['dflux'][:][good_pixels] = 1.0 / np.sqrt(self.ivar[offsets][good_pixels])
+        if include_wdisp:
+            data['wdisp'][:] = self.wdisp[offsets]
+        if include_sky:
+            data['sky'][:] = self.sky[offsets]
+
+        return numpy.ma.MaskedArray(data, mask=bad_pixels)
 
 
 class FrameFile(object):
@@ -362,7 +436,7 @@ class FrameFile(object):
 
     def get_valid_data(self, fibers, pixel_quality_mask=None,
                        include_wdisp=False, include_sky=False):
-        """Get the valid for a specified exposure or the combined coadd.
+        """Get the valid for the specified fibers.
 
         Args:
             fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000.  All fibers must
@@ -372,9 +446,7 @@ class FrameFile(object):
                 bits defined in :attr:`bossdata.bits.SPPIXMASK` (see also
                 http://www.sdss3.org/dr10/algorithms/bitmask_sppixmask.php). Any bits set in
                 this mask are considered harmless and the corresponding spectrum pixels are
-                assumed to contain valid data. When accessing the coadded spectrum, this mask
-                is applied to the AND of the masks for each individual exposure. No mask is
-                applied if this value is None.
+                assumed to contain valid data.
             include_wdisp: Include a wavelength dispersion column in the returned data.
             include_sky: Include a sky flux column in the returned data.
 

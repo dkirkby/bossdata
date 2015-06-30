@@ -182,13 +182,12 @@ def main():
     if args.exposure is None:
         if args.platefile:
             fibers = np.array([args.fiber],dtype=int)
-            #spectra.append(platefile.get_valid_data(pixel_quality_mask=pixel_quality_mask,
-            #    **data_args))
+            spectra.append(platefile.get_valid_data(fibers,
+                pixel_quality_mask=pixel_quality_mask, **data_args)[0])
             plot_colors.append('black')
             if args.verbose:
                 print('Showing coadd of {:d} exposures.'.format(platefile.num_exposures))
                 print_mask_summary('Coadd (AND)', platefile.get_pixel_masks(fibers)[0])
-            return 0
         else:
             spectra.append(specfile.get_valid_data(pixel_quality_mask=pixel_quality_mask,
                 **data_args))
