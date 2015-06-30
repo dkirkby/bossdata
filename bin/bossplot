@@ -185,7 +185,8 @@ def main():
         return -1
 
     # Initialize the plot.
-    figure = plt.figure(figsize=(12,8))
+    figsize = [float(value) for value in args.figsize.split(',')]
+    figure = plt.figure(figsize=figsize, tight_layout=True)
     left_axis = plt.gca()
     figure.set_facecolor('white')
     plt.xlabel('Wavelength ($\AA$)')
