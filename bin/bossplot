@@ -22,6 +22,41 @@ import bossdata.spec
 import bossdata.bits
 import bossdata.plate
 
+def set_yaxis_limits(axis, limits, data_lo=None, data_hi=None):
+    if data_hi is None:
+        data_hi = data_lo
+    old_lo, old_hi = axis.get_ylim()
+    arg_lo, arg_hi = limits.split(':')
+    def _limit_parser(limit, old_limit, data):
+        if limit.endswith('%'):
+            assert data is not None, 'must specify data array when using quantile limit'
+            limit_frac = float(limit.rstrip('%'))
+            return np.percentile(data, limit_frac)
+        else:
+            try:
+                return float(limit)
+            except ValueError:
+                return old_limit
+    new_lo = _limit_parser(arg_lo, old_lo, data_lo)
+    new_hi = _limit_parser(arg_hi, old_hi, data_hi)
+    axis.set_ylim(new_lo, new_hi)
+
+def set_xaxis_limits(axis, limits):
+    old_lo, old_hi = axis.get_xlim()
+    arg_lo, arg_hi = limits.split(':')
+    def _limit_parser(limit, old_limit):
+        if limit.endswith('%'):
+            limit_frac = float(limit.rstrip('%'))
+            return old_lo + (old_hi - old_lo)*limit_frac/100.0
+        else:
+            try:
+                return float(limit)
+            except ValueError:
+                return old_limit
+    new_lo = _limit_parser(arg_lo, old_lo)
+    new_hi = _limit_parser(arg_hi, old_hi)
+    axis.set_xlim(new_lo, new_hi)
+
 def print_mask_summary(label, mask_values):
     if np.any(mask_values):
         print('{0} pixel mask summary:'.format(label))
