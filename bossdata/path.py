@@ -120,9 +120,32 @@ class Finder(object):
             raise ValueError('Invalid mjd ({}) must be >= 3500.'.format(mjd))
 
         if combined:
-            filename = 'spPlancomb-{plate:4d}-{mjd:5d}.par'.format(plate=plate, mjd=mjd)
+            filename = 'spPlancomb-{plate:04d}-{mjd:5d}.par'.format(plate=plate, mjd=mjd)
         else:
-            filename = 'spPlan2d-{plate:4d}-{mjd:5d}.par'.format(plate=plate, mjd=mjd)
+            filename = 'spPlan2d-{plate:04d}-{mjd:5d}.par'.format(plate=plate, mjd=mjd)
+        return posixpath.join(self.get_plate_path(plate), filename)
+
+    def get_plate_spec_path(self, plate, mjd):
+        """Get the path to the file containing combined spectra for a whole plate.
+
+        Combined spectra for all exposures of a plate are packaged in spPlate files
+        http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spPlate.html
+        As of DR12, these files are about 110Mb for 1000 spectra.
+
+        Args:
+            plate(int): Plate number, which must be positive.
+            mjd(int): Modified Julian date of the observation, which must be > 3500.
+
+        Returns:
+            str: Full path to the requested plan file.
+
+        Raises:
+            ValueError: Invalid plate or mjd inputs.
+        """
+        if mjd <= 3500:
+            raise ValueError('Invalid mjd ({}) must be >= 3500.'.format(mjd))
+
+        filename = 'spPlate-{plate:04d}-{mjd:5d}.fits'.format(plate=plate, mjd=mjd)
         return posixpath.join(self.get_plate_path(plate), filename)
 
     def get_sp_all_path(self, lite=True):
