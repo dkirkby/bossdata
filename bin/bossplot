@@ -136,6 +136,7 @@ def main():
         elif args.platefile:
             remote_path = finder.get_plate_spec_path(plate=args.plate, mjd=args.mjd)
             local_path = mirror.get(remote_path)
+            platefile = bossdata.plate.PlateFile(local_path)
             return 0
         else:
             lite=(args.exposure is None)

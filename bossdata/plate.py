@@ -225,6 +225,22 @@ class TraceSet(object):
         return y
 
 
+class PlateFile(object):
+    """A BOSS plate file containing combined exposures for a whole plate (1000 fibers).
+
+    This class provides an interface to the spPlate files whose data model is at
+    http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spPlate.html
+
+    Args:
+        path(str): Local path of the plate FITS file to use.  This should normally be obtained
+            via :meth:`bossdata.path.Finder.get_plate_spec_path` and can be automatically
+            mirrored via :meth:`bossdata.remote.Manager.get` or using the :ref:`bossfetch`
+            script. The file is opened in read-only mode so you do not need write privileges.
+    """
+    def __init__(self, path):
+        self.hdulist = fitsio.FITS(path, mode=fitsio.READONLY)
+
+
 class FrameFile(object):
     """A BOSS frame file containing a single exposure of one spectrograph (500 fibers).
 
