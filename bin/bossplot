@@ -22,40 +22,26 @@ import bossdata.spec
 import bossdata.bits
 import bossdata.plate
 
-def set_yaxis_limits(axis, limits, data_lo=None, data_hi=None):
+def auto_range(range_str, default_limits, data_lo=None, data_hi=None):
     if data_hi is None:
         data_hi = data_lo
-    old_lo, old_hi = axis.get_ylim()
-    arg_lo, arg_hi = limits.split(':')
-    def _limit_parser(limit, old_limit, data):
+    def _limit_parser(limit, default_limit, data):
         if limit.endswith('%'):
-            assert data is not None, 'must specify data array when using quantile limit'
             limit_frac = float(limit.rstrip('%'))
-            return np.percentile(data, limit_frac)
+            if data is not None:
+                return np.percentile(data, limit_frac)
+            else:
+                return default_lo + (default_hi - default_lo)*limit_frac/100.0
         else:
             try:
                 return float(limit)
             except ValueError:
-                return old_limit
-    new_lo = _limit_parser(arg_lo, old_lo, data_lo)
-    new_hi = _limit_parser(arg_hi, old_hi, data_hi)
-    axis.set_ylim(new_lo, new_hi)
-
-def set_xaxis_limits(axis, limits):
-    old_lo, old_hi = axis.get_xlim()
-    arg_lo, arg_hi = limits.split(':')
-    def _limit_parser(limit, old_limit):
-        if limit.endswith('%'):
-            limit_frac = float(limit.rstrip('%'))
-            return old_lo + (old_hi - old_lo)*limit_frac/100.0
-        else:
-            try:
-                return float(limit)
-            except ValueError:
-                return old_limit
-    new_lo = _limit_parser(arg_lo, old_lo)
-    new_hi = _limit_parser(arg_hi, old_hi)
-    axis.set_xlim(new_lo, new_hi)
+                return default_limit
+    lo, hi = range_str.split(':')
+    default_lo, default_hi = default_limits
+    new_lo = _limit_parser(lo, default_lo, data_lo)
+    new_hi = _limit_parser(hi, default_hi, data_hi)
+    return new_lo, new_hi
 
 def print_mask_summary(label, mask_values):
     if np.any(mask_values):
@@ -108,13 +94,13 @@ def main():
     parser.add_argument('--add-sky', action = 'store_true',
         help = 'Add the subtracted sky to the object flux (overrides show-sky).')
     parser.add_argument('--flux-range', type=str, default='0.5%:99.5%',
-        help='Force y axis limits.')
+        help='Limit flux axis range.')
     parser.add_argument('--wlen-range', type=str, default=None,
-            help='Force y axis limits.')
+        help='Limit wavelength axis range.')
     parser.add_argument('--wdisp-range', type=str, default=None,
-            help='Force y axis limits.')
+        help='Limit dispersion axis range.')
     parser.add_argument('--figsize', type=str, default='12,8',
-        help='Figure dimension in inches.')
+        help='Figure dimensions in inches.')
     args = parser.parse_args()
 
     if args.exposure is None:
@@ -299,25 +285,28 @@ def main():
         flux_lo = numpy.ma.append(flux_lo, flux - dflux)
         flux_hi = numpy.ma.append(flux_hi, flux + dflux)
 
-        # Update the list of wavelengths that we will use to auto-range the vertical scale.
+        # Update the list of wavelengths that we will use to auto-range the horizontal scale.
         wlen_data = numpy.ma.append(wlen_data, wlen)
 
     # The x-axis limits are reset by the twinx() function so we set them here.
     plt.xlim(wlen_min, wlen_max)
     # Adjust wlen axis range, if requested
     if args.wlen_range:
-        set_xaxis_limits(left_axis, args.wlen_range)
-        wlen_min, wlen_max = left_axis.get_xlim()
+        wlen_min, wlen_max = auto_range(args.wlen_range, left_axis.get_xlim())
+        left_axis.set_xlim(wlen_min, wlen_max)
 
     # Adjust flux axis range, if requested
     if args.flux_range:
         valid = ~flux_lo.mask & ~flux_hi.mask & (wlen_data > wlen_min) & (wlen_data < wlen_max)
-        set_yaxis_limits(left_axis, args.flux_range, data_lo=flux_lo[valid], data_hi=flux_hi[valid])
+        flux_min, flux_max = auto_range(args.flux_range, left_axis.get_ylim(),
+            data_lo=flux_lo[valid], data_hi=flux_hi[valid])
+        left_axis.set_ylim(flux_min, flux_max)
 
     # Adjust dispersion axis range, if requested
     if args.show_dispersion and args.wdisp_range is not None:
-        valid = ~wdisp_data.mask
-        set_yaxis_limits(right_axis, args.wdisp_range, wdisp_data[valid])
+        valid = ~wdisp_data.mask & (wlen_data > wlen_min) & (wlen_data < wlen_max)
+        wdisp_min, wdisp_max = auto_range(args.wdisp_range, right_axis.get_ylim(), wdisp_data[valid])
+        right_axis.set_ylim(wdisp_min, wdisp_max)
 
     if args.save_plot is not None:
         save_name = args.save_plot
