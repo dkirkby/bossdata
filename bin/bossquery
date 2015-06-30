@@ -38,6 +38,8 @@ def main():
         help='Query quasar catalog instead of spAll.')
     parser.add_argument('--quasar-catalog-name', type=str, default=bossdata.path.Finder.default_quasar_catalog_name,
         help='Use the specified BOSS quasar catalog name.')
+    parser.add_argument('--platelist', action='store_true',
+        help='Query the platelist catalog instead of spAll')
     args = parser.parse_args()
 
     # Use the "lite" version of spAll unless --full is requested.
@@ -46,7 +48,7 @@ def main():
 
     try:
         meta_db = bossdata.meta.Database(lite=use_lite, quasar_catalog=args.quasar_catalog,
-            quasar_catalog_name=args.quasar_catalog_name, verbose=args.verbose)
+            quasar_catalog_name=args.quasar_catalog_name, platelist=args.platelist, verbose=args.verbose)
         table = meta_db.select_all(args.what, args.where, args.sort, max_rows=args.max_rows)
     except (RuntimeError,ValueError) as e:
         print(e)
