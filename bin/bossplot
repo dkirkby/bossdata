@@ -260,6 +260,7 @@ def main():
     wlen_min,wlen_max = +1e6,-1e6
     flux_lo, flux_hi = np.array([], dtype=float), np.array([], dtype=float)
     wdisp_data = np.array([], dtype=float)
+    wlen_data = np.array([], dtype=float)
     for data,plot_color in zip(spectra,plot_colors):
 
         wlen,dflux = data['wavelength'][:],data['dflux'][:]
@@ -298,15 +299,19 @@ def main():
         flux_lo = numpy.ma.append(flux_lo, flux - dflux)
         flux_hi = numpy.ma.append(flux_hi, flux + dflux)
 
+        # Update the list of wavelengths that we will use to auto-range the vertical scale.
+        wlen_data = numpy.ma.append(wlen_data, wlen)
+
     # The x-axis limits are reset by the twinx() function so we set them here.
     plt.xlim(wlen_min, wlen_max)
     # Adjust wlen axis range, if requested
     if args.wlen_range:
         set_xaxis_limits(left_axis, args.wlen_range)
+        wlen_min, wlen_max = left_axis.get_xlim()
 
     # Adjust flux axis range, if requested
     if args.flux_range:
-        valid = ~flux_lo.mask & ~flux_hi.mask
+        valid = ~flux_lo.mask & ~flux_hi.mask & (wlen_data > wlen_min) & (wlen_data < wlen_max)
         set_yaxis_limits(left_axis, args.flux_range, data_lo=flux_lo[valid], data_hi=flux_hi[valid])
 
     # Adjust dispersion axis range, if requested
