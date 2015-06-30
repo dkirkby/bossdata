@@ -143,6 +143,12 @@ class Finder(object):
             name = 'spAll-{}.fits'.format(self.redux_version)
         return posixpath.join(self.redux_base, name)
 
+    def get_platelist_path(self):
+        """Get the location of the platelist summary file.
+        """
+        name = 'platelist.fits'
+        return posixpath.join(self.redux_base, name)
+
     default_quasar_catalog_name = 'DR12Q'
     """Default quasar catalog name.
 
