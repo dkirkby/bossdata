@@ -16,7 +16,7 @@ import fitsio
 import astropy.table
 
 
-def get_exposures(header):
+def get_exposure_table(header):
     """Parse FITS header keywords to extract exposure info.
 
     Uses the NEXP and EXPID01-12 keywords that are present in the header of HDU0
@@ -90,7 +90,7 @@ class SpecFile(object):
         self.header = self.hdulist[0].read_header()
         # Look up the available exposures.
         self.num_exposures = self.header['NEXP']
-        self.exposure_table = get_exposures(self.header)
+        self.exposure_table = get_exposure_table(self.header)
 
     def get_exposure_hdu(self, exposure_index=None, camera=None):
         """Lookup the HDU for one exposure.

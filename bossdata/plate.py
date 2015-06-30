@@ -14,7 +14,7 @@ import numpy.polynomial.legendre
 
 import fitsio
 
-from bossdata.spec import get_exposures
+from bossdata.spec import get_exposure_table
 
 
 class Plan(object):
@@ -244,7 +244,7 @@ class PlateFile(object):
         self.header = self.hdulist[0].read_header()
         # Look up the number of exposures used for this coadd.
         self.num_exposures = self.header['NEXP']
-        self.exposure_table = get_exposures(self.header)
+        self.exposure_table = get_exposure_table(self.header)
         self.masks = None
 
     def get_fiber_offsets(self, fiber):
