@@ -50,10 +50,12 @@ def main():
         help = 'Camera to use when plotting a single exposure.')
     parser.add_argument('--allow-mask', type = str, default = None,
         help = 'SPPIXMASK bit names to allow in valid data. Separate multiple names with |.')
+    parser.add_argument('--platefile', action='store_true',
+        help = 'Plot the combined spectrum from an spPlate file.')
     parser.add_argument('--frame', action='store_true',
-        help = 'Plot the spectrum from an uncalibrated spFrame file.')
+        help = 'Plot a single exposure spectrum from an uncalibrated spFrame file.')
     parser.add_argument('--cframe', action='store_true',
-        help = 'Plot the spectrum from a calibrated spCFrame file.')
+        help = 'Plot a single exposure spectrum from a calibrated spCFrame file.')
     parser.add_argument('--save-plot', type=str, default=None, const='', nargs='?', metavar='FILE',
         help = ('Save the generated plot to specified name ' +
             '(uses bossplot-{plate}-{mjd}-{fiber}.png if name omitted).'))
@@ -79,8 +81,12 @@ def main():
             print('Coadds not available from frame and cframe files.')
             return -1
         if args.camera is not 'both':
-            print('Ignoring camera = "{0}" for coadded spectrum.'.format(args.camera))
+            print('Ignoring camera = "{0}" for combined spectrum.'.format(args.camera))
             args.camera = 'both'
+    else:
+        if args.platefile:
+            print('Single exposures not available from plate files.')
+            return -1
 
     if args.allow_mask is None:
         pixel_quality_mask = None
@@ -94,6 +100,13 @@ def main():
     except ValueError as e:
         print(e)
         return -1
+
+    if args.verbose:
+        observation = '{:04d}-{:5d}-{:04d}'.format(args.plate, args.mjd, args.fiber)
+        if args.exposure is None:
+            print('Plotting combined spectrum for {}.'.format(observation))
+        else:
+            print('Plotting exposure {} spectrum for {}.'.format(args.exposure, observation))
 
     # Load spectra into memory, downloading if necessary.
     try:
@@ -120,10 +133,14 @@ def main():
                 frames['blue'] = bossdata.plate.FrameFile(
                     mirror.get(os.path.join(frame_path, blue_name)),
                     index=1 + (args.fiber-1)//500, calibrated=args.cframe)
+        elif args.platefile:
+            remote_path = finder.get_plate_spec_path(plate=args.plate, mjd=args.mjd)
+            local_path = mirror.get(remote_path)
+            return 0
         else:
             lite=(args.exposure is None)
-            remote_paths = [finder.get_spec_path(plate=args.plate, mjd=args.mjd,fiber=args.fiber,
-                                            lite=lite)]
+            remote_paths = [finder.get_spec_path(plate=args.plate, mjd=args.mjd,
+                            fiber=args.fiber, lite=lite)]
             if lite:    # If lite, we can use the Full file if it exists but lite does not
                 remote_paths.append(finder.get_spec_path(plate=args.plate, mjd=args.mjd,
                                 fiber=args.fiber, lite=False))
