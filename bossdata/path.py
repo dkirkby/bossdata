@@ -112,7 +112,7 @@ class Finder(object):
 
         Args:
             plate(int): Plate number, which must be positive.
-            mjd(int): Modified Julian date of the observation, which must be > 3500.
+            mjd(int): Modified Julian date of the observation, which must be > 45000.
             combined(bool): Specifies the combined plan, which spans all MJDs
                 associated with a coadd, but does not include calibration frames
                 (arcs,flats) for a specific MJD.
@@ -123,8 +123,8 @@ class Finder(object):
         Raises:
             ValueError: Invalid plate or mjd inputs.
         """
-        if mjd <= 3500:
-            raise ValueError('Invalid mjd ({}) must be >= 3500.'.format(mjd))
+        if mjd <= 45000:
+            raise ValueError('Invalid mjd ({}) must be >= 45000.'.format(mjd))
 
         if combined:
             filename = 'spPlancomb-{plate:04d}-{mjd:5d}.par'.format(plate=plate, mjd=mjd)
@@ -141,7 +141,7 @@ class Finder(object):
 
         Args:
             plate(int): Plate number, which must be positive.
-            mjd(int): Modified Julian date of the observation, which must be > 3500.
+            mjd(int): Modified Julian date of the observation, which must be > 45000.
 
         Returns:
             str: Full path to the requested plan file.
@@ -149,8 +149,8 @@ class Finder(object):
         Raises:
             ValueError: Invalid plate or mjd inputs.
         """
-        if mjd <= 3500:
-            raise ValueError('Invalid mjd ({}) must be >= 3500.'.format(mjd))
+        if mjd <= 45000:
+            raise ValueError('Invalid mjd ({}) must be >= 45000.'.format(mjd))
 
         filename = 'spPlate-{plate:04d}-{mjd:5d}.fits'.format(plate=plate, mjd=mjd)
         return posixpath.join(self.get_plate_path(plate), filename)
@@ -214,7 +214,7 @@ class Finder(object):
 
         Args:
             plate(int): Plate number, which must be positive.
-            mjd(int): Modified Julian date of the observation, which must be > 3500.
+            mjd(int): Modified Julian date of the observation, which must be > 45000.
             fiber(int): Fiber number of the target on this plate, which must be in the
                 range 1-1000.
             lite(bool): Specifies the "lite" version which contains only HDUs 0-3, so no
@@ -228,8 +228,8 @@ class Finder(object):
         """
         if plate < 0:
             raise ValueError('Invalid plate number ({}) must be > 0.'.format(plate))
-        if mjd <= 3500:
-            raise ValueError('Invalid mjd ({}) must be >= 3500.'.format(mjd))
+        if mjd <= 45000:
+            raise ValueError('Invalid mjd ({}) must be >= 45000.'.format(mjd))
         if fiber < 1 or fiber > get_num_fibers(plate):
             raise ValueError('Invalid fiber ({}) must be 1-{} for plate {}.'.format(
                 fiber, get_num_fibers(plate), plate))
