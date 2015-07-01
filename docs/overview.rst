@@ -4,7 +4,7 @@ Overview of BOSS Data
 
 BOSS data consists of `spectroscopic observations <http://www.sdss.org/dr12/spectro/spectro_basics/>`_ of astrophysical `targets <http://www.sdss.org/dr12/algorithms/boss_target_selection/>`_. An observation is identified by a triplet of numbers (PLATE,MJD,FIBER). Most BOSS targets only have a single observation. Each observation consists of several 15-minute exposures using red and blue cameras with overlapping wavelength coverage that are combined to give a single co-added spectrum.
 
-The table below summarizes the different files produced by the `spectroscopic pipeline <http://www.sdss.org/dr12/spectro/pipeline/>`_ containing the individual and combined exposures contributing to each observation. Files contain from 1 to 1000 spectra, with some duplication between files.  Each file provides wavelength, flux, inverse variance, mask bits and subtracted sky for each of its spectra.
+The table below summarizes the different files produced by the `spectroscopic pipeline <http://www.sdss.org/dr12/spectro/pipeline/>`_ containing the individual and combined exposures contributing to each observation. Files contain from 1 to 1000 spectra, with some duplication between files.  Each file provides wavelength, flux, inverse variance, `mask bits <https://www.sdss3.org/dr9/algorithms/bitmask_sppixmask.php>`_ and subtracted sky for each of its spectra.
 
 ====== ====== ===== ==== ====== ====== =========
 Type   Size   #Tgts #Exp Coadd? Calib? Datamodel
