@@ -258,7 +258,7 @@ class Manager(object):
         # Create local directories as needed.
 
         # We get the file for first path if there are more than one
-        local_path = self.local_path(remote_paths[0])
+        local_path = paths[0]
         parent_path = os.path.dirname(local_path)
         if not os.path.exists(parent_path):
             # There is a potential race condition if other processes are running.
@@ -269,4 +269,4 @@ class Manager(object):
             except OSError as e:
                 if e.errno != 17:
                     raise e
-        return self.download(remote_paths[0], local_path, progress_min_size=progress_min_size)
+        return self.download(paths[0], local_path, progress_min_size=progress_min_size)
