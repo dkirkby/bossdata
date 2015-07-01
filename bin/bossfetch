@@ -38,6 +38,8 @@ def main():
         help='File containing PLATE,MJD,FIBER columns that specify the observations to fetch.')
     parser.add_argument('--full', action='store_true',
         help='Fetch the full version of each spectrum data file.')
+    parser.add_argument('--platefile', action='store_true',
+        help='Fetch spPlate files for each plate instead of individual spectra.')
     parser.add_argument('--frame', action='store_true',
         help='Fetch spFrame files for each plate instead of individual spectra.')
     parser.add_argument('--cframe', action='store_true',
@@ -62,8 +64,12 @@ def main():
         print('nproc must be 1-5.')
         return -1
 
-    if args.full and (args.frame or args.cframe):
-        print('Option --full is not compatible with --frame or --cframe.')
+    if args.full and (args.platefile or args.frame or args.cframe):
+        print('Option --full is not compatible with --platefile, --frame, --cframe.')
+        return -1
+
+    if args.platefile and (args.frame or args.cframe):
+        print('Option --platefile is not compatible with --frame, --cframe.')
         return -1
 
     # Read the list of observations to fetch.
@@ -102,18 +108,29 @@ def main():
                     plan_local_path = mirror.get(plan_remote_path)
                     plan = bossdata.plate.Plan(plan_local_path)
                     plans[tag] = plan
-                plate_path = finder.get_plate_path(plate=row[args.plate_name])
+                plate = row[args.plate_name]
                 for i in range(plan.num_science_exposures):
                     # Add the names of spFrame and/or spCFrame files, if they are available.
                     for name,cal in calibrated.iteritems():
-                        blue_path = plan.get_exposure_name(
+                        blue_name = plan.get_exposure_name(
                             i, 'blue', row[args.fiber_name], calibrated=cal)
-                        if blue_path:
-                            remote_paths.add(os.path.join(plate_path, blue_path))
-                        red_path = plan.get_exposure_name(
+                        if blue_name:
+                            remote_paths.add(
+                                finder.get_plate_path(plate=plate, filename=blue_name))
+                        red_name = plan.get_exposure_name(
                             i, 'red', row[args.fiber_name], calibrated=cal)
-                        if red_path:
-                            remote_paths.add(os.path.join(plate_path, red_path))
+                        if red_name:
+                            remote_paths.add(
+                                finder.get_plate_path(plate=plate, filename=red_name))
+        elif args.platefile:
+            plate_added = {}
+            for row in table:
+                tag = (row[args.plate_name], row[args.mjd_name])
+                if tag not in plate_added:
+                    plate_spec_path = finder.get_plate_spec_path(
+                        plate=row[args.plate_name], mjd=row[args.mjd_name])
+                    remote_paths.add(plate_spec_path)
+                    plate_added[tag] = True
         else:
             for row in table:
                 remote_paths.add(finder.get_spec_path(

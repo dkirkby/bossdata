@@ -50,10 +50,12 @@ def main():
         help = 'Camera to use when plotting a single exposure.')
     parser.add_argument('--allow-mask', type = str, default = None,
         help = 'SPPIXMASK bit names to allow in valid data. Separate multiple names with |.')
+    parser.add_argument('--platefile', action='store_true',
+        help = 'Plot the combined spectrum from an spPlate file.')
     parser.add_argument('--frame', action='store_true',
-        help = 'Plot the spectrum from an uncalibrated spFrame file.')
+        help = 'Plot a single exposure spectrum from an uncalibrated spFrame file.')
     parser.add_argument('--cframe', action='store_true',
-        help = 'Plot the spectrum from a calibrated spCFrame file.')
+        help = 'Plot a single exposure spectrum from a calibrated spCFrame file.')
     parser.add_argument('--save-plot', type=str, default=None, const='', nargs='?', metavar='FILE',
         help = ('Save the generated plot to specified name ' +
             '(uses bossplot-{plate}-{mjd}-{fiber}.png if name omitted).'))
@@ -79,8 +81,12 @@ def main():
             print('Coadds not available from frame and cframe files.')
             return -1
         if args.camera is not 'both':
-            print('Ignoring camera = "{0}" for coadded spectrum.'.format(args.camera))
+            print('Ignoring camera = "{0}" for combined spectrum.'.format(args.camera))
             args.camera = 'both'
+    else:
+        if args.platefile:
+            print('Single exposures not available from plate files.')
+            return -1
 
     if args.allow_mask is None:
         pixel_quality_mask = None
@@ -95,6 +101,13 @@ def main():
         print(e)
         return -1
 
+    if args.verbose:
+        observation = '{:04d}-{:5d}-{:04d}'.format(args.plate, args.mjd, args.fiber)
+        if args.exposure is None:
+            print('Plotting combined spectrum for {}.'.format(observation))
+        else:
+            print('Plotting exposure {} spectrum for {}.'.format(args.exposure, observation))
+
     # Load spectra into memory, downloading if necessary.
     try:
         if args.frame or args.cframe:
@@ -102,6 +115,7 @@ def main():
             frame_path = finder.get_plate_path(plate=args.plate)
             plan_path = finder.get_plate_plan_path(plate=args.plate, mjd=args.mjd)
             plan = bossdata.plate.Plan(mirror.get(plan_path))
+            spec_index = plan.get_spectrograph_index(args.fiber)
             if args.camera in ('red','both'):
                 red_name = plan.get_exposure_name(
                     args.exposure, 'red', args.fiber, calibrated=args.cframe)
@@ -110,7 +124,7 @@ def main():
                     return -1
                 frames['red'] = bossdata.plate.FrameFile(
                     mirror.get(os.path.join(frame_path, red_name)),
-                    index=1 + (args.fiber-1)//500, calibrated=args.cframe)
+                    index=spec_index, calibrated=args.cframe)
             if args.camera in ('blue','both'):
                 blue_name = plan.get_exposure_name(
                     args.exposure, 'blue', args.fiber, calibrated=args.cframe)
@@ -119,24 +133,29 @@ def main():
                     return -1
                 frames['blue'] = bossdata.plate.FrameFile(
                     mirror.get(os.path.join(frame_path, blue_name)),
-                    index=1 + (args.fiber-1)//500, calibrated=args.cframe)
+                    index=spec_index, calibrated=args.cframe)
+        elif args.platefile:
+            remote_path = finder.get_plate_spec_path(plate=args.plate, mjd=args.mjd)
+            local_path = mirror.get(remote_path)
+            platefile = bossdata.plate.PlateFile(local_path)
+            if args.verbose:
+                print('Exposure summary:')
+                print(platefile.exposure_table)
         else:
             lite=(args.exposure is None)
-            remote_paths = [finder.get_spec_path(plate=args.plate, mjd=args.mjd,fiber=args.fiber,
-                                            lite=lite)]
+            remote_paths = [finder.get_spec_path(plate=args.plate, mjd=args.mjd,
+                            fiber=args.fiber, lite=lite)]
             if lite:    # If lite, we can use the Full file if it exists but lite does not
                 remote_paths.append(finder.get_spec_path(plate=args.plate, mjd=args.mjd,
                                 fiber=args.fiber, lite=False))
-
-            local_path = mirror.get(remote_paths)
+            local_paths = []
+            local_path = mirror.get(remote_paths, local_paths=local_paths)
             specfile = bossdata.spec.SpecFile(local_path)
             if args.verbose:
                 print('Exposure summary:')
                 print(specfile.exposure_table)
-                relative_local_path = local_path.replace(mirror.local_root, '', 1)
-                if relative_local_path != remote_paths[0]:
-                    print("A substitution was made:\n\t{}\nwas substituted for\n\t{}.".format(
-                        relative_local_path, remote_paths[0]))
+                if local_path != local_paths[0]:
+                    print("Using local full spec file instead of downloading lite file.")
     except RuntimeError as e:
         print(str(e))
         return -1
@@ -157,13 +176,24 @@ def main():
     # We will potentially plot two spectra.
     spectra = [ ]
     plot_colors = [ ]
-    data_args = dict(include_wdisp=args.show_dispersion, include_sky=args.show_sky or args.add_sky)
+    data_args = dict(include_wdisp=args.show_dispersion,
+        include_sky=args.show_sky or args.add_sky)
     if args.exposure is None:
-        spectra.append(specfile.get_valid_data(pixel_quality_mask=pixel_quality_mask, **data_args))
-        plot_colors.append('black')
-        if args.verbose:
-            print('Showing coadd of {0:d} exposures:'.format(specfile.num_exposures))
-            print_mask_summary('Coadd (AND)',specfile.get_pixel_mask())
+        if args.platefile:
+            fibers = np.array([args.fiber],dtype=int)
+            spectra.append(platefile.get_valid_data(fibers,
+                pixel_quality_mask=pixel_quality_mask, **data_args)[0])
+            plot_colors.append('black')
+            if args.verbose:
+                print('Showing coadd of {:d} exposures.'.format(platefile.num_exposures))
+                print_mask_summary('Coadd (AND)', platefile.get_pixel_masks(fibers)[0])
+        else:
+            spectra.append(specfile.get_valid_data(pixel_quality_mask=pixel_quality_mask,
+                **data_args))
+            plot_colors.append('black')
+            if args.verbose:
+                print('Showing coadd of {:d} exposures.'.format(specfile.num_exposures))
+                print_mask_summary('Coadd (AND)',specfile.get_pixel_mask())
     elif args.frame or args.cframe:
         fibers = np.array([args.fiber],dtype=int)
         if args.verbose:

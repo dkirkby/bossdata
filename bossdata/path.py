@@ -27,6 +27,8 @@ from __future__ import division, print_function
 import os
 import posixpath
 
+from bossdata.plate import get_num_fibers
+
 
 class Finder(object):
     """Initialize a path finder object.
@@ -75,8 +77,8 @@ class Finder(object):
     See :doc:`/scripts` and :doc:`/usage` for details.
     """
 
-    def get_plate_path(self, plate):
-        """Get the path to the specified plate.
+    def get_plate_path(self, plate, filename=None):
+        """Get the path to the specified plate directory or file.
 
         The returned path contains files that include all targets on the plate. Use the
         :meth:`get_spec_path` method for the path of a single spectrum file.
@@ -85,9 +87,11 @@ class Finder(object):
 
         Args:
             plate(int): Plate number, which must be positive.
+            filename(str): Name of a file within the plate directory to append to the
+                returned path.
 
         Returns:
-            str: Full path to files for the specified plate.
+            str: Full path to the specified plate directory or file within this directory.
 
         Raises:
             ValueError: Invalid plate number must be > 0.
@@ -95,7 +99,10 @@ class Finder(object):
         if plate < 0:
             raise ValueError('Invalid plate number ({}) must be > 0.'.format(plate))
 
-        return posixpath.join(self.redux_base, '{:04d}'.format(plate))
+        path = posixpath.join(self.redux_base, '{:04d}'.format(plate))
+        if filename:
+            path = posixpath.join(path, filename)
+        return path
 
     def get_plate_plan_path(self, plate, mjd, combined=True):
         """Get the path to the specified plate plan file.
@@ -105,7 +112,7 @@ class Finder(object):
 
         Args:
             plate(int): Plate number, which must be positive.
-            mjd(int): Modified Julian date of the observation, which must be > 3500.
+            mjd(int): Modified Julian date of the observation, which must be > 45000.
             combined(bool): Specifies the combined plan, which spans all MJDs
                 associated with a coadd, but does not include calibration frames
                 (arcs,flats) for a specific MJD.
@@ -116,13 +123,36 @@ class Finder(object):
         Raises:
             ValueError: Invalid plate or mjd inputs.
         """
-        if mjd <= 3500:
-            raise ValueError('Invalid mjd ({}) must be >= 3500.'.format(mjd))
+        if mjd <= 45000:
+            raise ValueError('Invalid mjd ({}) must be >= 45000.'.format(mjd))
 
         if combined:
-            filename = 'spPlancomb-{plate:4d}-{mjd:5d}.par'.format(plate=plate, mjd=mjd)
+            filename = 'spPlancomb-{plate:04d}-{mjd:5d}.par'.format(plate=plate, mjd=mjd)
         else:
-            filename = 'spPlan2d-{plate:4d}-{mjd:5d}.par'.format(plate=plate, mjd=mjd)
+            filename = 'spPlan2d-{plate:04d}-{mjd:5d}.par'.format(plate=plate, mjd=mjd)
+        return posixpath.join(self.get_plate_path(plate), filename)
+
+    def get_plate_spec_path(self, plate, mjd):
+        """Get the path to the file containing combined spectra for a whole plate.
+
+        Combined spectra for all exposures of a plate are packaged in spPlate files
+        http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spPlate.html
+        As of DR12, these files are about 110Mb for 1000 spectra.
+
+        Args:
+            plate(int): Plate number, which must be positive.
+            mjd(int): Modified Julian date of the observation, which must be > 45000.
+
+        Returns:
+            str: Full path to the requested plan file.
+
+        Raises:
+            ValueError: Invalid plate or mjd inputs.
+        """
+        if mjd <= 45000:
+            raise ValueError('Invalid mjd ({}) must be >= 45000.'.format(mjd))
+
+        filename = 'spPlate-{plate:04d}-{mjd:5d}.fits'.format(plate=plate, mjd=mjd)
         return posixpath.join(self.get_plate_path(plate), filename)
 
     def get_sp_all_path(self, lite=True):
@@ -184,9 +214,9 @@ class Finder(object):
 
         Args:
             plate(int): Plate number, which must be positive.
-            mjd(int): Modified Julian date of the observation, which must be > 3500.
+            mjd(int): Modified Julian date of the observation, which must be > 45000.
             fiber(int): Fiber number of the target on this plate, which must be in the
-                range 1-1000.
+                range 1-1000 (or 1-640 for plate < 3510).
             lite(bool): Specifies the "lite" version which contains only HDUs 0-3, so no
                 per-exposure data is included.
 
@@ -198,10 +228,11 @@ class Finder(object):
         """
         if plate < 0:
             raise ValueError('Invalid plate number ({}) must be > 0.'.format(plate))
-        if mjd <= 3500:
-            raise ValueError('Invalid mjd ({}) must be >= 3500.'.format(mjd))
-        if fiber < 1 or fiber > 1000:
-            raise ValueError('Invalid fiber ({}) must be 1-1000.'.format(fiber))
+        if mjd <= 45000:
+            raise ValueError('Invalid mjd ({}) must be >= 45000.'.format(mjd))
+        if fiber < 1 or fiber > get_num_fibers(plate):
+            raise ValueError('Invalid fiber ({}) must be 1-{} for plate {}.'.format(
+                fiber, get_num_fibers(plate), plate))
 
         path = 'spectra'
         plate_label = '{:04d}'.format(plate)
