@@ -2,14 +2,29 @@
 Overview of BOSS Data
 =====================
 
-BOSS data consists of spectroscopic observations of astrophysical targets. An observation is identified by a triplet of numbers (PLATE,MJD,FIBER). Most BOSS targets only have a single observation.
+BOSS data consists of `spectroscopic observations <http://www.sdss.org/dr12/spectro/spectro_basics/>`_ of astrophysical `targets <http://www.sdss.org/dr12/algorithms/boss_target_selection/>`_. An observation is identified by a triplet of numbers (PLATE,MJD,FIBER). Most BOSS targets only have a single observation. Each observation consists of several 15-minute exposures using red and blue cameras with overlapping wavelength coverage that are combined to give a single co-added spectrum.
 
-====== ====== ===== ==== ====== ====== ==== ==== ==== ===== ==== ====
-Type   Size   #Tgts #Exp Coadd? Calib? Wlen Flux Ivar Wdisp Bits  Sky
-====== ====== ===== ==== ====== ====== ==== ==== ==== ===== ==== ====
-lite   0.2Mb      1    0      Y      Y    1    1    1     1    1    1
-spec   1.7Mb      1  ALL      Y      Y 1,4+ 1,4+ 1,4+  1,4+ 1,4+ 1,4+
-plate  110Mb   1000    0      Y      Y    .    0    1     4  2,3    6
-frame  30Mb     500    1      N      Y    3    0    1     4    2    6
-cframe 75Mb     500    1      N      N    3    0    1     4    2    6
-====== ====== ===== ==== ====== ====== ==== ==== ==== ===== ==== ====
+The table below summarizes the different files produced by the `spectroscopic pipeline <http://www.sdss.org/dr12/spectro/pipeline/>`_ containing the individual and combined exposures contributing to each observation. Files contain from 1 to 1000 spectra, with some duplication between files.  Each file provides wavelength, flux, inverse variance, mask bits and subtracted sky for each of its spectra.
+
+====== ====== ===== ==== ====== ====== =========
+Type   Size   #Tgts #Exp Coadd? Calib? Datamodel
+====== ====== ===== ==== ====== ====== =========
+lite   0.2Mb      1    0      Y      Y `lite <http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/spectra/lite/PLATE4/spec.html>`_
+spec   1.7Mb      1  ALL      Y      Y `spec <http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/spectra/PLATE4/spec.html>`_
+plate  110Mb   1000    0      Y      Y `plate <http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spPlate.html>`_
+cframe 75Mb     500    1      N      Y `cframe <http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spCFrame.html>`_
+frame  30Mb     500    1      N      N `frame <http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spFrame.html>`_
+====== ====== ===== ==== ====== ====== =========
+
+The following examples show how the same combined spectrum can be :ref:`plotted <bossplot>` from lite files and plate files::
+
+    bossplot --plate 6641 --mjd 56383 --fiber 30
+    bossplot --plate 6641 --mjd 56383 --fiber 30 --platefile
+
+Individual exposures can also be plotted using either spec files, cframe files or frame files::
+
+    bossplot --plate 6641 --mjd 56383 --fiber 30 --exposure 0
+    bossplot --plate 6641 --mjd 56383 --fiber 30 --exposure 2 --cframe
+    bossplot --plate 6641 --mjd 56383 --fiber 30 --exposure 2 --frame
+
+Note that the indexing of exposures is different for spec files, which only index exposures used in the final coadd, and (c)frame files which index all available exposures. The indices used in the example all refer to exposure number 00158842, which can be verified by adding the ``--verbose`` option to these commands. The difference between the cframe and frame files is that the frame gives fluxes in units of flat-fielded detected electrons, before the step of calibrating fluxes using standard stars.
