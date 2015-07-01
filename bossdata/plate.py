@@ -17,6 +17,21 @@ import fitsio
 from bossdata.spec import get_exposure_table
 
 
+def get_num_fibers(plate):
+    """Return the number of fiber holes for a given plate number.
+
+    Plate numbers 3510 or larger are (e)BOSS plates with 1000 fibers. Smaller plate
+    numbers are assumed to be SDSS-I/II with 640 fibers.
+
+    Args:
+        plate(int): Plate number.
+
+    Returns:
+        int: The value 640 or 1000.
+    """
+    return 640 if plate < 3510 else 1000
+
+
 class Plan(object):
     """The plan file for configuring the BOSS pipeline to combine exposures of a single plate.
 

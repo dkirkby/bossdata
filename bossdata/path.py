@@ -27,6 +27,8 @@ from __future__ import division, print_function
 import os
 import posixpath
 
+from bossdata.plate import get_num_fibers
+
 
 class Finder(object):
     """Initialize a path finder object.
@@ -228,8 +230,9 @@ class Finder(object):
             raise ValueError('Invalid plate number ({}) must be > 0.'.format(plate))
         if mjd <= 3500:
             raise ValueError('Invalid mjd ({}) must be >= 3500.'.format(mjd))
-        if fiber < 1 or fiber > 1000:
-            raise ValueError('Invalid fiber ({}) must be 1-1000.'.format(fiber))
+        if fiber < 1 or fiber > get_num_fibers(plate):
+            raise ValueError('Invalid fiber ({}) must be 1-{} for plate {}.'.format(
+                fiber, get_num_fibers(plate), plate))
 
         path = 'spectra'
         plate_label = '{:04d}'.format(plate)
