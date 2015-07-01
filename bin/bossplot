@@ -25,34 +25,26 @@ import bossdata.plate
 def auto_range(range_str, default_limits, data_lo=None, data_hi=None):
     if data_hi is None:
         data_hi = data_lo
-
     def _limit_parser(limit, default_limit, data):
-        s_limit, type_flag = limit.strip(), '#'
-        limit_val = default_limit
-        if s_limit.endswith('%'):
-            s_limit, type_flag = limit.rstrip('%'), '%'
-
         try:
-            limit_val = float(s_limit)
-        except ValueError:
-            print("WARNING: {} doesn't appear to be a number or percent. The unmodified value "\
-                    "{} was used instead.".format(limit, default_limit) )
-            return default_limit
-
-        if type_flag == '%':
-            if data is not None:
-                return np.percentile(data, limit_val)
+            if limit.endswith('%'):
+                limit_frac = float(limit.rstrip('%'))
+                if data is not None:
+                    return np.percentile(data, limit_frac)
+                else:
+                    return default_lo + (default_hi - default_lo)*limit_frac/100.0
+            elif limit == '':
+                return default_limit
             else:
-                return default_lo + (default_hi - default_lo)*limit_val/100.0
-        else:
-            return limit_val
+                return float(limit)
+        except ValueError:
+            print('Warning: invalid limit specified ({}) using default.'.format(range_str))
+            return default_limit
 
     lo, hi = range_str.split(':')
     default_lo, default_hi = default_limits
     new_lo = _limit_parser(lo, default_lo, data_lo)
     new_hi = _limit_parser(hi, default_hi, data_hi)
-    if new_hi < new_lo:
-        new_hi, new_lo = new_lo, new_hi
     return new_lo, new_hi
 
 def print_mask_summary(label, mask_values):
@@ -106,12 +98,11 @@ def main():
     parser.add_argument('--add-sky', action = 'store_true',
         help = 'Add the subtracted sky to the object flux (overrides show-sky).')
     parser.add_argument('--flux-range', type=str, default='0.5%:99.5%', metavar="MIN:MAX",
-        help='Limit flux axis range. MIN or MAX may be either a number, percent, or blank, '\
-            'e.g. 10%%:90%%, 5000:95%%, 4750:')
+        help='Limit flux axis range. MIN or MAX may be either a number, percent, or blank.')
     parser.add_argument('--wlen-range', type=str, default=None, metavar="MIN:MAX",
-        help='Limit wavelength axis range. MIN:MAX follows --flux-range format.')
+        help='Limit wavelength axis range. MIN or MAX may be either a number, percent, or blank.')
     parser.add_argument('--wdisp-range', type=str, default=None, metavar="MIN:MAX",
-        help='Limit dispersion axis range. MIN:MAX follows --flux-range format.')
+        help='Limit dispersion axis range. MIN or MAX may be either a number, percent, or blank.')
     parser.add_argument('--figsize', type=str, default='12,8', metavar="WIDTH,HEIGHT",
         help='Figure dimensions in inches.')
     args = parser.parse_args()
