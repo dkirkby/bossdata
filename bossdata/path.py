@@ -216,7 +216,7 @@ class Finder(object):
             plate(int): Plate number, which must be positive.
             mjd(int): Modified Julian date of the observation, which must be > 45000.
             fiber(int): Fiber number of the target on this plate, which must be in the
-                range 1-1000.
+                range 1-1000 (or 1-640 for plate < 3510).
             lite(bool): Specifies the "lite" version which contains only HDUs 0-3, so no
                 per-exposure data is included.
 

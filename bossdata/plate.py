@@ -53,8 +53,8 @@ class Plan(object):
                 tokens = line.split()
                 # token[1] is the plate number and must be identical for all lines.
                 if not self.plate:
-                    self.plate = tokens[1]
-                elif self.plate != tokens[1]:
+                    self.plate = int(tokens[1])
+                elif self.plate != int(tokens[1]):
                     raise RuntimeError('Internal error: unexpected plate {0} in {1}.'.format(
                         tokens[1], path))
                 # Validate the exposure names, which should all have the form
@@ -95,6 +95,28 @@ class Plan(object):
             self.num_science_exposures = len(self.exposures['science'])
         else:
             self.num_science_exposures = 0
+        # Remember the number of fibers on this plate.
+        self.num_fibers = get_num_fibers(self.plate)
+
+    def get_spectrograph_index(self, fiber):
+        """Get the spectrograph index 1,2 for the specified fiber.
+
+        Args:
+            fiber(int): Fiber number to identify which spectrograph to use, which must
+                be in the range 1-1000 (or 1-640 for plate < 3510).
+
+        Returns:
+            int: Value of 1 if fiber is read out by the first spectrograph 1-500 (1-320),
+                or else 2 for the second spectrograph.
+
+        Raises:
+            ValueError: fiber is outside the allowed range 1-1000 (1-640) for this plate.
+        """
+        if fiber < 1 or fiber > self.num_fibers:
+            raise ValueError(
+                'Invalid fiber {} should be in the range 1-{} for plate {}.',format(
+                fiber, self.num_fibers, self.plate))
+        return 1 if fiber <= self.num_fibers//2 else 2
 
     def get_exposure_name(self, sequence_number, camera, fiber, calibrated=True):
         """Get the name of a science exposure from this plan.
@@ -106,7 +128,7 @@ class Plan(object):
             sequence_number(int): Science exposure sequence number, counting from zero.
                 Must be less than our num_science_exposures attribute.
             fiber(int): Fiber number to identify which spectrograph to use, which must
-                be in the range 1-1000.
+                be in the range 1-1000 (or 1-640 for plate < 3510).
             camera(str): Must be 'blue' or 'red'.
             calibrated(bool): Returns the name of the calibrated (spCFrame) file rather
                 than the un-calibrated (spFrame) file.
@@ -125,16 +147,13 @@ class Plan(object):
         if sequence_number < 0 or sequence_number >= self.num_science_exposures:
             raise ValueError('Invalid sequence number ({0}) must be 0-{1}.'.format(
                 sequence_number, self.num_science_exposures))
-        if fiber < 1 or fiber > 1000:
-            raise ValueError('Invalid fiber ({}) must be 1-1000.'.format(fiber))
+        if fiber < 1 or fiber > self.num_fibers:
+            raise ValueError('Invalid fiber ({}) must be 1-{} for plate {}.'.format(
+                fiber, self.num_fibers, self.plate))
         if camera not in ('blue', 'red'):
             raise ValueError('Invalid camera ({}) must be blue or red.'.format(camera))
 
-        if fiber <= 500:
-            index = '1'
-        else:
-            index = '2'
-        spectrograph = camera[0] + index
+        spectrograph = camera[0] + str(self.get_spectrograph_index(fiber))
         exposure_info = self.exposures['science'][sequence_number]
         if spectrograph not in exposure_info['SPECS']:
             return None
@@ -211,18 +230,19 @@ class TraceSet(object):
         Evaluate the interpolating function for each trace.
 
         Args:
-            xpos(numpy.ndarray): Numpy array of shape (500,nx) with x-pixel coordinates
-                along each trace where y(x) should be evaluated. If this
-                argument is not set, ``self.default_xpos`` will be used, which consists
-                of 500 identical traces with x-pixel coordinates at each integer pixel
-                value covering the full allowed range (nominally 0-4111 for blue, 0-4127
-                for red).
+            xpos(numpy.ndarray): Numpy array of shape (ntrace,nx) with x-pixel
+                coordinates along each trace where y(x) should be evaluated. For BOSS,
+                ntrace = 500 and for SDSS-I/II (plate < 3510), ntrace = 320. The value
+                of ntrace is available as `self.ntrace`.
+                If this argument is not set, ``self.default_xpos`` will be used, which
+                consists of num_fibers identical traces with x-pixel coordinates at
+                each integer pixel value covering the full allowed range.
             ignore_jump(bool): Include a jump when this is set and this is a 2-phase readout.
                 There is probably no good reason to set this False, but it is included
                 for compatibility with the original IDL code.
 
         Returns:
-            numpy.ndarray: Numpy array ``y`` with shape (500,nx) that matches the input
+            numpy.ndarray: Numpy array ``y`` with shape (ntrace,nx) that matches the input
                 ``xpos`` or else the default ``self.default_xpos``.  ``ypos[[i,x]]`` gives
                 the value of the interpolated y(x) with x equal to ``xpos[[i,x]]``.
         """
@@ -243,7 +263,7 @@ class TraceSet(object):
 
 
 class PlateFile(object):
-    """A BOSS plate file containing combined exposures for a whole plate (1000 fibers).
+    """A BOSS plate file containing combined exposures for a whole plate.
 
     This class provides an interface to the spPlate files whose data model is at
     http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spPlate.html
@@ -257,6 +277,8 @@ class PlateFile(object):
     def __init__(self, path):
         self.hdulist = fitsio.FITS(path, mode=fitsio.READONLY)
         self.header = self.hdulist[0].read_header()
+        # Look up the number of fibers.
+        self.num_fibers = self.header['NAXIS2']
         # Look up the number of exposures used for this coadd.
         self.num_exposures = self.header['NEXP']
         self.exposure_table = get_exposure_table(self.header)
@@ -279,8 +301,8 @@ class PlateFile(object):
         """Convert fiber numbers to array offsets.
 
         Args:
-            fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000.  Fibers do not
-                need to be sorted and repetitions are ok.
+            fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000 (or 1-640 for
+                plate < 3510).  Fibers do not need to be sorted and repetitions are ok.
 
         Returns:
             numpy.ndarray: Numpy array of offsets 0-999.
@@ -300,8 +322,8 @@ class PlateFile(object):
         inverse variance. Returns the 'and_mask' and ignores the 'or_mask'.
 
         Args:
-            fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000. Fibers do not
-                need to be sorted and repetitions are ok.
+            fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000 (or 1-640 for
+                plate < 3510).  Fibers do not need to be sorted and repetitions are ok.
 
         Returns:
             numpy.ndarray: Integer numpy array of shape (nfibers,npixels) where (i,j)
@@ -319,8 +341,8 @@ class PlateFile(object):
         """Get the valid for the specified fibers.
 
         Args:
-            fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000. Fibers do not
-                need to be sorted and repetitions are ok.
+            fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000 (or 1-640 for
+                plate < 3510).  Fibers do not need to be sorted and repetitions are ok.
             pixel_quality_mask(int): An integer value interpreted as a bit pattern using the
                 bits defined in :attr:`bossdata.bits.SPPIXMASK` (see also
                 http://www.sdss3.org/dr10/algorithms/bitmask_sppixmask.php). Any bits set in
@@ -382,7 +404,7 @@ class PlateFile(object):
 
 
 class FrameFile(object):
-    """A BOSS frame file containing a single exposure of one spectrograph (500 fibers).
+    """A BOSS frame file containing a single exposure of one spectrograph (half plate).
 
     This class supports both types of frame data files: the uncalibrated spFrame and
     the calibrated spCFrame. The corresponding data models are documented at:
@@ -390,13 +412,17 @@ class FrameFile(object):
     http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spFrame.html
     http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spCFrame.html
 
+    BOSS spectrographs read out 500 fibers each. SDSS-I/II spectrographs (plate < 3510)
+    read out 320 fibers each.
+
     Args:
         path(str): Local path of the frame FITS file to use.  This should normally be obtained
             via :meth:`Plan.get_exposure_name` and can be automatically mirrored
             via :meth:`bossdata.remote.Manager.get` or using the :ref:`bossfetch` script. The
             file is opened in read-only mode so you do not need write privileges.
         index(int): Identifies if this is the first (1) or second (2) spectrograph, which
-            determines whether it has spectra for fibers 1-500 or 501-1000.
+            determines whether it has spectra for fibers 1-500 (1-320) or 501-1000 (321-640).
+            You should normally obtain this value using :meth:`Plan.get_spectrograph_index`.
         calibrated(bool): Identifies whether this is a calibrated (spCFrame) or
             un-calibrated (spFrame) frame file.
     """
@@ -406,6 +432,10 @@ class FrameFile(object):
         self.index = index
         self.calibrated = calibrated
         self.hdulist = fitsio.FITS(path, mode=fitsio.READONLY)
+        self.header = self.hdulist[0].read_header()
+        # Look up the number of fibers.
+        self.num_fibers = self.header['NAXIS2']
+        # Do not read arrays until we have to.
         self.masks = None
         self.ivar = None
         self.loglam = None
@@ -417,18 +447,19 @@ class FrameFile(object):
         """Convert fiber numbers to array offsets.
 
         Args:
-            fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000.  All fibers must
-                be in the appropriate range 1-500 or 501-1000 for this frame's spectograph.
-                Fibers do not need to be sorted and repetitions are ok.
+            fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000 (or 1-640 for
+                plate < 3510).  All fibers must be in the appropriate range 1-500 (1-320)
+                or 501-1000 (321-640) for this frame's spectograph. Fibers do not need
+                to be sorted and repetitions are ok.
 
         Returns:
-            numpy.ndarray: Numpy array of offsets 0-499.
+            numpy.ndarray: Numpy array of offsets 0-499 (or 0-319 for plate < 3510).
 
         Raises:
             ValueError: Fiber number is out of the valid range for this spectrograph.
         """
-        offset = fiber - 500*(self.index-1) - 1
-        if np.any((offset < 0) | (offset > 499)):
+        offset = fiber - self.num_fibers*(self.index - 1) - 1
+        if np.any((offset < 0) | (offset >= self.num_fibers)):
             raise ValueError('Fiber number out of range for this spectrograph.')
         return offset
 
@@ -439,9 +470,10 @@ class FrameFile(object):
         inverse variance.
 
         Args:
-            fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000.  All fibers must
-                be in the appropriate range 1-500 or 501-1000 for this frame's spectograph.
-                Fibers do not need to be sorted and repetitions are ok.
+            fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000 (or 1-640 for
+                plate < 3510).  All fibers must be in the appropriate range 1-500 (1-320)
+                or 501-1000 (321-640) for this frame's spectograph. Fibers do not need
+                to be sorted and repetitions are ok.
 
         Returns:
             numpy.ndarray: Integer numpy array of shape (nfibers,npixels) where (i,j)
@@ -459,9 +491,10 @@ class FrameFile(object):
         """Get the valid for the specified fibers.
 
         Args:
-            fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000.  All fibers must
-                be in the appropriate range 1-500 or 501-1000 for this frame's spectograph.
-                Fibers do not need to be sorted and repetitions are ok.
+            fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000 (or 1-640 for
+                plate < 3510).  All fibers must be in the appropriate range 1-500 (1-320)
+                or 501-1000 (321-640) for this frame's spectograph. Fibers do not need
+                to be sorted and repetitions are ok.
             pixel_quality_mask(int): An integer value interpreted as a bit pattern using the
                 bits defined in :attr:`bossdata.bits.SPPIXMASK` (see also
                 http://www.sdss3.org/dr10/algorithms/bitmask_sppixmask.php). Any bits set in
