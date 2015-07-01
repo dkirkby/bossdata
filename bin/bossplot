@@ -147,13 +147,13 @@ def main():
             if lite:    # If lite, we can use the Full file if it exists but lite does not
                 remote_paths.append(finder.get_spec_path(plate=args.plate, mjd=args.mjd,
                                 fiber=args.fiber, lite=False))
-
-            local_path = mirror.get(remote_paths)
+            local_paths = []
+            local_path = mirror.get(remote_paths, local_paths=local_paths)
             specfile = bossdata.spec.SpecFile(local_path)
             if args.verbose:
                 print('Exposure summary:')
                 print(specfile.exposure_table)
-                if local_path != remote_paths[0]:
+                if local_path != local_paths[0]:
                     print("Using local full spec file instead of downloading lite file.")
     except RuntimeError as e:
         print(str(e))
