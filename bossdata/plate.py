@@ -246,8 +246,13 @@ class PlateFile(object):
         self.num_exposures = self.header['NEXP']
         self.exposure_table = get_exposure_table(self.header)
         # Calculate the common wavelength grid from header keywords.
-        num_pixels, min_loglam = self.header['NAXIS1'], self.header['CRVAL1']
-        self.loglam = min_loglam + 1e-4*np.arange(num_pixels)
+        num_pixels = self.header['NAXIS1']
+        loglam_min = self.header['COEFF0']
+        loglam_step = self.header['COEFF1']
+        # We cast the log(lambda) grid to float32 to match how the grid is calculated
+        # in IDL and propagated to spec files, even though this entails a (tiny) loss
+        # of precision.
+        self.loglam = (loglam_min + loglam_step * np.arange(num_pixels)).astype(np.float32)
         # Do not read arrays until we have to.
         self.masks = None
         self.ivar = None
