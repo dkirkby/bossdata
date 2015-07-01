@@ -75,8 +75,8 @@ class Finder(object):
     See :doc:`/scripts` and :doc:`/usage` for details.
     """
 
-    def get_plate_path(self, plate):
-        """Get the path to the specified plate.
+    def get_plate_path(self, plate, filename=None):
+        """Get the path to the specified plate directory or file.
 
         The returned path contains files that include all targets on the plate. Use the
         :meth:`get_spec_path` method for the path of a single spectrum file.
@@ -85,9 +85,11 @@ class Finder(object):
 
         Args:
             plate(int): Plate number, which must be positive.
+            filename(str): Name of a file within the plate directory to append to the
+                returned path.
 
         Returns:
-            str: Full path to files for the specified plate.
+            str: Full path to the specified plate directory or file within this directory.
 
         Raises:
             ValueError: Invalid plate number must be > 0.
@@ -95,7 +97,10 @@ class Finder(object):
         if plate < 0:
             raise ValueError('Invalid plate number ({}) must be > 0.'.format(plate))
 
-        return posixpath.join(self.redux_base, '{:04d}'.format(plate))
+        path = posixpath.join(self.redux_base, '{:04d}'.format(plate))
+        if filename:
+            path = posixpath.join(path, filename)
+        return path
 
     def get_plate_plan_path(self, plate, mjd, combined=True):
         """Get the path to the specified plate plan file.

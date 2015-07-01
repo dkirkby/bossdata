@@ -108,18 +108,20 @@ def main():
                     plan_local_path = mirror.get(plan_remote_path)
                     plan = bossdata.plate.Plan(plan_local_path)
                     plans[tag] = plan
-                plate_path = finder.get_plate_path(plate=row[args.plate_name])
+                plate = row[args.plate_name]
                 for i in range(plan.num_science_exposures):
                     # Add the names of spFrame and/or spCFrame files, if they are available.
                     for name,cal in calibrated.iteritems():
-                        blue_path = plan.get_exposure_name(
+                        blue_name = plan.get_exposure_name(
                             i, 'blue', row[args.fiber_name], calibrated=cal)
-                        if blue_path:
-                            remote_paths.add(os.path.join(plate_path, blue_path))
-                        red_path = plan.get_exposure_name(
+                        if blue_name:
+                            remote_paths.add(
+                                finder.get_plate_path(plate=plate, filename=blue_name))
+                        red_name = plan.get_exposure_name(
                             i, 'red', row[args.fiber_name], calibrated=cal)
-                        if red_path:
-                            remote_paths.add(os.path.join(plate_path, red_path))
+                        if red_name:
+                            remote_paths.add(
+                                finder.get_plate_path(plate=plate, filename=red_name))
         elif args.platefile:
             plate_added = {}
             for row in table:
