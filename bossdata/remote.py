@@ -210,10 +210,10 @@ class Manager(object):
             remote_path(str,iterable): if str, then it must be the full path to the remote
                 file relative to the remote server root, which should normally be obtained
                 using :class:`bossdata.path` methods.  If an interable instead, then the first
-                item (in iteration order) that is an existing file is used; if not such file
-                exists, the first item is used to create a local file and download (see
-                auto_download).  In general, a caller can determine which path is being
-                returned for with something like::
+                item (in iteration order) that is an existing file is used; if no such file
+                exists, the first item is downloaded. On return, each remote path in the
+                input argument is replaced with its local equivalent path. This allows you
+                to detect if a substitution has occurred using the pattern::
 
                     mirror = bossdata.remote.Manager()
                     remote_paths = [the_preferred_path, a_backup_path]
@@ -235,21 +235,18 @@ class Manager(object):
             RuntimeError: File is not already mirrored and auto_download is False.
         """
 
-        # Don't test if its a string; maybe later it won't be.  Test if it's a iterable.  If
-        # not, we'll just assume it is a single path (e.g. a single string)
-        remote_paths = []
+        # If the argument is not iterable we assume it is a single path.
         if not hasattr(remote_path, '__iter__'):
-            remote_paths = [remote_path]
+            paths = [remote_path]
         else:
-            # It's some kind of iterable; this is small, so lets make life easy and make it a
-            # list.
-            if isinstance(remote_path, list):
-                remote_paths = remote_path
-            else:
-                remote_paths = [path for path in remote_path]
+            paths = remote_path
 
-        for path in remote_paths:
-            local_path = self.local_path(path)
+        # Convert remote paths to local paths.
+        for i, remote_path in enumerate(paths):
+            paths[i] = self.local_path(remote_path)
+
+        # Return the first locally available file, if any.
+        for local_path in paths:
             if os.path.isfile(local_path):
                 return local_path
 

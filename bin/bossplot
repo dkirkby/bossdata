@@ -153,10 +153,8 @@ def main():
             if args.verbose:
                 print('Exposure summary:')
                 print(specfile.exposure_table)
-                relative_local_path = local_path.replace(mirror.local_root, '', 1)
-                if relative_local_path != remote_paths[0]:
-                    print("A substitution was made:\n\t{}\nwas substituted for\n\t{}.".format(
-                        relative_local_path, remote_paths[0]))
+                if local_path != remote_paths[0]:
+                    print("Using local full spec file instead of downloading lite file.")
     except RuntimeError as e:
         print(str(e))
         return -1
