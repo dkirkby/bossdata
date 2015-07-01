@@ -96,6 +96,16 @@ This should open a new window containing the plot that you will need to close in
 
 You can also save the data shown in a plot using ``--save-data`` with an optional filename (the default is ``bossplot-{plate}-{mjd}-{fiber}.dat``).  Data is saved using the `ascii.basic <http://docs.astropy.org/en/latest/api/astropy.io.ascii.Basic.html#astropy.io.ascii.Basic>`_ format and only wavelengths with valid data are included in the output.
 
+Use ``--wlen-range MIN:MAX`` to specify a wavelength range over which to plot (x-axis), overriding the default, auto-detected range.  Similarly, ``--flux-range MIN:MAX`` and ``--wdisp-range MIN:MAX`` work for the flux (left y-axis) and dispersion (right y-axis).  MIN and MAX can be either blank (which means use the default value), an absolute value (1000), or a percentage (10%), and percentages and absolute values may be mixed.  Working examples::
+
+    --wlen-range :7500
+    --wlen-range 10%:90%
+    --wlen-range 10%:8000
+
+Another visual option is ``--scatter`` will give a scatter plot of the flux rather than the flux +/- error band.
+
+Several options are available to see data beyond just object flux.  Use ``--show-sky`` to show the subtracted sky (modeled) flux, ``--add-sky`` to show the total of object flux and modeled sky flux, ``--show-mask`` to show grayed regions where data has been masked out because it is deemed invalid, and ``--show-dispersion`` to show wavelength dispersion.
+
 The ``bossplot`` command will automatically download the appropriate data file if necessary.  This is 'conservative':  if an existing local file can be used to satisfy a request, no new files will be downloaded.
 
 Different versions of the spectrum can be plotted. By default the spec-lite data file is used for a coadd or the spec file for an individual exposure.  Use the ``--frame`` or ``--cframe`` to plot the spectrum from a plate ``spFrame`` file or its flux-calibrated equivalent ``spCFrame`` file.
