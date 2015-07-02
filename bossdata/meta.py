@@ -298,7 +298,7 @@ class Database(object):
             assert not lite, 'Lite format parsing not implemented for platelist catalog'
             remote_path = finder.get_platelist_path()
             local_path = mirror.local_path(remote_path)
-            local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
+            assert local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
                 local_path)
             db_path = local_path.replace('.fits', '.db')
             lite_db_used = False
