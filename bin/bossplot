@@ -251,6 +251,7 @@ def main():
     flux_lo, flux_hi = np.array([], dtype=float), np.array([], dtype=float)
     wdisp_data = np.array([], dtype=float)
     wlen_data = np.array([], dtype=float)
+    x_mask = [ ]
     for data,plot_color in zip(spectra,plot_colors):
 
         wlen,dflux = data['wavelength'][:],data['dflux'][:]
@@ -268,14 +269,9 @@ def main():
 
         num_masked = len(data.mask)
         if args.show_mask and num_masked > 0:
-            x_mask = [ ]
-            y_mask = [ ]
-            ymin,ymax = left_axis.get_ylim()
             bad_pixels = np.where(data.mask)
             for x in data.data['wavelength'][bad_pixels]:
                 x_mask.extend([x,x,None])
-                y_mask.extend([ymin,ymax,None])
-            plt.plot(x_mask,y_mask,'-',color=plot_color,alpha=0.2)
 
         if args.show_dispersion:
             right_axis.plot(wlen,data['wdisp'][:],ls='-',color=plot_color)
@@ -311,6 +307,12 @@ def main():
         valid = ~wdisp_data.mask & (wlen_data > wlen_min) & (wlen_data < wlen_max)
         wdisp_min, wdisp_max = auto_range(args.wdisp_range, right_axis.get_ylim(), wdisp_data[valid])
         right_axis.set_ylim(wdisp_min, wdisp_max)
+
+    # Set masking to be dispersion range hieght
+    if args.show_mask and len(x_mask)>0:
+        ymin,ymax = left_axis.get_ylim()
+        y_mask = [ymin,ymax,None]*int(len(x_mask)/3) # /3 since there are 3 elems per x_entry
+        left_axis.plot(x_mask,y_mask,'-',color=plot_color,alpha=0.2)
 
     if args.save_plot is not None:
         save_name = args.save_plot

@@ -102,7 +102,7 @@ Use ``--wlen-range MIN:MAX`` to specify a wavelength range over which to plot (x
     --wlen-range 10%:90%
     --wlen-range 10%:8000
 
-Another visual option is ``--scatter`` will give a scatter plot of the flux rather than the flux +/- error band.
+Another visual option ``--scatter`` will give a scatter plot of the flux rather than the flux +/- error band.
 
 Several options are available to see data beyond just object flux.  Use ``--show-sky`` to show the subtracted sky (modeled) flux, ``--add-sky`` to show the total of object flux and modeled sky flux, ``--show-mask`` to show grayed regions where data has been masked out because it is deemed invalid, and ``--show-dispersion`` to show wavelength dispersion.
 
