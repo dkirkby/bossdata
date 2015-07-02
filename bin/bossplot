@@ -49,6 +49,7 @@ def auto_range(range_str, default_limits, data_lo=None, data_hi=None):
     else: #Assume e.g. limits from get_xlim
         default_lo, default_hi = default_limits
 
+    range_str = range_str.strip("[] ")
     lo, hi = range_str.split(':')
     new_lo = _limit_parser(lo, default_lo, data_lo)
     new_hi = _limit_parser(hi, default_hi, data_hi)
@@ -108,11 +109,11 @@ def main():
         help = 'Show the subtracted sky flux instead of the object flux.')
     parser.add_argument('--add-sky', action = 'store_true',
         help = 'Add the subtracted sky to the object flux (overrides show-sky).')
-    parser.add_argument('--flux-range', type=str, default='0.5%:99.5%', metavar="MIN:MAX",
+    parser.add_argument('--flux-range', type=str, default='0.5%:99.5%', metavar="[MIN:MAX]",
         help='Limit flux axis range. MIN or MAX may be either a number, percent, or blank.')
-    parser.add_argument('--wlen-range', type=str, default=None, metavar="MIN:MAX",
+    parser.add_argument('--wlen-range', type=str, default=None, metavar="[MIN:MAX]",
         help='Limit wavelength axis range. MIN or MAX may be either a number, percent, or blank.')
-    parser.add_argument('--wdisp-range', type=str, default=None, metavar="MIN:MAX",
+    parser.add_argument('--wdisp-range', type=str, default=None, metavar="[MIN:MAX]",
         help='Limit dispersion axis range. MIN or MAX may be either a number, percent, or blank.')
     parser.add_argument('--figsize', type=str, default='12,8', metavar="WIDTH,HEIGHT",
         help='Figure dimensions in inches.')
