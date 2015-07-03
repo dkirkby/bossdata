@@ -45,8 +45,14 @@ def auto_range(range_str, default_limits, data_lo=None, data_hi=None):
         except ValueError:
             raise ValueError('Invalid limit specified ({}).'.format(limit))
 
-    if isinstance(default_limits, basestring): #Then parse; no blanks, is default!
-        def_lo, def_hi = default_limits.split(':')
+    range_pattern = re.compile('\s*\[\s*(.*?)\s*:\s*(.*?)\s*\]\s*')
+
+    if isinstance(default_limits, basestring):
+        parsed = re.match(range_pattern, default_limits)
+        if not parsed:
+            raise ValueError('Default range {} does not have the format [<lo>:<hi>].'.format(
+                range_str))
+        def_lo, def_hi = parsed.groups()
         default_lo = _limit_parser(def_lo, 0, data_lo)
         default_hi = _limit_parser(def_hi, 0, data_hi)
     else: #Assume e.g. limits from get_xlim
