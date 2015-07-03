@@ -43,7 +43,7 @@ def auto_range(range_str, default_limits, data_lo=None, data_hi=None):
                 raise ValueError()
             return value
         except ValueError:
-            raise ValueError('Invalid limit specified ({})'.format(limit))
+            raise ValueError('Invalid limit specified ({}).'.format(limit))
 
     if isinstance(default_limits, basestring): #Then parse; no blanks, is default!
         def_lo, def_hi = default_limits.split(':')
@@ -113,13 +113,13 @@ def main():
         help = 'Show the subtracted sky flux instead of the object flux.')
     parser.add_argument('--add-sky', action = 'store_true',
         help = 'Add the subtracted sky to the object flux (overrides show-sky).')
-    parser.add_argument('--flux-range', type=str, default='0.5%:99.5%', metavar="[MIN:MAX]",
+    parser.add_argument('--flux-range', type=str, default='[0.5%:99.5%]', metavar='[MIN:MAX]',
         help='Limit flux axis range. MIN or MAX may be either a number, percent, or blank.')
-    parser.add_argument('--wlen-range', type=str, default=None, metavar="[MIN:MAX]",
+    parser.add_argument('--wlen-range', type=str, default=None, metavar='[MIN:MAX]',
         help='Limit wavelength axis range. MIN or MAX may be either a number, percent, or blank.')
-    parser.add_argument('--wdisp-range', type=str, default=None, metavar="[MIN:MAX]",
+    parser.add_argument('--wdisp-range', type=str, default=None, metavar='[MIN:MAX]',
         help='Limit dispersion axis range. MIN or MAX may be either a number, percent, or blank.')
-    parser.add_argument('--figsize', type=str, default='12,8', metavar="WIDTH,HEIGHT",
+    parser.add_argument('--figsize', type=str, default='12,8', metavar='WIDTH,HEIGHT',
         help='Figure dimensions in inches.')
     args = parser.parse_args()
 
@@ -184,7 +184,7 @@ def main():
                 print(specfile.exposure_table)
                 relative_local_path = local_path.replace(mirror.local_root, '', 1)
                 if relative_local_path != remote_paths[0]:
-                    print("A substitution was made:\n\t{}\nwas substituted for\n\t{}.".format(
+                    print('A substitution was made:\n\t{}\nwas substituted for\n\t{}.'.format(
                         relative_local_path, remote_paths[0]))
     except RuntimeError as e:
         print(str(e))
@@ -320,7 +320,7 @@ def main():
         try:
             valid = (~flux_lo.mask & ~flux_hi.mask & (wlen_data > wlen_min) &
                 (wlen_data < wlen_max))
-            flux_min, flux_max = auto_range(args.flux_range, "0.5%:99.5%",
+            flux_min, flux_max = auto_range(args.flux_range, '0.5%:99.5%',
                 data_lo=flux_lo[valid], data_hi=flux_hi[valid])
             left_axis.set_ylim(flux_min, flux_max)
         except ValueError as e:
