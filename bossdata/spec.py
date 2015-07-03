@@ -16,6 +16,56 @@ import fitsio
 import astropy.table
 
 
+def get_exposure_table(header):
+    """Parse FITS header keywords to extract exposure info.
+
+    Uses the NEXP and EXPID01-12 keywords that are present in the header of HDU0
+    in spPlate and spec FITS files.
+
+    Args:
+        header(dict): dictionary of FITS header keyword, value pairs.
+
+    Returns:
+        `astropy.table.Table`: table with columns 'exp', 'arc', 'flat', 'b1', 'b2',
+        'r1', 'r2', that give the science exposure numbers 'exp', together with the
+        corresponding 'arc' and 'flat' exposure numbers used to calibrate them.
+        The 'b1', 'b2', 'r1', 'r2' columns give the value n=1-12 of the 'EXP<n>' header
+        keyword described each of the four spectrographs, or n=0 if this spectrograph
+        is not present for this exposure.
+    """
+    num_exposures = header['NEXP']
+    exposures = {}
+    expid_pattern = re.compile('([br][12])-([0-9]{8})-([0-9]{8})-([0-9]{8})')
+    for i in range(num_exposures):
+        spec_id, exp_num, flat_num, arc_num = expid_pattern.match(
+            header['EXPID{0:02d}'.format(i + 1)]).groups()
+        if exp_num in exposures:
+            info = exposures[exp_num]
+            # Check that the arc and flat exposure numbers agree.
+            if info['arc'] != arc_num:
+                raise RuntimeError(
+                    'Found inconsistent arcs for expid {}.'.format(exp_num))
+            if info['flat'] != flat_num:
+                raise RuntimeError(
+                    'Found inconsistent flats for expid {}.'.format(exp_num))
+        else:
+            # Initialize a new record with zeros to indicate a missing camera.
+            info = dict(arc=arc_num, flat=flat_num, b1=0, b2=0, r1=0, r2=0)
+        # Record which EXP<nn> we found this spectrograph in.
+        info[spec_id] = i + 1
+        exposures[exp_num] = info
+    # Build a table of exposure info sorted by exposure number.
+    exposure_table = astropy.table.Table(
+        names=('exp', 'arc', 'flat', 'b1', 'b2', 'r1', 'r2'),
+        dtype=('i4', 'i4', 'i4', 'i4', 'i4', 'i4', 'i4'))
+    for exp_num in sorted(exposures.keys()):
+        info = exposures[exp_num]
+        exposure_table.add_row(
+            (exp_num, info['arc'], info['flat'],
+            info['b1'], info['b2'], info['r1'], info['r2']))
+    return exposure_table
+
+
 class SpecFile(object):
     """ A BOSS spec file containing summary data for a single target.
 
@@ -40,34 +90,7 @@ class SpecFile(object):
         self.header = self.hdulist[0].read_header()
         # Look up the available exposures.
         self.num_exposures = self.header['NEXP']
-        exposures = {}
-        expid_pattern = re.compile('([br][12])-([0-9]{8})-([0-9]{8})-([0-9]{8})')
-        for i in range(self.num_exposures):
-            spec_id, exp_num, flat_num, arc_num = expid_pattern.match(
-                self.header['EXPID{0:02d}'.format(i + 1)]).groups()
-            if exp_num in exposures:
-                info = exposures[exp_num]
-                # Check that the arc and flat exposure numbers agree.
-                if info['arc'] != arc_num:
-                    raise RuntimeError(
-                        'Found different red/blue arcs for expid {}.'.format(exp_num))
-                if info['flat'] != flat_num:
-                    raise RuntimeError(
-                        'Found different red/blue flats for expid {}.'.format(exp_num))
-            else:
-                # Initialize a new record with zeros to indicate a missing camera.
-                info = dict(arc=arc_num, flat=flat_num, bhdu=0, rhdu=0)
-            # Record the HDU number for this camera.
-            info[spec_id[0]+'hdu'] = 4 + i
-            exposures[exp_num] = info
-        # Build a table of exposure info sorted by exposure number.
-        self.exposure_table = astropy.table.Table(
-            names=('exp', 'arc', 'flat', 'bhdu', 'rhdu'),
-            dtype=('i4', 'i4', 'i4', 'i4', 'i4'))
-        for exp_num in sorted(exposures.keys()):
-            info = exposures[exp_num]
-            self.exposure_table.add_row(
-                (exp_num, info['arc'], info['flat'], info['bhdu'], info['rhdu']))
+        self.exposure_table = get_exposure_table(self.header)
 
     def get_exposure_hdu(self, exposure_index=None, camera=None):
         """Lookup the HDU for one exposure.
@@ -99,9 +122,9 @@ class SpecFile(object):
 
         info = self.exposure_table[exposure_index]
         if camera == 'blue':
-            hdu_index = info['bhdu']
+            hdu_index = 3 + info['b1'] + info['b2']
         else:
-            hdu_index = info['rhdu']
+            hdu_index = 3 + info['r1'] + info['r2']
         if hdu_index == 0:
             raise RuntimeError('Missing {0} camera for exposure {1}.'.format(
                 camera, info['exp']))

@@ -28,13 +28,13 @@ The `--what`, `--where` and `--sort` options all use SQL syntax (these are in fa
 
     --where '(OBJTYPE="QSO" and Z > 0.1) or CLASS="QSO"'
 
-* `--sort` takes a list of columns with optional DESC keywork following columns to reverse their order (a la SQL ORDER BY)::
+* `--sort` takes a list of columns with optional DESC keyword following columns to reverse their order (a la SQL ORDER BY)::
 
     --sort 'CLASS, Z DESC'
 
 This command uses an sqlite3 database of metadata that will be created if necessary. By default, the "lite" version database will be used, which provides faster queries and a smaller database file.  However, the full `spAll data model <http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/spAll.html>`_ is also available with the `--full` option (resulting in slower queries and a larger database file).  The "lite" and "full" databases are separate files based on different downloads. Once either has been created the first time, it will be immediately available for future queries.  Note that it can take a while to create the initial database file: allow about 30 minutes for either version. Once the database has been created, you can safely delete the downloaded source file if you are short on disk space.
 
-The columns in the lite database are a subset of those in the full database but the values are not numerically identical between them because they are truncated in the text file used to generate the lite database. However, the level of these truncation errors should be insigificant for any science applications.
+The columns in the lite database are a subset of those in the full database but the values are not numerically identical between them because they are truncated in the text file used to generate the lite database. However, the level of these truncation errors should be insignificant for any science applications.
 
 There are some minor inconsistencies between the data models of the lite and full versions of the meta data provided by BOSS.  In particular, the lite format uses the name `FIBER` while the full version uses `FIBERID`. We resolve this by consistently using the shorter form `FIBER` in both SQL databases.  Also, the full format includes columns that are themselves arrays. One of these, `MODELFUX(5)`, is included in the lite format using names `MODELFLUX0...MODELFUX4`. We normalize the mapping of array columns to scalar SQL columns using the syntax `COLNAME_I` for element [i] of a 1D array and `COLNAME_I_J` for element [i,j] of a 2D array, with indices starting from zero. This means, for example, that `MODELFLUX(5)` values are consistently named `MODELFLUX_0...MODELFLUX_4` in both SQL databases.
 
@@ -66,7 +66,7 @@ would be downloaded to::
 
     $BOSS_LOCAL_ROOT/sas/dr12/boss/spectro/redux/v5_7_0/spectra/lite/3586/spec-3586-55181-0190.fits
 
-By default, the "lite" format of each spectrum data file is downloaded, which is sufficient for many purposes and signficantly (about 8x) smaller. The "lite" format contains HDUs 0-3 of the `full spectrum data file <http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/spectra/PLATE4/spec.html>`_ and does not include the spectra of individual exposures.  To download the full files instead, use the ``--full`` option. Both types of files can co-exist in your local mirror. You can also load the plate ``spFrame`` or flux-calibrated ``spCFrame`` files using the ``--frame`` or ``--cframe`` options, respectively.  These files contain an entire half plate (500) spectra for a single camera (blue/red) and exposure.  See the :doc:`/overview` for details.
+By default, the "lite" format of each spectrum data file is downloaded, which is sufficient for many purposes and signficantly (about 8x) smaller. The "lite" format contains HDUs 0-3 of the `full spectrum data file <http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/spectra/PLATE4/spec.html>`_ and does not include the spectra of individual exposures.  To download the full files instead, use the ``--full`` option. Both types of files can co-exist in your local mirror. You can also load the plate ``spFrame`` or flux-calibrated ``spCFrame`` files using the ``--frame`` or ``--cframe`` options, respectively.  These files contain a half plate of spectra for a single camera (blue/red) and exposure.  Finally, you can load the ``spPlate`` files containing combined spectra for a whole plate using the ``--platefile`` option. See the :doc:`/overview` for details.
 
 The ``--verbose`` option displays a progress bar showing the fraction of files already locally available. Any files that were previously fetched will not be downloaded again so it is safe and efficient to run ``bossfetch`` for overlapping lists of observations.  Note that the progress bar may appear to update unevenly if some files are already mirrored and others need to be downloaded.
 
@@ -112,6 +112,6 @@ Several options are available to see data beyond just object flux.  Use ``--show
 
 The ``bossplot`` command will automatically download the appropriate data file if necessary.  This is 'conservative':  if an existing local file can be used to satisfy a request, no new files will be downloaded.
 
-Different versions of the spectrum can be plotted. By default the spec-lite data file is used for a coadd or the spec file for an individual exposure.  Use the ``--frame`` or ``--cframe`` to plot the spectrum from a plate ``spFrame`` file or its flux-calibrated equivalent ``spCFrame`` file.
+Spectra can be plotted from different data files. By default the spec-lite data file is used for a coadd or the spec file for an individual exposure.  Use the ``--frame`` or ``--cframe`` options to plot a single-exposure spectrum from a plate ``spFrame`` file or its flux-calibrated equivalent ``spCFrame`` file.  Use the ``--platefile`` option to plot the combined spectrum from an ``spPlate`` file. See the :doc:`/overview` for details.
 
-This script uses the `matplotlib <http://matplotlib.org>`_ python library, which is not required for the ``bossdata`` package and therefore not automatically installed.
+This script uses the `matplotlib <http://matplotlib.org>`_ python library, which is not required for the ``bossdata`` package and therefore not automatically installed, but is included in scientific python distributions like `anaconda <https://store.continuum.io/cshop/anaconda/>`_.

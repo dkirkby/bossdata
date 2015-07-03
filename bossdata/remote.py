@@ -203,30 +203,37 @@ class Manager(object):
             raise RuntimeError('No local root specified (try setting BOSS_LOCAL_ROOT).')
         return os.path.abspath(os.path.join(self.local_root, *remote_path.split('/')))
 
-    def get(self, remote_path, progress_min_size=10, auto_download=True):
+    def get(self, remote_path, progress_min_size=10, auto_download=True, local_paths=None):
         """Get a local file that mirrors a remote file, downloading the file if necessary.
 
         Args:
-            remote_path(str,iterable): if str, then it must be the full path to the remote
-                file relative to the remote server root, which should normally be obtained
-                using :class:`bossdata.path` methods.  If an interable instead, then the first
-                item (in iteration order) that is an existing file is used; if not such file
-                exists, the first item is used to create a local file and download (see
-                auto_download).  In general, a caller can determine which path is being
-                returned for with something like::
-
-                    mirror = bossdata.remote.Manager()
-                    remote_paths = [the_preferred_path, a_backup_path]
-                    local_path = mirror.get(remote_paths)
-                    if local_path != remote_paths[0]:
-                        print('substituted {} for {}.'.format(local_path, remote_paths[0]))
-
+            remote_path(str,iterable): This arg will normally be a single string but can
+                optionally be an iterable over strings for some advanced functionality.
+                Strings give the full path to a remote file and should normally be obtained
+                using :class:`bossdata.path` methods.  When passing an iterable, the first
+                item specifies the desired file and subsequent items specify acceptable
+                substitutes. If the desired file is not already available locally but at
+                least one substitute file is locally available, this method immediately
+                returns the first substitute without downloading the desired file. If no
+                substitute is available, the desired file is downloaded and returned.
             progress_min_size(int): Display a text progress bar for any downloads whose size
                 in Mb exceeds this value. No progress bar will ever be shown if this
                 value is None.
             auto_download(bool): Automatically download the file to the local mirror
                 if necessary. If this is not set and the file is not already mirrored,
                 then a RuntimeError occurs.
+            local_paths(list): When this arg is not None, the local paths corresponding to
+                each input remote path are stored to this arg, resulting in a list of the
+                same size as the input remote_path (or length 1 if remote_path is a single
+                string). This enables the following pattern for detecting when a substitution
+                has ocurred::
+
+                    mirror = bossdata.remote.Manager()
+                    remote_paths = [the_preferred_path, a_backup_path]
+                    local_paths = []
+                    local_path = mirror.get(remote_paths, local_paths=local_paths)
+                    if local_path != local_paths[0]:
+                        print('substituted {} for {}.'.format(local_path, local_paths[0]))
 
         Returns:
             str: Absolute local path of the local file that mirrors the remote file.
@@ -234,22 +241,22 @@ class Manager(object):
         Raises:
             RuntimeError: File is not already mirrored and auto_download is False.
         """
-
-        # Don't test if its a string; maybe later it won't be.  Test if it's a iterable.  If
-        # not, we'll just assume it is a single path (e.g. a single string)
-        remote_paths = []
+        # If the argument is not iterable we assume it is a single path.
         if not hasattr(remote_path, '__iter__'):
             remote_paths = [remote_path]
         else:
-            # It's some kind of iterable; this is small, so lets make life easy and make it a
-            # list.
-            if isinstance(remote_path, list):
-                remote_paths = remote_path
-            else:
-                remote_paths = [path for path in remote_path]
+            remote_paths = remote_path
 
-        for path in remote_paths:
-            local_path = self.local_path(path)
+        # Convert remote paths to local paths.
+        if local_paths is None:
+            local_paths = []
+        else:
+            del local_paths[:]
+        for remote_path in remote_paths:
+            local_paths.append(self.local_path(remote_path))
+
+        # Return the first locally available file, if any.
+        for local_path in local_paths:
             if os.path.isfile(local_path):
                 return local_path
 
@@ -257,19 +264,17 @@ class Manager(object):
             raise RuntimeError('File not in mirror and auto_download is False: {}'.format(
                 remote_path))
 
-        # If we get here, the file is not available locally so try to download it now.
-        # Create local directories as needed.
-
-        # We get the file for first path if there are more than one
-        local_path = self.local_path(remote_paths[0])
-        parent_path = os.path.dirname(local_path)
-        if not os.path.exists(parent_path):
+        # If we get here, none of the requested files is locally available so next we try
+        # to download the first requested file. Start by creating local directories as needed.
+        local_parent_path = os.path.dirname(local_paths[0])
+        if not os.path.exists(local_parent_path):
             # There is a potential race condition if other processes are running.
             # In python >= 3.2 we would use the new exist_ok=True option, but here we instead
             # silently ignore a "FileExists" OSError (errno 17).
             try:
-                os.makedirs(parent_path)
+                os.makedirs(local_parent_path)
             except OSError as e:
                 if e.errno != 17:
                     raise e
-        return self.download(remote_paths[0], local_path, progress_min_size=progress_min_size)
+        return self.download(remote_paths[0], local_paths[0],
+            progress_min_size=progress_min_size)

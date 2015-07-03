@@ -23,6 +23,7 @@ Refer to the API documentation for details on using the :mod:`bossdata.path` and
 
 Certain data files have a helper class for accessing their contents:
  * spec,spec-lite: :class:`bossdata.spec.SpecFile`
+ * plate: :class:`bossdata.plate.PlateFile`
  * plan: :class:`bossdata.plate.Plan`
  * frame,cframe: :class:`bossdata.plate.FrameFile`
 
