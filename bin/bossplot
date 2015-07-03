@@ -9,7 +9,6 @@ from __future__ import division,print_function
 
 from astropy.utils.compat import argparse
 
-import sys
 import os.path
 
 import numpy as np
@@ -39,8 +38,7 @@ def auto_range(range_str, default_limits, data_lo=None, data_hi=None):
             else:
                 return float(limit)
         except ValueError:
-            print('WARNING: invalid limit specified ({})'.format(limit))
-            sys.exit(2)
+            raise ValueError('Invalid limit specified ({})'.format(limit))
 
     if isinstance(default_limits, basestring): #Then parse; no blanks, is default!
         def_lo, def_hi = default_limits.split(':')
@@ -54,8 +52,7 @@ def auto_range(range_str, default_limits, data_lo=None, data_hi=None):
     new_lo = _limit_parser(lo, default_lo, data_lo)
     new_hi = _limit_parser(hi, default_hi, data_hi)
     if abs(new_hi-new_lo) < 0.1 or not abs(new_hi-new_lo) < float('inf'):
-        print('WARNING: limits resulted in invalid range {:.4}:{:.4}'.format(new_lo, new_hi))
-        sys.exit(2)
+        raise ValueError('Limits resulted in invalid range {:.4}:{:.4}'.format(new_lo, new_hi))
     if new_hi < new_lo:
         new_lo, new_hi = new_hi, new_lo
     return new_lo, new_hi
@@ -305,21 +302,35 @@ def main():
     plt.xlim(wlen_min, wlen_max)
     # Adjust wlen axis range, if requested
     if args.wlen_range:
-        wlen_min, wlen_max = auto_range(args.wlen_range, left_axis.get_xlim())
-        left_axis.set_xlim(wlen_min, wlen_max)
+        try:
+            wlen_min, wlen_max = auto_range(args.wlen_range, left_axis.get_xlim())
+            left_axis.set_xlim(wlen_min, wlen_max)
+        except ValueError as e:
+            print(e)
+            return -2
 
     # Adjust flux axis range, if requested
     if args.flux_range:
-        valid = ~flux_lo.mask & ~flux_hi.mask & (wlen_data > wlen_min) & (wlen_data < wlen_max)
-        flux_min, flux_max = auto_range(args.flux_range, "0.5%:99.5%",
-            data_lo=flux_lo[valid], data_hi=flux_hi[valid])
-        left_axis.set_ylim(flux_min, flux_max)
+        try:
+            valid = (~flux_lo.mask & ~flux_hi.mask & (wlen_data > wlen_min) &
+                (wlen_data < wlen_max))
+            flux_min, flux_max = auto_range(args.flux_range, "0.5%:99.5%",
+                data_lo=flux_lo[valid], data_hi=flux_hi[valid])
+            left_axis.set_ylim(flux_min, flux_max)
+        except ValueError as e:
+            print(e)
+            return -2
 
     # Adjust dispersion axis range, if requested
     if args.show_dispersion and args.wdisp_range is not None:
-        valid = ~wdisp_data.mask & (wlen_data > wlen_min) & (wlen_data < wlen_max)
-        wdisp_min, wdisp_max = auto_range(args.wdisp_range, right_axis.get_ylim(), wdisp_data[valid])
-        right_axis.set_ylim(wdisp_min, wdisp_max)
+        try:
+            valid = ~wdisp_data.mask & (wlen_data > wlen_min) & (wlen_data < wlen_max)
+            wdisp_min, wdisp_max = auto_range(args.wdisp_range, right_axis.get_ylim(),
+                                              wdisp_data[valid])
+            right_axis.set_ylim(wdisp_min, wdisp_max)
+        except ValueError as e:
+            print(e)
+            return -2
 
     # Set masking to be dispersion range hieght
     if args.show_mask and len(x_mask)>0:
