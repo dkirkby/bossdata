@@ -24,17 +24,36 @@ import bossdata.spec
 import bossdata.bits
 import bossdata.plate
 
-def auto_range(range_str, default_limits, data_lo=None, data_hi=None):
+def auto_range(range_str, abs_lo, abs_hi, default_limits, data_lo=None, data_hi=None):
+    """
+    Interpret an axis range specification.
+
+    Percentage lo/hi limits are interpreted as percentiles when data_lo/data_hi is
+    provided and the limit value is 0-100%.  Otheriwse, the limit value is calculated
+    as::
+
+        abs_lo + (abs_hi - abs_lo) * limit/100
+
+    Args:
+        range_str(str): A range specification of the form [ <lo> : <hi> ].
+        abs_lo(float): The absolute lower bound for data on this axis.
+        abs_hi(float): The absolute upper bound for data on this axis.
+        default_limits(str): A default range specification of the form [ <lo> : <hi> ].
+        data_lo(numpy.ndarray): An array of values whose percentile is used to
+            calculate lo limits when the limit value is 0-100%.
+        data_hi(numpy.ndarray): An array of values whose percentile is used to
+            calculate hi limits when the limit value is 0-100%.
+    """
     if data_hi is None:
         data_hi = data_lo
     def _limit_parser(limit, default_limit, data):
         try:
             if limit.endswith('%'):
-                limit_frac = float(limit.rstrip('%'))
-                if data is not None:
-                    value = np.percentile(data, limit_frac)
+                limit_percent = float(limit.rstrip('%'))
+                if data is not None and limit_percent > 0 and limit_percent < 100:
+                    value = np.percentile(data, limit_percent)
                 else:
-                    value = default_lo + (default_hi - default_lo)*limit_frac/100.0
+                    value = abs_lo + (abs_hi - abs_lo) * limit_percent / 100.0
             elif limit == '':
                 value = default_limit
             else:
@@ -312,33 +331,36 @@ def main():
 
     # The x-axis limits are reset by the twinx() function so we set them here.
     plt.xlim(wlen_min, wlen_max)
-    # Adjust wlen axis range, if requested
+    # Set the wavelength axis range.
     if args.wlen_range:
         try:
             left_axis.set_xlim(*auto_range(args.wlen_range,
+                wlen_min, wlen_max,
                 parser.get_default('wlen_range') or left_axis.get_xlim()))
         except ValueError as e:
             print(e)
             return -2
 
-    # Adjust flux axis range, if requested
+    # Set the flux axis range.
     if args.flux_range:
         try:
             valid = (~flux_lo.mask & ~flux_hi.mask & (wlen_data > wlen_min) &
                 (wlen_data < wlen_max))
             left_axis.set_ylim(*auto_range(args.flux_range,
+                np.min(flux_lo[valid]), np.max(flux_hi[valid]),
                 parser.get_default('flux_range') or left_axis.get_ylim(),
                 data_lo=flux_lo[valid], data_hi=flux_hi[valid]))
         except ValueError as e:
             print(e)
             return -2
 
-    # Adjust dispersion axis range, if requested
-    if args.show_dispersion and args.wdisp_range is not None:
+    # Set the wavelength dispersion axis range.
+    if args.show_dispersion and args.wdisp_range:
         try:
             valid = ~wdisp_data.mask & (wlen_data > wlen_min) & (wlen_data < wlen_max)
             right_axis.set_ylim(*auto_range(args.wdisp_range,
-                parser.get_default('wlen_range') or right_axis.get_ylim(),
+                np.min(wdisp_data[valid]), np.max(wdisp_data[valid]),
+                parser.get_default('wdisp_range') or right_axis.get_ylim(),
                 wdisp_data[valid]))
         except ValueError as e:
             print(e)
