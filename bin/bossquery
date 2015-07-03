@@ -43,8 +43,13 @@ def main():
     args = parser.parse_args()
 
     # Use the "lite" version of spAll unless --full is requested.
-    # There is no "lite" version of the quasar catalog.
+    # There is no "lite" version of the quasar or platelist catalogs.
     use_lite = not (args.full or args.quasar_catalog or args.platelist)
+
+    # The platelist does not have per-fiber metadata so silently remove FIBER from
+    # the default list of columns to return.
+    if args.platelist and args.what == 'PLATE,MJD,FIBER':
+        args.what = 'PLATE,MJD'
 
     try:
         meta_db = bossdata.meta.Database(lite=use_lite, quasar_catalog=args.quasar_catalog,
