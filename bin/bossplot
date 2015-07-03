@@ -10,6 +10,8 @@ from __future__ import division,print_function
 from astropy.utils.compat import argparse
 
 import os.path
+import math
+import re
 
 import numpy as np
 import numpy.ma
@@ -21,6 +23,70 @@ import bossdata.remote
 import bossdata.spec
 import bossdata.bits
 import bossdata.plate
+
+def auto_range(range_str, abs_lo, abs_hi, default_limits, data_lo=None, data_hi=None):
+    """
+    Interpret an axis range specification.
+
+    Percentage lo/hi limits are interpreted as percentiles when data_lo/data_hi is
+    provided and the limit value is 0-100%.  Otheriwse, the limit value is calculated
+    as::
+
+        abs_lo + (abs_hi - abs_lo) * limit/100
+
+    Args:
+        range_str(str): A range specification of the form [ <lo> : <hi> ].
+        abs_lo(float): The absolute lower bound for data on this axis.
+        abs_hi(float): The absolute upper bound for data on this axis.
+        default_limits(str): A default range specification of the form [ <lo> : <hi> ].
+        data_lo(numpy.ndarray): An array of values whose percentile is used to
+            calculate lo limits when the limit value is 0-100%.
+        data_hi(numpy.ndarray): An array of values whose percentile is used to
+            calculate hi limits when the limit value is 0-100%.
+    """
+    if data_hi is None:
+        data_hi = data_lo
+    def _limit_parser(limit, default_limit, data):
+        try:
+            if limit.endswith('%'):
+                limit_percent = float(limit.rstrip('%'))
+                if data is not None and limit_percent > 0 and limit_percent < 100:
+                    value = np.percentile(data, limit_percent)
+                else:
+                    value = abs_lo + (abs_hi - abs_lo) * limit_percent / 100.0
+            elif limit == '':
+                value = default_limit
+            else:
+                value = float(limit)
+            if math.isinf(value) or math.isnan(value):
+                raise ValueError()
+            return value
+        except ValueError:
+            raise ValueError('Invalid limit specified ({}).'.format(limit))
+
+    range_pattern = re.compile('\s*\[\s*(.*?)\s*:\s*(.*?)\s*\]\s*')
+
+    if isinstance(default_limits, basestring):
+        parsed = re.match(range_pattern, default_limits)
+        if not parsed:
+            raise ValueError('Default range {} does not have the format [<lo>:<hi>].'.format(
+                range_str))
+        def_lo, def_hi = parsed.groups()
+        default_lo = _limit_parser(def_lo, 0, data_lo)
+        default_hi = _limit_parser(def_hi, 0, data_hi)
+    else: #Assume e.g. limits from get_xlim
+        default_lo, default_hi = default_limits
+
+    # The range must be have the format [ <lo> : <hi> ]
+    parsed = re.match(range_pattern, range_str)
+    if not parsed:
+        raise ValueError('Range {} does not have the format [<lo>:<hi>].'.format(range_str))
+    lo, hi = parsed.groups()
+    new_lo = _limit_parser(lo, default_lo, data_lo)
+    new_hi = _limit_parser(hi, default_hi, data_hi)
+    if new_hi <= new_lo:
+        raise ValueError('Must have min < max in range {}.'.format(range_str))
+    return new_lo, new_hi
 
 def print_mask_summary(label, mask_values):
     if np.any(mask_values):
@@ -74,6 +140,14 @@ def main():
         help = 'Show the subtracted sky flux instead of the object flux.')
     parser.add_argument('--add-sky', action = 'store_true',
         help = 'Add the subtracted sky to the object flux (overrides show-sky).')
+    parser.add_argument('--flux-range', type=str, default='[0.5%:99.5%]', metavar='[MIN:MAX]',
+        help='Limit flux axis range. MIN or MAX may be either a number, percent, or blank.')
+    parser.add_argument('--wlen-range', type=str, default=None, metavar='[MIN:MAX]',
+        help='Limit wavelength axis range. MIN or MAX may be either a number, percent, or blank.')
+    parser.add_argument('--wdisp-range', type=str, default=None, metavar='[MIN:MAX]',
+        help='Limit dispersion axis range. MIN or MAX may be either a number, percent, or blank.')
+    parser.add_argument('--figsize', type=str, default='12,8', metavar='WIDTH,HEIGHT',
+        help='Figure dimensions in inches.')
     args = parser.parse_args()
 
     if args.exposure is None:
@@ -155,13 +229,14 @@ def main():
                 print('Exposure summary:')
                 print(specfile.exposure_table)
                 if local_path != local_paths[0]:
-                    print("Using local full spec file instead of downloading lite file.")
+                    print('Using local full spec file instead of downloading lite file.')
     except RuntimeError as e:
         print(str(e))
         return -1
 
     # Initialize the plot.
-    figure = plt.figure(figsize=(12,8))
+    figsize = [float(value) for value in args.figsize.split(',')]
+    figure = plt.figure(figsize=figsize, tight_layout=True)
     left_axis = plt.gca()
     figure.set_facecolor('white')
     plt.xlabel('Wavelength ($\AA$)')
@@ -245,6 +320,9 @@ def main():
 
     wlen_min,wlen_max = +1e6,-1e6
     flux_lo, flux_hi = np.array([], dtype=float), np.array([], dtype=float)
+    wdisp_data = np.array([], dtype=float)
+    wlen_data = np.array([], dtype=float)
+    x_mask = [ ]
     for data,plot_color in zip(spectra,plot_colors):
 
         wlen,dflux = data['wavelength'][:],data['dflux'][:]
@@ -262,17 +340,13 @@ def main():
 
         num_masked = len(data.mask)
         if args.show_mask and num_masked > 0:
-            x_mask = [ ]
-            y_mask = [ ]
-            ymin,ymax = left_axis.get_ylim()
             bad_pixels = np.where(data.mask)
             for x in data.data['wavelength'][bad_pixels]:
                 x_mask.extend([x,x,None])
-                y_mask.extend([ymin,ymax,None])
-            plt.plot(x_mask,y_mask,'-',color=plot_color,alpha=0.2)
 
         if args.show_dispersion:
             right_axis.plot(wlen,data['wdisp'][:],ls='-',color=plot_color)
+            wdisp_data = numpy.ma.append(wdisp_data, data['wdisp'][:])
 
         # Update the plot wavelength limits to include this data.
         wlen_min = min(wlen_min,np.ma.min(wlen))
@@ -282,12 +356,51 @@ def main():
         flux_lo = numpy.ma.append(flux_lo, flux - dflux)
         flux_hi = numpy.ma.append(flux_hi, flux + dflux)
 
-    # The x-axis limits are reset by the twinx() function so we set them here.
-    plt.xlim(wlen_min,wlen_max)
+        # Update the list of wavelengths that we will use to auto-range the horizontal scale.
+        wlen_data = numpy.ma.append(wlen_data, wlen)
 
-    # Set the flux scale to show 99% of the valid flux +/- dflux range.
-    valid = ~flux_lo.mask & ~flux_hi.mask
-    left_axis.set_ylim(np.percentile(flux_lo[valid], 0.5), np.percentile(flux_hi[valid], 99.5))
+    # The x-axis limits are reset by the twinx() function so we set them here.
+    plt.xlim(wlen_min, wlen_max)
+    # Set the wavelength axis range.
+    if args.wlen_range:
+        try:
+            left_axis.set_xlim(*auto_range(args.wlen_range,
+                wlen_min, wlen_max,
+                parser.get_default('wlen_range') or left_axis.get_xlim()))
+        except ValueError as e:
+            print(e)
+            return -2
+
+    # Set the flux axis range.
+    if args.flux_range:
+        try:
+            valid = (~flux_lo.mask & ~flux_hi.mask & (wlen_data > wlen_min) &
+                (wlen_data < wlen_max))
+            left_axis.set_ylim(*auto_range(args.flux_range,
+                np.min(flux_lo[valid]), np.max(flux_hi[valid]),
+                parser.get_default('flux_range') or left_axis.get_ylim(),
+                data_lo=flux_lo[valid], data_hi=flux_hi[valid]))
+        except ValueError as e:
+            print(e)
+            return -2
+
+    # Set the wavelength dispersion axis range.
+    if args.show_dispersion and args.wdisp_range:
+        try:
+            valid = ~wdisp_data.mask & (wlen_data > wlen_min) & (wlen_data < wlen_max)
+            right_axis.set_ylim(*auto_range(args.wdisp_range,
+                np.min(wdisp_data[valid]), np.max(wdisp_data[valid]),
+                parser.get_default('wdisp_range') or right_axis.get_ylim(),
+                wdisp_data[valid]))
+        except ValueError as e:
+            print(e)
+            return -2
+
+    # Set masking to be dispersion range hieght
+    if args.show_mask and len(x_mask)>0:
+        ymin,ymax = left_axis.get_ylim()
+        y_mask = [ymin,ymax,None]*int(len(x_mask)/3) # /3 since there are 3 elems per x_entry
+        left_axis.plot(x_mask,y_mask,'-',color=plot_color,alpha=0.2)
 
     if args.save_plot is not None:
         save_name = args.save_plot
