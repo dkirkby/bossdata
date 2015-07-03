@@ -96,13 +96,17 @@ This should open a new window containing the plot that you will need to close in
 
 You can also save the data shown in a plot using ``--save-data`` with an optional filename (the default is ``bossplot-{plate}-{mjd}-{fiber}.dat``).  Data is saved using the `ascii.basic <http://docs.astropy.org/en/latest/api/astropy.io.ascii.Basic.html#astropy.io.ascii.Basic>`_ format and only wavelengths with valid data are included in the output.
 
-Use ``--wlen-range MIN:MAX`` to specify a wavelength range over which to plot (x-axis), overriding the default, auto-detected range.  Similarly, ``--flux-range MIN:MAX`` and ``--wdisp-range MIN:MAX`` work for the flux (left y-axis) and dispersion (right y-axis).  MIN and MAX can be either blank (which means use the default value), an absolute value (1000), or a percentage (10%), and percentages and absolute values may be mixed.  Working examples::
+Use ``--wlen-range [MIN:MAX]`` to specify a wavelength range over which to plot (x-axis), overriding the default, auto-detected range.  Similarly, ``--flux-range [MIN:MAX]`` and ``--wdisp-range [MIN:MAX]`` work for the flux (left y-axis) and dispersion (right y-axis).  MIN and MAX can be either blank (which means use the default value), an absolute value (1000), or a percentage (10%), and percentages and absolute values may be mixed.  Working examples::
 
-    --wlen-range :7500
-    --wlen-range 10%:90%
-    --wlen-range 10%:8000
+    --wlen-range [:7500]
+    --wlen-range [10%:90%]
+    --wlen-range [10%:8000]
 
-Another visual option ``--scatter`` will give a scatter plot of the flux rather than the flux +/- error band.
+Note that a percentage value between 0-100% is interpreted as a percentile for vertical (flux, wdisp) axes. In all other cases, percentage values specify a limit value equal to a fraction of the full range ``[lo:hi]``::
+
+    limit = lo + fraction*(hi - lo)
+
+and can be < 0% or >100% to include padding. Another visual option ``--scatter`` will give a scatter plot of the flux rather than the flux +/- error band.
 
 Several options are available to see data beyond just object flux.  Use ``--show-sky`` to show the subtracted sky (modeled) flux, ``--add-sky`` to show the total of object flux and modeled sky flux, ``--show-mask`` to show grayed regions where data has been masked out because it is deemed invalid, and ``--show-dispersion`` to show wavelength dispersion.
 
