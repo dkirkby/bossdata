@@ -44,6 +44,7 @@ Note that specifying `--full` will only (and always) use the full DB or catalog 
 
 The `--quasar-catalog` option can be used to query the `BOSS quasar catalog <http://www.sdss.org/dr12/algorithms/boss-dr12-quasar-catalog/>`_ instead of spAll. By default, the current version of the catalog will be used; use the `--quasar-catalog-name` option to specify an earlier version.
 
+The ```--platelist`` option can be used to query the `BOSS plate list database <http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/platelist.html>`_ instead of spAll.
 
 .. _bossfetch:
 
