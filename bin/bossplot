@@ -10,6 +10,7 @@ from __future__ import division,print_function
 from astropy.utils.compat import argparse
 
 import os.path
+import math
 import re
 
 import numpy as np
@@ -31,13 +32,16 @@ def auto_range(range_str, default_limits, data_lo=None, data_hi=None):
             if limit.endswith('%'):
                 limit_frac = float(limit.rstrip('%'))
                 if data is not None:
-                    return np.percentile(data, limit_frac)
+                    value = np.percentile(data, limit_frac)
                 else:
-                    return default_lo + (default_hi - default_lo)*limit_frac/100.0
+                    value = default_lo + (default_hi - default_lo)*limit_frac/100.0
             elif limit == '':
-                return default_limit
+                value = default_limit
             else:
-                return float(limit)
+                value = float(limit)
+            if math.isinf(value) or math.isnan(value):
+                raise ValueError()
+            return value
         except ValueError:
             raise ValueError('Invalid limit specified ({})'.format(limit))
 
@@ -55,11 +59,8 @@ def auto_range(range_str, default_limits, data_lo=None, data_hi=None):
     lo, hi = parsed.groups()
     new_lo = _limit_parser(lo, default_lo, data_lo)
     new_hi = _limit_parser(hi, default_hi, data_hi)
-    if abs(new_hi-new_lo) < 0.1 or not abs(new_hi-new_lo) < float('inf'):
-        raise ValueError('Limits resulted in invalid range [{:.4}:{:.4}]'.format(
-            new_lo, new_hi))
-    if new_hi < new_lo:
-        new_lo, new_hi = new_hi, new_lo
+    if new_hi <= new_lo:
+        raise ValueError('Must have min < max in range {}.'.format(range_str))
     return new_lo, new_hi
 
 def print_mask_summary(label, mask_values):
