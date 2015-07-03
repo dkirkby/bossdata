@@ -44,7 +44,7 @@ def main():
 
     # Use the "lite" version of spAll unless --full is requested.
     # There is no "lite" version of the quasar catalog.
-    use_lite = not (args.full or args.quasar_catalog)
+    use_lite = not (args.full or args.quasar_catalog or args.platelist)
 
     try:
         meta_db = bossdata.meta.Database(lite=use_lite, quasar_catalog=args.quasar_catalog,
