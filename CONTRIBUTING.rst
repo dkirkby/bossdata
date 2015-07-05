@@ -118,7 +118,7 @@ Version Update Checklist
 
     git log --oneline --merges `git describe --tags --abbrev=0`..HEAD
 
-6. Add a brief description of the changes to `HISTORY.rst`
+6. Add a brief description of the changes to ``HISTORY.rst`` and update the ``What's New`` section of `DESCRIPTION.rst` (which is what pypi will display for this release).
 7. Push changes to github, which will trigger a Travis integration test of the release-candidate branch.
 8. Merge the pull request.
 9. Update local master and tag the new version, e.g::

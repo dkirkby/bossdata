@@ -23,11 +23,8 @@ class PyTest(Command):
         errno = subprocess.call([sys.executable, 'runtests.py'])
         raise SystemExit(errno)
 
-with open('README.rst') as readme_file:
-    readme = readme_file.read()
-
-with open('HISTORY.rst') as history_file:
-    history = history_file.read().replace('.. :changelog:', '')
+with open('DESCRIPTION.rst') as f:
+    long_description = f.read()
 
 requirements = [
     'requests>=2.7.0',
@@ -45,7 +42,7 @@ setup(
     name='bossdata',
     version='0.2.4',
     description='Tools to access SDSS BOSS data.',
-    long_description=readme + '\n\n' + history,
+    long_description=long_description,
     author='David Kirkby',
     author_email='dkirkby@uci.edu',
     url='https://github.com/dkirkby/bossdata',
