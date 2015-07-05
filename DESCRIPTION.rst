@@ -1,4 +1,4 @@
-A python package for working with [spectroscopic data](http://www.sdss.org/dr12/spectro/spectro_basics/) from the [Sloan Digital Sky Survey](http://www.sdss.org).
+A python package for working with `spectroscopic data <http://www.sdss.org/dr12/spectro/spectro_basics/>`_ from the `Sloan Digital Sky Survey <http://www.sdss.org>`_.
 
 * Free software: MIT license
 * Documentation: https://bossdata.readthedocs.org
