@@ -124,10 +124,10 @@ def main():
         help = 'Plot a single exposure spectrum from a calibrated spCFrame file.')
     parser.add_argument('--save-plot', type=str, default=None, const='', nargs='?',
         metavar='FILE', help = ('Save the generated plot to specified name ' +
-            '(uses bossplot-{plate}-{mjd}-{fiber}.png if name omitted).'))
+            '(uses {plot-label}.png if name omitted).'))
     parser.add_argument('--save-data', type=str, default=None, const='', nargs='?',
         metavar='FILE', help = ('Save the spectrum data to specified name ' +
-            '(uses bossplot-{plate}-{mjd}-{fiber}.dat if name omitted).'))
+            '(uses {plot-label}.dat if name omitted).'))
     parser.add_argument('--no-display', action = 'store_true',
         help = 'Do not display the image on screen (useful for batch processing).')
     parser.add_argument('--scatter', action = 'store_true',
@@ -141,14 +141,15 @@ def main():
     parser.add_argument('--add-sky', action = 'store_true',
         help = 'Add the subtracted sky to the object flux (overrides show-sky).')
     parser.add_argument('--flux-range', type=str, default='[0.5%:99.5%]', metavar='[MIN:MAX]',
-        help='Custom flux axis range, e.g. [0:100], [1%:99%], [0:].')
+        help='Custom flux axis range, e.g. [0:100], [1%%:99%%], [0:].')
     parser.add_argument('--wlen-range', type=str, default=None, metavar='[MIN:MAX]',
-        help='Custom wavelength axis range, e.g. [4000:8000], [-5%:105%].')
+        help='Custom wavelength axis range, e.g. [4000:8000], [-5%%:105%%].')
     parser.add_argument('--wdisp-range', type=str, default=None, metavar='[MIN:MAX]',
         help='Custom dispersion axis range, e.g. [0:2], [0:].')
     parser.add_argument('--label-pos', metavar='POS', default='top-left',choices=[
         'none','top-left','top-center','top-right','center-left','center-center',
-        'center-right','bottom-left','bottom-center','bottom-right'])
+        'center-right','bottom-left','bottom-center','bottom-right'],
+        help='Label position, e.g. top-right, bottom-left, center-center.')
     parser.add_argument('--figsize', type=str, default='12,8', metavar='WIDTH,HEIGHT',
         help='Figure dimensions in inches.')
     args = parser.parse_args()
@@ -307,10 +308,11 @@ def main():
                 print_mask_summary('Red',specfile.get_pixel_mask(args.exposure,'red'))
 
     # Determine this plot's label and use it for the plot window title.
-    label = '{plate}-{mjd}-{fiber}'.format(plate=args.plate, mjd=args.mjd, fiber=args.fiber)
+    plot_label = '{plate}-{mjd}-{fiber}'.format(
+        plate=args.plate, mjd=args.mjd, fiber=args.fiber)
     if args.exposure:
-        label += '-{:08d}'.format(exposure_id)
-    figure.canvas.set_window_title(label)
+        plot_label += '-{:08d}'.format(exposure_id)
+    figure.canvas.set_window_title(plot_label)
 
     # Save the spectrum data, if requested.
     if args.save_data:
@@ -318,8 +320,7 @@ def main():
             print('WARNING: saving data for the first spectrum only.')
         save_name = args.save_data
         if save_name == '':
-            save_name = 'bossplot-{plate}-{mjd}-{fiber}.dat'.format(
-                plate=args.plate, mjd=args.mjd, fiber=args.fiber)
+            save_name = plot_label + '.dat'
         # Only save un-masked rows.
         valid = ~(spectra[0]['wavelength'].mask)
         table = astropy.table.Table(spectra[0][valid])
@@ -417,15 +418,14 @@ def main():
         valign, halign = args.label_pos.split('-')
         x = dict(left=0.02, center=0.5, right=0.98)[halign]
         y = dict(top=0.98, center=0.5, bottom=0.02)[valign]
-        plt.annotate(label, xy=(x,y), xycoords='axes fraction',
+        plt.annotate(plot_label, xy=(x,y), xycoords='axes fraction',
             xytext=(x,y), textcoords='axes fraction',
             horizontalalignment=halign, verticalalignment=valign, fontsize=20)
 
     if args.save_plot is not None:
         save_name = args.save_plot
         if save_name == '':
-            save_name = 'bossplot-{plate}-{mjd}-{fiber}.png'.format(
-                plate=args.plate, mjd=args.mjd, fiber=args.fiber)
+            save_name = plot_label + '.png'
         figure.savefig(save_name)
         if args.verbose:
             print('Saved plot to {}'.format(save_name))
