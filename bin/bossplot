@@ -411,7 +411,7 @@ def main():
         ymin, ymax = left_axis.get_ylim()
         assert len(x_mask) % 3 == 0, 'Internal error: len(x_mask)%3 != 0'
         y_mask = [ymin, ymax, None] * (len(x_mask) // 3)
-        left_axis.plot(x_mask, y_mask, '-', color=plot_color, alpha=0.2)
+        left_axis.plot(x_mask, y_mask, '-', color='DarkGreen', alpha=0.4)
 
     # Annotate the plot with a label identifying this spectrum.
     if args.label_pos != 'none':
