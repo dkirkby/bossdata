@@ -10,35 +10,38 @@ You can contribute in many ways:
 Types of Contributions
 ----------------------
 
-Report Bugs
-~~~~~~~~~~~
+Report Issues
+~~~~~~~~~~~~~
 
-Report bugs at https://github.com/dkirkby/bossdata/issues.
+Report issues on our `issues page <https://github.com/dkirkby/bossdata/issues>`_. First check that if your issue is already addressed.  If so, feel free to join its conversation and add any relevant information from your experience.  If this is a new issue, click the ``New Issue`` button to describe it, including:
 
-If you are reporting a bug, please include:
-
-* Your operating system name and version.
+* The type of data you are trying to access (BOSS, SEQUELS, ...)
 * Any details about your local setup that might be helpful in troubleshooting.
 * Detailed steps to reproduce the bug.
 
-Fix Bugs
-~~~~~~~~
+Propose a New Feature
+~~~~~~~~~~~~~~~~~~~~~
 
-Look through the GitHub issues for bugs. Anything tagged with "bug"
-is open to whoever wants to fix it.
+You can also open a new issue to propose a new feature:
 
-Implement Features
-~~~~~~~~~~~~~~~~~~
+* Explain in detail how it would work.
+* Keep the scope as narrow as possible, to make it easier to implement.
+* Remember that this is a volunteer-driven project, and that contributions
+  are welcome :)
 
-Look through the GitHub issues for features. Anything tagged with "feature"
-is open to whoever wants to implement it.
+Work on Iusses
+~~~~~~~~~~~~~~
+
+Look through the `open issues <https://github.com/dkirkby/bossdata/issues>`_ for areas where we currently need help from developers like you. If you find an issue that you are willing to contribute to, start by joining its conversation and tell us about your ideas.
 
 Write Documentation
 ~~~~~~~~~~~~~~~~~~~
 
 bossdata could always use more documentation, whether as part of the
 official bossdata docs, in docstrings, or even on the web in blog posts,
-articles, and such.  We use the `sphinx napolean extension <http://sphinx-doc.org/latest/ext/napoleon.html>`_ and write google-style docstrings. Some helpful tips:
+articles, and such.
+
+We use the `sphinx napolean extension <http://sphinx-doc.org/latest/ext/napoleon.html>`_ and write google-style docstrings. Some helpful tips:
 
 * Use ```text <http://url>`_`` to embed external links (don't forget the space!)
 * Add ``.. _scriptname:`` before the heading for new scripts in `bin/scripts.rst`.  You can refer to these from other markup as ``:ref:`scriptname```.
@@ -51,42 +54,31 @@ articles, and such.  We use the `sphinx napolean extension <http://sphinx-doc.or
 
 * You can override the default link text by changing ``:role:`target``` to ``:role:`text <target>```.
 
-Submit Feedback
-~~~~~~~~~~~~~~~
-
-The best way to send feedback is to file an issue at https://github.com/dkirkby/bossdata/issues.
-
-If you are proposing a feature:
-
-* Explain in detail how it would work.
-* Keep the scope as narrow as possible, to make it easier to implement.
-* Remember that this is a volunteer-driven project, and that contributions
-  are welcome :)
-
 Get Started!
 ------------
 
-Ready to contribute? Here's how to set up `bossdata` for local development.
+Ready to contribute? Here's how to set up ``bossdata`` for local development.
 
-1. Fork the `bossdata` repo on GitHub.
+1. Fork the ``bossdata`` repo on GitHub.
 2. Clone your fork locally::
 
-    $ git clone git@github.com:your_name_here/bossdata.git
+    git clone git@github.com:your_name_here/bossdata.git
 
 3. Install your local copy for local development::
 
-    $ cd bossdata/
-    $ python setup.py develop --user
+    cd bossdata/
+    python setup.py develop --user
 
-To later revert back to a system-installed version of the package, un-install your development install using::
+   To later revert back to a system-installed version of the package, un-install your development install using::
 
-    $ python setup.py develop --user --uninstall
+    python setup.py develop --user --uninstall
 
 4. Create a branch for local development::
 
-    $ git checkout -b name-of-your-bugfix-or-feature
+    git checkout -b '#nnn'
+    git push -u origin '#nnn'
 
-   Now you can make your changes locally.
+   where ``nnn`` is the number of the issue you are working on (quotes are required because of the ``#`` symbol in the branch name). Now you can make your changes locally.
 
 5. When you're done making changes, check that your changes pass flake8 and the unit tests::
 
@@ -97,11 +89,24 @@ To later revert back to a system-installed version of the package, un-install yo
 
 6. Commit your changes and push your branch to GitHub::
 
-    $ git add .
-    $ git commit -m "Your detailed description of your changes."
-    $ git push origin name-of-your-bugfix-or-feature
+    git add .
+    git commit -m "Your detailed description of your changes."
+    git push origin '#nnn'
 
-7. Submit a pull request through the GitHub website.
+7. Submit a `pull request <https://github.com/dkirkby/bossdata/pulls>`_.
+
+Pull Request Guidelines
+-----------------------
+
+Before you submit a pull request, check that it meets these guidelines:
+
+1. The pull request should include tests, if appropriate.
+2. If the pull request adds functionality, the docs should be updated. Put
+   your new functionality into a function with a docstring, and add the
+   feature to the list in HISTORY.rst.
+3. The pull request should work for Python 2.6 and 2.7. Check
+   https://travis-ci.org/dkirkby/bossdata/pull_requests
+   and make sure that the tests pass for all supported Python versions.
 
 Version Update Checklist
 ------------------------
@@ -143,16 +148,3 @@ These steps are not required for modules that are included with the python stand
 2. Add the actual version being used to `requirements.txt`
 3. Add to the `requirements` list in `setup.py`
 4. Mention in `docs/installation.rst`
-
-Pull Request Guidelines
------------------------
-
-Before you submit a pull request, check that it meets these guidelines:
-
-1. The pull request should include tests.
-2. If the pull request adds functionality, the docs should be updated. Put
-   your new functionality into a function with a docstring, and add the
-   feature to the list in README.rst.
-3. The pull request should work for Python 2.6 and 2.7. Check
-   https://travis-ci.org/dkirkby/bossdata/pull_requests
-   and make sure that the tests pass for all supported Python versions.
