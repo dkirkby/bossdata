@@ -150,6 +150,8 @@ def main():
         'none','top-left','top-center','top-right','center-left','center-center',
         'center-right','bottom-left','bottom-center','bottom-right'],
         help='Label position, e.g. top-right, bottom-left, center-center.')
+    parser.add_argument('--no-grid', action='store_true',
+        help='Do not draw wavelength grid lines.')
     parser.add_argument('--figsize', type=str, default='12,8', metavar='WIDTH,HEIGHT',
         help='Figure dimensions in inches.')
     args = parser.parse_args()
@@ -421,6 +423,9 @@ def main():
         plt.annotate(plot_label, xy=(x,y), xycoords='axes fraction',
             xytext=(x,y), textcoords='axes fraction',
             horizontalalignment=halign, verticalalignment=valign, fontsize=20)
+
+    if not args.no_grid:
+        left_axis.xaxis.grid()
 
     if args.save_plot is not None:
         save_name = args.save_plot
