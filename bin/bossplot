@@ -146,8 +146,9 @@ def main():
         help='Custom wavelength axis range, e.g. [4000:8000], [-5%:105%].')
     parser.add_argument('--wdisp-range', type=str, default=None, metavar='[MIN:MAX]',
         help='Custom dispersion axis range, e.g. [0:2], [0:].')
-    parser.add_argument('--no-label', action='store_true',
-        help='Do not display a label on this plot.')
+    parser.add_argument('--label-pos', metavar='POS', default='top-left',choices=[
+        'none','top-left','top-center','top-right','center-left','center-center',
+        'center-right','bottom-left','bottom-center','bottom-right'])
     parser.add_argument('--figsize', type=str, default='12,8', metavar='WIDTH,HEIGHT',
         help='Figure dimensions in inches.')
     args = parser.parse_args()
@@ -412,11 +413,13 @@ def main():
         left_axis.plot(x_mask, y_mask, '-', color=plot_color, alpha=0.2)
 
     # Annotate the plot with a label identifying this spectrum.
-    if not args.no_label:
-        print('label',label)
-        plt.annotate(label, xy=(0.5,0.98), xycoords='axes fraction',
-            xytext=(0.5,0.98), textcoords='axes fraction',
-            horizontalalignment='center', verticalalignment='top', fontsize=20)
+    if args.label_pos != 'none':
+        valign, halign = args.label_pos.split('-')
+        x = dict(left=0.02, center=0.5, right=0.98)[halign]
+        y = dict(top=0.98, center=0.5, bottom=0.02)[valign]
+        plt.annotate(label, xy=(x,y), xycoords='axes fraction',
+            xytext=(x,y), textcoords='axes fraction',
+            horizontalalignment=halign, verticalalignment=valign, fontsize=20)
 
     if args.save_plot is not None:
         save_name = args.save_plot

@@ -107,7 +107,9 @@ Note that a percentage value between 0-100% is interpreted as a percentile for v
 
     limit = lo + fraction*(hi - lo)
 
-and can be < 0% or >100% to include padding. Another visual option ``--scatter`` will give a scatter plot of the flux rather than the flux +/- error band.
+and can be < 0% or >100% to include padding. Another visual option ``--scatter`` will give a scatter plot of the flux rather than the flux 1-sigma error band.
+
+Plots include a label ``PLATE-MJD-FIBER`` by default (or ``PLATE-MJD-FIBER-EXPID`` for a single exposure).  Add the option ``--label-pos <VALIGN>-<HALIGN>`` option to change its position, with ``<VALIGN> = top, center, bottom`` and ``<HALIGN> = left, center, right``.  Use ``--label-pos none`` to remove the label.
 
 Several options are available to see data beyond just object flux.  Use ``--show-sky`` to show the subtracted sky (modeled) flux, ``--add-sky`` to show the total of object flux and modeled sky flux, ``--show-mask`` to show grayed regions where data has been masked out because it is deemed invalid, and ``--show-dispersion`` to show wavelength dispersion.
 
