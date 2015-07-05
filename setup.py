@@ -43,7 +43,7 @@ setup(
     version='0.2.4',
     description='Tools to access SDSS spectroscopic data.',
     long_description=long_description,
-    author='David Kirkby',
+    author='bossdata developers',
     author_email='dkirkby@uci.edu',
     url='https://github.com/dkirkby/bossdata',
     packages=[

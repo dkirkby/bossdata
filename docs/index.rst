@@ -17,7 +17,6 @@ Contents:
    envvar
    usage
    contributing
-   authors
    history
 
 Modules API Reference
