@@ -1,6 +1,8 @@
-=====================
-Overview of BOSS Data
-=====================
+===================================
+Overview of SDSS Spectroscopic Data
+===================================
+
+This package is primarily intended for working with data from the `SDSS-III BOSS survey <https://www.sdss3.org/surveys/boss.php>`_, but can also be used to access older data from SDSS-I/II and newer data from the `SEQUELS ancillary program <http://www.sdss.org/dr12/algorithms/ancillary/boss/sequels/>`_ and the `SDSS-IV eBOSS survey <http://www.sdss.org/surveys/eboss/>`_ (see :doc:`/envvar` for details).
 
 BOSS data consists of `spectroscopic observations <http://www.sdss.org/dr12/spectro/spectro_basics/>`_ of astrophysical `targets <http://www.sdss.org/dr12/algorithms/boss_target_selection/>`_. An observation is identified by a triplet of numbers (PLATE,MJD,FIBER). Most BOSS targets only have a single observation. Each observation consists of several 15-minute exposures using red and blue cameras with overlapping wavelength coverage that are combined to give a single co-added spectrum.
 
