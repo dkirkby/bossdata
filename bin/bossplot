@@ -146,6 +146,8 @@ def main():
         help='Custom wavelength axis range, e.g. [4000:8000], [-5%:105%].')
     parser.add_argument('--wdisp-range', type=str, default=None, metavar='[MIN:MAX]',
         help='Custom dispersion axis range, e.g. [0:2], [0:].')
+    parser.add_argument('--no-label', action='store_true',
+        help='Do not display a label on this plot.')
     parser.add_argument('--figsize', type=str, default='12,8', metavar='WIDTH,HEIGHT',
         help='Figure dimensions in inches.')
     args = parser.parse_args()
@@ -271,9 +273,9 @@ def main():
                 print_mask_summary('Coadd (AND)',specfile.get_pixel_mask())
     elif args.frame or args.cframe:
         fibers = np.array([args.fiber],dtype=int)
+        exposure_id = plan.exposures['science'][args.exposure]['EXPID']
         if args.verbose:
-            print('Showing exposure {:08d}.'.format(
-                plan.exposures['science'][args.exposure]['EXPID']))
+            print('Showing exposure {:08d}.'.format(exposure_id))
         if args.camera in ('blue','both'):
             spectra.append(frames['blue'].get_valid_data(fibers,
                 pixel_quality_mask=pixel_quality_mask, **data_args)[0])
@@ -287,9 +289,9 @@ def main():
             if args.verbose:
                 print_mask_summary('Red',frames['red'].get_pixel_masks(fibers)[0])
     else:
+        exposure_id = specfile.exposure_table[args.exposure]['exp']
         if args.verbose:
-            print('Showing exposure {:08d}.'.format(
-                specfile.exposure_table[args.exposure]['exp']))
+            print('Showing exposure {:08d}.'.format(exposure_id))
         if args.camera in ('blue','both'):
             spectra.append(specfile.get_valid_data(args.exposure,'blue',
                 pixel_quality_mask=pixel_quality_mask, **data_args))
@@ -302,6 +304,12 @@ def main():
             plot_colors.append('red')
             if args.verbose:
                 print_mask_summary('Red',specfile.get_pixel_mask(args.exposure,'red'))
+
+    # Determine this plot's label and use it for the plot window title.
+    label = '{plate}-{mjd}-{fiber}'.format(plate=args.plate, mjd=args.mjd, fiber=args.fiber)
+    if args.exposure:
+        label += '-{:08d}'.format(exposure_id)
+    figure.canvas.set_window_title(label)
 
     # Save the spectrum data, if requested.
     if args.save_data:
@@ -396,11 +404,19 @@ def main():
             print(e)
             return -2
 
-    # Set masking to be dispersion range hieght
-    if args.show_mask and len(x_mask)>0:
-        ymin,ymax = left_axis.get_ylim()
-        y_mask = [ymin,ymax,None]*int(len(x_mask)/3) # /3 since there are 3 elems per x_entry
-        left_axis.plot(x_mask,y_mask,'-',color=plot_color,alpha=0.2)
+    # Draw mask lines that extend the full range of the left axis.
+    if args.show_mask and len(x_mask) > 0:
+        ymin, ymax = left_axis.get_ylim()
+        assert len(x_mask) % 3 == 0, 'Internal error: len(x_mask)%3 != 0'
+        y_mask = [ymin, ymax, None] * (len(x_mask) // 3)
+        left_axis.plot(x_mask, y_mask, '-', color=plot_color, alpha=0.2)
+
+    # Annotate the plot with a label identifying this spectrum.
+    if not args.no_label:
+        print('label',label)
+        plt.annotate(label, xy=(0.5,0.98), xycoords='axes fraction',
+            xytext=(0.5,0.98), textcoords='axes fraction',
+            horizontalalignment='center', verticalalignment='top', fontsize=20)
 
     if args.save_plot is not None:
         save_name = args.save_plot
