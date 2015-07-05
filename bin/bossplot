@@ -112,8 +112,8 @@ def main():
         help = 'Fiber number identifying the spectrum of the requested PLATE-MJD to plot.')
     parser.add_argument('--exposure',type = int,default = None, metavar = 'EXP',
         help = 'Exposure sequence number starting from 0, or plot the coadd if not set.')
-    parser.add_argument('--camera',type = str, choices = ['blue','red','both'], default = 'both',
-        help = 'Camera to use when plotting a single exposure.')
+    parser.add_argument('--camera',type = str, choices = ['blue','red','both'],
+        default = 'both', help = 'Camera to use when plotting a single exposure.')
     parser.add_argument('--allow-mask', type = str, default = None,
         help = 'SPPIXMASK bit names to allow in valid data. Separate multiple names with |.')
     parser.add_argument('--platefile', action='store_true',
@@ -122,11 +122,11 @@ def main():
         help = 'Plot a single exposure spectrum from an uncalibrated spFrame file.')
     parser.add_argument('--cframe', action='store_true',
         help = 'Plot a single exposure spectrum from a calibrated spCFrame file.')
-    parser.add_argument('--save-plot', type=str, default=None, const='', nargs='?', metavar='FILE',
-        help = ('Save the generated plot to specified name ' +
+    parser.add_argument('--save-plot', type=str, default=None, const='', nargs='?',
+        metavar='FILE', help = ('Save the generated plot to specified name ' +
             '(uses bossplot-{plate}-{mjd}-{fiber}.png if name omitted).'))
-    parser.add_argument('--save-data', type=str, default=None, const='', nargs='?', metavar='FILE',
-        help = ('Save the spectrum data to specified name ' +
+    parser.add_argument('--save-data', type=str, default=None, const='', nargs='?',
+        metavar='FILE', help = ('Save the spectrum data to specified name ' +
             '(uses bossplot-{plate}-{mjd}-{fiber}.dat if name omitted).'))
     parser.add_argument('--no-display', action = 'store_true',
         help = 'Do not display the image on screen (useful for batch processing).')
@@ -141,11 +141,11 @@ def main():
     parser.add_argument('--add-sky', action = 'store_true',
         help = 'Add the subtracted sky to the object flux (overrides show-sky).')
     parser.add_argument('--flux-range', type=str, default='[0.5%:99.5%]', metavar='[MIN:MAX]',
-        help='Limit flux axis range. MIN or MAX may be either a number, percent, or blank.')
+        help='Custom flux axis range, e.g. [0:100], [1%:99%], [0:].')
     parser.add_argument('--wlen-range', type=str, default=None, metavar='[MIN:MAX]',
-        help='Limit wavelength axis range. MIN or MAX may be either a number, percent, or blank.')
+        help='Custom wavelength axis range, e.g. [4000:8000], [-5%:105%].')
     parser.add_argument('--wdisp-range', type=str, default=None, metavar='[MIN:MAX]',
-        help='Limit dispersion axis range. MIN or MAX may be either a number, percent, or blank.')
+        help='Custom dispersion axis range, e.g. [0:2], [0:].')
     parser.add_argument('--figsize', type=str, default='12,8', metavar='WIDTH,HEIGHT',
         help='Figure dimensions in inches.')
     args = parser.parse_args()
