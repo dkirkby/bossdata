@@ -116,6 +116,8 @@ def main():
         default = 'both', help = 'Camera to use when plotting a single exposure.')
     parser.add_argument('--allow-mask', type = str, default = None,
         help = 'SPPIXMASK bit names to allow in valid data. Separate multiple names with |.')
+    parser.add_argument('--show-invalid', action='store_true',
+        help = 'Include pixels with invalid data in the plot (implies --scatter).')
     parser.add_argument('--platefile', action='store_true',
         help = 'Plot the combined spectrum from an spPlate file.')
     parser.add_argument('--frame', action='store_true',
@@ -312,7 +314,7 @@ def main():
     # Determine this plot's label and use it for the plot window title.
     plot_label = '{plate}-{mjd}-{fiber}'.format(
         plate=args.plate, mjd=args.mjd, fiber=args.fiber)
-    if args.exposure:
+    if args.exposure is not None:
         plot_label += '-{:08d}'.format(exposure_id)
     figure.canvas.set_window_title(plot_label)
 
@@ -330,7 +332,7 @@ def main():
         if args.verbose:
             print('Saved data to {}'.format(save_name))
 
-    wlen_min,wlen_max = +1e6,-1e6
+    wlen_min,wlen_max = +np.inf,-np.inf
     flux_lo, flux_hi = np.array([], dtype=float), np.array([], dtype=float)
     wdisp_data = np.array([], dtype=float)
     wlen_data = np.array([], dtype=float)
@@ -347,29 +349,49 @@ def main():
 
         if args.scatter:
             left_axis.scatter(wlen,flux,color=plot_color,marker='.',s=0.1)
+        elif args.show_invalid:
+            left_axis.scatter(wlen.data, flux.data, color=plot_color, marker='.', s=0.1)
         else:
             left_axis.fill_between(wlen,flux-dflux,flux+dflux,color=plot_color,alpha=0.5)
 
-        num_masked = len(data.mask)
+        num_masked = np.count_nonzero(data.mask)
         if args.show_mask and num_masked > 0:
             bad_pixels = np.where(data.mask)
             for x in data.data['wavelength'][bad_pixels]:
                 x_mask.extend([x,x,None])
 
         if args.show_dispersion:
-            right_axis.plot(wlen,data['wdisp'][:],ls='-',color=plot_color)
-            wdisp_data = numpy.ma.append(wdisp_data, data['wdisp'][:])
+            wdisp = data['wdisp'][:]
+            if args.show_invalid:
+                right_axis.plot(wlen.data, wdisp.data, ls='-', color=plot_color)
+                wdisp_data = np.append(wdisp_data, wdisp.data)
+            else:
+                right_axis.plot(wlen,wdisp, ls='-', color=plot_color)
+                wdisp_data = numpy.ma.append(wdisp_data, data['wdisp'][:])
 
         # Update the plot wavelength limits to include this data.
-        wlen_min = min(wlen_min,np.ma.min(wlen))
-        wlen_max = max(wlen_max,np.ma.max(wlen))
+        if args.show_invalid:
+            wlen_min = min(wlen_min,np.min(wlen.data))
+            wlen_max = max(wlen_max,np.max(wlen.data))
+        else:
+            # Only use pixels with valid data to update the limits.
+            wlen_min = min(wlen_min,np.ma.min(wlen))
+            wlen_max = max(wlen_max,np.ma.max(wlen))
 
         # Update the list of fluxes that we will use to auto-range the vertical scale.
-        flux_lo = numpy.ma.append(flux_lo, flux - dflux)
-        flux_hi = numpy.ma.append(flux_hi, flux + dflux)
+        if args.show_invalid:
+            flux_lo = numpy.append(flux_lo, flux.data)
+        else:
+            flux_lo = numpy.ma.append(flux_lo, flux - dflux)
+            flux_hi = numpy.ma.append(flux_hi, flux + dflux)
 
         # Update the list of wavelengths that we will use to auto-range the horizontal scale.
         wlen_data = numpy.ma.append(wlen_data, wlen)
+
+    # Is there any valid data to plot?
+    if wlen_min == np.inf:
+        print('There is no valid data. Try the --allow-mask and --show-invalid options?')
+        return 0
 
     # The x-axis limits are reset by the twinx() function so we set them here.
     plt.xlim(wlen_min, wlen_max)
@@ -386,12 +408,18 @@ def main():
     # Set the flux axis range.
     if args.flux_range:
         try:
-            valid = (~flux_lo.mask & ~flux_hi.mask & (wlen_data > wlen_min) &
-                (wlen_data < wlen_max))
-            left_axis.set_ylim(*auto_range(args.flux_range,
-                np.min(flux_lo[valid]), np.max(flux_hi[valid]),
-                parser.get_default('flux_range') or left_axis.get_ylim(),
-                data_lo=flux_lo[valid], data_hi=flux_hi[valid]))
+            if args.show_invalid:
+                left_axis.set_ylim(*auto_range(args.flux_range,
+                    np.min(flux_lo), np.max(flux_lo),
+                    parser.get_default('flux_range') or left_axis.get_ylim(),
+                    data_lo=flux_lo, data_hi=flux_lo))
+            else:
+                valid = (~flux_lo.mask & ~flux_hi.mask & (wlen_data > wlen_min) &
+                    (wlen_data < wlen_max))
+                left_axis.set_ylim(*auto_range(args.flux_range,
+                    np.min(flux_lo[valid]), np.max(flux_hi[valid]),
+                    parser.get_default('flux_range') or left_axis.get_ylim(),
+                    data_lo=flux_lo[valid], data_hi=flux_hi[valid]))
         except ValueError as e:
             print(e)
             return -2
@@ -413,7 +441,7 @@ def main():
         ymin, ymax = left_axis.get_ylim()
         assert len(x_mask) % 3 == 0, 'Internal error: len(x_mask)%3 != 0'
         y_mask = [ymin, ymax, None] * (len(x_mask) // 3)
-        left_axis.plot(x_mask, y_mask, '-', color='DarkGreen', alpha=0.4)
+        left_axis.plot(x_mask, y_mask, '-', color='DarkGreen', alpha=0.3)
 
     # Annotate the plot with a label identifying this spectrum.
     if args.label_pos != 'none':
