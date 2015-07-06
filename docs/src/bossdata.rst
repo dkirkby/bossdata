@@ -1,8 +1,7 @@
 bossdata package
 ================
 
-Submodules
-----------
+See also :doc:`/usage`. Use the links below to browse the API docs for each sub-module.
 
 .. toctree::
     bossdata.path
@@ -11,11 +10,3 @@ Submodules
     bossdata.spec
     bossdata.bits
     bossdata.plate
-
-Module contents
----------------
-
-.. automodule:: bossdata
-    :members:
-    :undoc-members:
-    :show-inheritance:

@@ -1,5 +1,5 @@
-Environment Variables
-=====================
+Configuration
+=============
 
 You will normally want to establish your local configuration and specify which remote data you want to work with using some environment variables:
 
