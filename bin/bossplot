@@ -173,8 +173,12 @@ def main():
     if args.allow_mask is None:
         pixel_quality_mask = None
     else:
-        pixel_quality_mask = bossdata.bits.bitmask_from_text(
-            bossdata.bits.SPPIXMASK,args.allow_mask)
+        try:
+            pixel_quality_mask = bossdata.bits.bitmask_from_text(
+                bossdata.bits.SPPIXMASK,args.allow_mask)
+        except ValueError as e:
+            print(e)
+            return -1
 
     try:
         finder = bossdata.path.Finder(verbose=args.verbose)
@@ -241,7 +245,7 @@ def main():
                 print(specfile.exposure_table)
                 if local_path != local_paths[0]:
                     print('Using local full spec file instead of downloading lite file.')
-    except RuntimeError as e:
+    except (RuntimeError, ValueError) as e:
         print(str(e))
         return -1
 
@@ -254,8 +258,16 @@ def main():
         return -1
 
     # Initialize the plot.
-    figsize = [float(value) for value in args.figsize.split(',')]
-    figure = plt.figure(figsize=figsize, tight_layout=True)
+    try:
+        figsize_x, figsize_y = map(float, args.figsize.split(','))
+        if figsize_x < 1 or figsize_y < 1:
+            print('Minimum --figsize is 1,1.')
+            return -1
+        figure = plt.figure(figsize=(figsize_x, figsize_y), tight_layout=True)
+    except ValueError as e:
+        print('Invalid option --figsize {} (expected WIDTH,HEIGHT in inches).'.format(
+            args.figsize))
+        return -1
     left_axis = plt.gca()
     figure.set_facecolor('white')
     plt.xlabel('Wavelength ($\AA$)')
