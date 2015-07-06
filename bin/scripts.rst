@@ -115,9 +115,9 @@ Several options are available to see data beyond just object flux.  Use ``--show
 
 You will sometimes want to see data that would normally be masked as invalid. To include pixels with a particular `mask bit <http://www.sdss3.org/dr10/algorithms/bitmask_sppixmask.php>`_ set, use the ``--allow-mask`` option, e.g.::
 
-    bossplot --allow-mask BRIGHTSKY|SCATTEREDLIGHT
-    
-To show all data, including any invalid pixels, use the ``--show-invalid`` option.
+    bossplot --allow-mask 'BRIGHTSKY|SCATTEREDLIGHT'
+
+Note that multiple flags can be combined using the logical-or symbol ``|``, but this requires quoting as shown above. To show all data, including any invalid pixels, use the ``--show-invalid`` option.
 
 The ``bossplot`` command will automatically download the appropriate data file if necessary.  This is 'conservative':  if an existing local file can be used to satisfy a request, no new files will be downloaded.
 
