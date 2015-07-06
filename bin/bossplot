@@ -202,6 +202,9 @@ def main():
             plan_path = finder.get_plate_plan_path(plate=args.plate, mjd=args.mjd)
             plan = bossdata.plate.Plan(mirror.get(plan_path))
             num_exposures = plan.num_science_exposures
+            if args.verbose:
+                print('Exposure summary:')
+                print(plan.exposure_table)
             spec_index = plan.get_spectrograph_index(args.fiber)
             if args.camera in ('red','both'):
                 red_name = plan.get_exposure_name(
