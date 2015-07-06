@@ -197,6 +197,7 @@ def main():
             frame_path = finder.get_plate_path(plate=args.plate)
             plan_path = finder.get_plate_plan_path(plate=args.plate, mjd=args.mjd)
             plan = bossdata.plate.Plan(mirror.get(plan_path))
+            num_exposures = plan.num_science_exposures
             spec_index = plan.get_spectrograph_index(args.fiber)
             if args.camera in ('red','both'):
                 red_name = plan.get_exposure_name(
@@ -220,6 +221,7 @@ def main():
             remote_path = finder.get_plate_spec_path(plate=args.plate, mjd=args.mjd)
             local_path = mirror.get(remote_path)
             platefile = bossdata.plate.PlateFile(local_path)
+            num_exposures = len(platefile.exposure_table)
             if args.verbose:
                 print('Exposure summary:')
                 print(platefile.exposure_table)
@@ -233,6 +235,7 @@ def main():
             local_paths = []
             local_path = mirror.get(remote_paths, local_paths=local_paths)
             specfile = bossdata.spec.SpecFile(local_path)
+            num_exposures = len(specfile.exposure_table)
             if args.verbose:
                 print('Exposure summary:')
                 print(specfile.exposure_table)
@@ -240,6 +243,14 @@ def main():
                     print('Using local full spec file instead of downloading lite file.')
     except RuntimeError as e:
         print(str(e))
+        return -1
+
+    # Check for an invalid exposure index.
+    if args.exposure is not None and (args.exposure < 0 or args.exposure >= num_exposures):
+        print('The value --exposure {} is outside the allowed range 0-{}.'.format(
+            args.exposure, num_exposures-1))
+        if not args.verbose:
+            print('Use the --verbose option for details on the available exposures.')
         return -1
 
     # Initialize the plot.
