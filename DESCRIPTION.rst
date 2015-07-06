@@ -5,6 +5,9 @@ A python package for working with `spectroscopic data <http://www.sdss.org/dr12/
 * Releases: https://pypi.python.org/pypi/bossdata
 * Code: https://github.com/dkirkby/bossdata
 
-What's new:
+What's new in version 0.2.5:
 
-* Describe new features of the current release here
+* Adds support for spPlate files and platelist metadata.
+* Adds command-line options to customize bossplot axes, add labels and grids, and display invalid data.
+* General documentation cleanup.
+* Better error handling in bossplot.

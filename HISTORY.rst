@@ -39,7 +39,7 @@ History
 
 * The main new library functionality is support for using wavelengths and dispersions encoded as "trace sets" in spFrame files via :class:`bossdata.plate.TraceSet`.
 
-0.2.4 (2015-05-29)
+0.2.4 (2015-06-29)
 ------------------
 
 * Fix issues #11, #36, #41, #43, #45, #50
@@ -49,3 +49,16 @@ History
  * bosscatalog: --quasar-catalog, --quasar-catalog-name
 
 * The main new functionality is support for querying the quasar catalog, using different data sources, and built-in defaults for any of the four environment variables that is not set.
+
+0.2.5 (2015-07-06)
+------------------
+
+* New command-line options include:
+
+ * bossplot: --platefile, --flux-range, --wlen-range, --wdisp-range, --label-pos, --no-grid, --show-invalid
+ * bossfetch: --platefile
+
+* Adds support for spPlate files and platelist metadata.
+* Adds command-line options to customize bossplot axes, add labels and grids, and display invalid data.
+* General documentation cleanup.
+* Better error handling in bossplot.
