@@ -112,22 +112,24 @@ def main():
         help = 'Fiber number identifying the spectrum of the requested PLATE-MJD to plot.')
     parser.add_argument('--exposure',type = int,default = None, metavar = 'EXP',
         help = 'Exposure sequence number starting from 0, or plot the coadd if not set.')
-    parser.add_argument('--camera',type = str, choices = ['blue','red','both'], default = 'both',
-        help = 'Camera to use when plotting a single exposure.')
+    parser.add_argument('--camera',type = str, choices = ['blue','red','both'],
+        default = 'both', help = 'Camera to use when plotting a single exposure.')
     parser.add_argument('--allow-mask', type = str, default = None,
         help = 'SPPIXMASK bit names to allow in valid data. Separate multiple names with |.')
+    parser.add_argument('--show-invalid', action='store_true',
+        help = 'Include pixels with invalid data in the plot (implies --scatter).')
     parser.add_argument('--platefile', action='store_true',
         help = 'Plot the combined spectrum from an spPlate file.')
     parser.add_argument('--frame', action='store_true',
         help = 'Plot a single exposure spectrum from an uncalibrated spFrame file.')
     parser.add_argument('--cframe', action='store_true',
         help = 'Plot a single exposure spectrum from a calibrated spCFrame file.')
-    parser.add_argument('--save-plot', type=str, default=None, const='', nargs='?', metavar='FILE',
-        help = ('Save the generated plot to specified name ' +
-            '(uses bossplot-{plate}-{mjd}-{fiber}.png if name omitted).'))
-    parser.add_argument('--save-data', type=str, default=None, const='', nargs='?', metavar='FILE',
-        help = ('Save the spectrum data to specified name ' +
-            '(uses bossplot-{plate}-{mjd}-{fiber}.dat if name omitted).'))
+    parser.add_argument('--save-plot', type=str, default=None, const='', nargs='?',
+        metavar='FILE', help = ('Save the generated plot to specified name ' +
+            '(uses {plot-label}.png if name omitted).'))
+    parser.add_argument('--save-data', type=str, default=None, const='', nargs='?',
+        metavar='FILE', help = ('Save the spectrum data to specified name ' +
+            '(uses {plot-label}.dat if name omitted).'))
     parser.add_argument('--no-display', action = 'store_true',
         help = 'Do not display the image on screen (useful for batch processing).')
     parser.add_argument('--scatter', action = 'store_true',
@@ -141,11 +143,17 @@ def main():
     parser.add_argument('--add-sky', action = 'store_true',
         help = 'Add the subtracted sky to the object flux (overrides show-sky).')
     parser.add_argument('--flux-range', type=str, default='[0.5%:99.5%]', metavar='[MIN:MAX]',
-        help='Limit flux axis range. MIN or MAX may be either a number, percent, or blank.')
+        help='Custom flux axis range, e.g. [0:100], [1%%:99%%], [0:].')
     parser.add_argument('--wlen-range', type=str, default=None, metavar='[MIN:MAX]',
-        help='Limit wavelength axis range. MIN or MAX may be either a number, percent, or blank.')
+        help='Custom wavelength axis range, e.g. [4000:8000], [-5%%:105%%].')
     parser.add_argument('--wdisp-range', type=str, default=None, metavar='[MIN:MAX]',
-        help='Limit dispersion axis range. MIN or MAX may be either a number, percent, or blank.')
+        help='Custom dispersion axis range, e.g. [0:2], [0:].')
+    parser.add_argument('--label-pos', metavar='POS', default='top-left',choices=[
+        'none','top-left','top-center','top-right','center-left','center-center',
+        'center-right','bottom-left','bottom-center','bottom-right'],
+        help='Label position, e.g. top-right, bottom-left, center-center.')
+    parser.add_argument('--no-grid', action='store_true',
+        help='Do not draw wavelength grid lines.')
     parser.add_argument('--figsize', type=str, default='12,8', metavar='WIDTH,HEIGHT',
         help='Figure dimensions in inches.')
     args = parser.parse_args()
@@ -165,8 +173,12 @@ def main():
     if args.allow_mask is None:
         pixel_quality_mask = None
     else:
-        pixel_quality_mask = bossdata.bits.bitmask_from_text(
-            bossdata.bits.SPPIXMASK,args.allow_mask)
+        try:
+            pixel_quality_mask = bossdata.bits.bitmask_from_text(
+                bossdata.bits.SPPIXMASK,args.allow_mask)
+        except ValueError as e:
+            print(e)
+            return -1
 
     try:
         finder = bossdata.path.Finder(verbose=args.verbose)
@@ -189,6 +201,10 @@ def main():
             frame_path = finder.get_plate_path(plate=args.plate)
             plan_path = finder.get_plate_plan_path(plate=args.plate, mjd=args.mjd)
             plan = bossdata.plate.Plan(mirror.get(plan_path))
+            num_exposures = plan.num_science_exposures
+            if args.verbose:
+                print('Exposure summary:')
+                print(plan.exposure_table)
             spec_index = plan.get_spectrograph_index(args.fiber)
             if args.camera in ('red','both'):
                 red_name = plan.get_exposure_name(
@@ -212,6 +228,7 @@ def main():
             remote_path = finder.get_plate_spec_path(plate=args.plate, mjd=args.mjd)
             local_path = mirror.get(remote_path)
             platefile = bossdata.plate.PlateFile(local_path)
+            num_exposures = len(platefile.exposure_table)
             if args.verbose:
                 print('Exposure summary:')
                 print(platefile.exposure_table)
@@ -225,18 +242,35 @@ def main():
             local_paths = []
             local_path = mirror.get(remote_paths, local_paths=local_paths)
             specfile = bossdata.spec.SpecFile(local_path)
+            num_exposures = len(specfile.exposure_table)
             if args.verbose:
                 print('Exposure summary:')
                 print(specfile.exposure_table)
                 if local_path != local_paths[0]:
                     print('Using local full spec file instead of downloading lite file.')
-    except RuntimeError as e:
+    except (RuntimeError, ValueError) as e:
         print(str(e))
         return -1
 
+    # Check for an invalid exposure index.
+    if args.exposure is not None and (args.exposure < 0 or args.exposure >= num_exposures):
+        print('The value --exposure {} is outside the allowed range 0-{}.'.format(
+            args.exposure, num_exposures-1))
+        if not args.verbose:
+            print('Use the --verbose option for details on the available exposures.')
+        return -1
+
     # Initialize the plot.
-    figsize = [float(value) for value in args.figsize.split(',')]
-    figure = plt.figure(figsize=figsize, tight_layout=True)
+    try:
+        figsize_x, figsize_y = map(float, args.figsize.split(','))
+        if figsize_x < 1 or figsize_y < 1:
+            print('Minimum --figsize is 1,1.')
+            return -1
+        figure = plt.figure(figsize=(figsize_x, figsize_y), tight_layout=True)
+    except ValueError as e:
+        print('Invalid option --figsize {} (expected WIDTH,HEIGHT in inches).'.format(
+            args.figsize))
+        return -1
     left_axis = plt.gca()
     figure.set_facecolor('white')
     plt.xlabel('Wavelength ($\AA$)')
@@ -260,20 +294,22 @@ def main():
                 pixel_quality_mask=pixel_quality_mask, **data_args)[0])
             plot_colors.append('black')
             if args.verbose:
-                print('Showing coadd of {:d} exposures.'.format(platefile.num_exposures))
+                print('Showing coadd of {:d} blue+red exposures.'.format(
+                    platefile.num_exposures))
                 print_mask_summary('Coadd (AND)', platefile.get_pixel_masks(fibers)[0])
         else:
             spectra.append(specfile.get_valid_data(pixel_quality_mask=pixel_quality_mask,
                 **data_args))
             plot_colors.append('black')
             if args.verbose:
-                print('Showing coadd of {:d} exposures.'.format(specfile.num_exposures))
+                print('Showing coadd of {:d} blue+red exposures.'.format(
+                    specfile.num_exposures))
                 print_mask_summary('Coadd (AND)',specfile.get_pixel_mask())
     elif args.frame or args.cframe:
         fibers = np.array([args.fiber],dtype=int)
+        exposure_id = plan.exposures['science'][args.exposure]['EXPID']
         if args.verbose:
-            print('Showing exposure {:08d}.'.format(
-                plan.exposures['science'][args.exposure]['EXPID']))
+            print('Showing exposure {:08d}.'.format(exposure_id))
         if args.camera in ('blue','both'):
             spectra.append(frames['blue'].get_valid_data(fibers,
                 pixel_quality_mask=pixel_quality_mask, **data_args)[0])
@@ -287,9 +323,9 @@ def main():
             if args.verbose:
                 print_mask_summary('Red',frames['red'].get_pixel_masks(fibers)[0])
     else:
+        exposure_id = specfile.exposure_table[args.exposure]['exp']
         if args.verbose:
-            print('Showing exposure {:08d}.'.format(
-                specfile.exposure_table[args.exposure]['exp']))
+            print('Showing exposure {:08d}.'.format(exposure_id))
         if args.camera in ('blue','both'):
             spectra.append(specfile.get_valid_data(args.exposure,'blue',
                 pixel_quality_mask=pixel_quality_mask, **data_args))
@@ -303,22 +339,32 @@ def main():
             if args.verbose:
                 print_mask_summary('Red',specfile.get_pixel_mask(args.exposure,'red'))
 
+    # Determine this plot's label and use it for the plot window title.
+    plot_label = '{plate}-{mjd}-{fiber}'.format(
+        plate=args.plate, mjd=args.mjd, fiber=args.fiber)
+    if args.exposure is not None:
+        plot_label += '-{:08d}'.format(exposure_id)
+    figure.canvas.set_window_title(plot_label)
+
     # Save the spectrum data, if requested.
     if args.save_data:
         if len(spectra) > 1:
             print('WARNING: saving data for the first spectrum only.')
         save_name = args.save_data
         if save_name == '':
-            save_name = 'bossplot-{plate}-{mjd}-{fiber}.dat'.format(
-                plate=args.plate, mjd=args.mjd, fiber=args.fiber)
+            save_name = plot_label + '.dat'
         # Only save un-masked rows.
         valid = ~(spectra[0]['wavelength'].mask)
         table = astropy.table.Table(spectra[0][valid])
-        table.write(save_name, format='ascii.basic')
+        try:
+            table.write(save_name, format='ascii.basic')
+        except IOError as e:
+            print('Unable to save data: {}.'.format(str(e)))
+            return -1
         if args.verbose:
             print('Saved data to {}'.format(save_name))
 
-    wlen_min,wlen_max = +1e6,-1e6
+    wlen_min,wlen_max = +np.inf,-np.inf
     flux_lo, flux_hi = np.array([], dtype=float), np.array([], dtype=float)
     wdisp_data = np.array([], dtype=float)
     wlen_data = np.array([], dtype=float)
@@ -335,29 +381,49 @@ def main():
 
         if args.scatter:
             left_axis.scatter(wlen,flux,color=plot_color,marker='.',s=0.1)
+        elif args.show_invalid:
+            left_axis.scatter(wlen.data, flux.data, color=plot_color, marker='.', s=0.1)
         else:
             left_axis.fill_between(wlen,flux-dflux,flux+dflux,color=plot_color,alpha=0.5)
 
-        num_masked = len(data.mask)
+        num_masked = np.count_nonzero(data.mask)
         if args.show_mask and num_masked > 0:
             bad_pixels = np.where(data.mask)
             for x in data.data['wavelength'][bad_pixels]:
                 x_mask.extend([x,x,None])
 
         if args.show_dispersion:
-            right_axis.plot(wlen,data['wdisp'][:],ls='-',color=plot_color)
-            wdisp_data = numpy.ma.append(wdisp_data, data['wdisp'][:])
+            wdisp = data['wdisp'][:]
+            if args.show_invalid:
+                right_axis.plot(wlen.data, wdisp.data, ls='-', color=plot_color)
+                wdisp_data = np.append(wdisp_data, wdisp.data)
+            else:
+                right_axis.plot(wlen,wdisp, ls='-', color=plot_color)
+                wdisp_data = numpy.ma.append(wdisp_data, data['wdisp'][:])
 
         # Update the plot wavelength limits to include this data.
-        wlen_min = min(wlen_min,np.ma.min(wlen))
-        wlen_max = max(wlen_max,np.ma.max(wlen))
+        if args.show_invalid:
+            wlen_min = min(wlen_min,np.min(wlen.data))
+            wlen_max = max(wlen_max,np.max(wlen.data))
+        else:
+            # Only use pixels with valid data to update the limits.
+            wlen_min = min(wlen_min,np.ma.min(wlen))
+            wlen_max = max(wlen_max,np.ma.max(wlen))
 
         # Update the list of fluxes that we will use to auto-range the vertical scale.
-        flux_lo = numpy.ma.append(flux_lo, flux - dflux)
-        flux_hi = numpy.ma.append(flux_hi, flux + dflux)
+        if args.show_invalid:
+            flux_lo = numpy.append(flux_lo, flux.data)
+        else:
+            flux_lo = numpy.ma.append(flux_lo, flux - dflux)
+            flux_hi = numpy.ma.append(flux_hi, flux + dflux)
 
         # Update the list of wavelengths that we will use to auto-range the horizontal scale.
         wlen_data = numpy.ma.append(wlen_data, wlen)
+
+    # Is there any valid data to plot?
+    if wlen_min == np.inf:
+        print('There is no valid data. Try the --allow-mask and --show-invalid options?')
+        return 0
 
     # The x-axis limits are reset by the twinx() function so we set them here.
     plt.xlim(wlen_min, wlen_max)
@@ -374,12 +440,18 @@ def main():
     # Set the flux axis range.
     if args.flux_range:
         try:
-            valid = (~flux_lo.mask & ~flux_hi.mask & (wlen_data > wlen_min) &
-                (wlen_data < wlen_max))
-            left_axis.set_ylim(*auto_range(args.flux_range,
-                np.min(flux_lo[valid]), np.max(flux_hi[valid]),
-                parser.get_default('flux_range') or left_axis.get_ylim(),
-                data_lo=flux_lo[valid], data_hi=flux_hi[valid]))
+            if args.show_invalid:
+                left_axis.set_ylim(*auto_range(args.flux_range,
+                    np.min(flux_lo), np.max(flux_lo),
+                    parser.get_default('flux_range') or left_axis.get_ylim(),
+                    data_lo=flux_lo, data_hi=flux_lo))
+            else:
+                valid = (~flux_lo.mask & ~flux_hi.mask & (wlen_data > wlen_min) &
+                    (wlen_data < wlen_max))
+                left_axis.set_ylim(*auto_range(args.flux_range,
+                    np.min(flux_lo[valid]), np.max(flux_hi[valid]),
+                    parser.get_default('flux_range') or left_axis.get_ylim(),
+                    data_lo=flux_lo[valid], data_hi=flux_hi[valid]))
         except ValueError as e:
             print(e)
             return -2
@@ -396,18 +468,34 @@ def main():
             print(e)
             return -2
 
-    # Set masking to be dispersion range hieght
-    if args.show_mask and len(x_mask)>0:
-        ymin,ymax = left_axis.get_ylim()
-        y_mask = [ymin,ymax,None]*int(len(x_mask)/3) # /3 since there are 3 elems per x_entry
-        left_axis.plot(x_mask,y_mask,'-',color=plot_color,alpha=0.2)
+    # Draw mask lines that extend the full range of the left axis.
+    if args.show_mask and len(x_mask) > 0:
+        ymin, ymax = left_axis.get_ylim()
+        assert len(x_mask) % 3 == 0, 'Internal error: len(x_mask)%3 != 0'
+        y_mask = [ymin, ymax, None] * (len(x_mask) // 3)
+        left_axis.plot(x_mask, y_mask, '-', color='DarkGreen', alpha=0.3)
+
+    # Annotate the plot with a label identifying this spectrum.
+    if args.label_pos != 'none':
+        valign, halign = args.label_pos.split('-')
+        x = dict(left=0.02, center=0.5, right=0.98)[halign]
+        y = dict(top=0.98, center=0.5, bottom=0.02)[valign]
+        plt.annotate(plot_label, xy=(x,y), xycoords='axes fraction',
+            xytext=(x,y), textcoords='axes fraction',
+            horizontalalignment=halign, verticalalignment=valign, fontsize=20)
+
+    if not args.no_grid:
+        left_axis.xaxis.grid()
 
     if args.save_plot is not None:
         save_name = args.save_plot
         if save_name == '':
-            save_name = 'bossplot-{plate}-{mjd}-{fiber}.png'.format(
-                plate=args.plate, mjd=args.mjd, fiber=args.fiber)
-        figure.savefig(save_name)
+            save_name = plot_label + '.png'
+        try:
+            figure.savefig(save_name)
+        except IOError as e:
+            print('Unable to save plot: {}.'.format(str(e)))
+            return -1
         if args.verbose:
             print('Saved plot to {}'.format(save_name))
     if not args.no_display:

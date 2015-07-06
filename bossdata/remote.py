@@ -137,8 +137,11 @@ class Manager(object):
             request = requests.get(url, stream=True, auth=self.authorization,
                                    timeout=(3.05, 27))
             if request.status_code != requests.codes.ok:
-                raise RuntimeError('HTTP request returned error code {} for {}.'.format(
-                    request.status_code, url))
+                if request.status_code == requests.codes.NOT_FOUND:
+                    raise RuntimeError('There is no remote file {}.'.format(remote_path))
+                else:
+                    raise RuntimeError('HTTP request returned error code {} for {}.'.format(
+                        request.status_code, url))
         except requests.exceptions.RequestException as e:
             raise RuntimeError('HTTP request failed for {}: {}.'.format(url, str(e)))
 

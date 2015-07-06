@@ -107,9 +107,17 @@ Note that a percentage value between 0-100% is interpreted as a percentile for v
 
     limit = lo + fraction*(hi - lo)
 
-and can be < 0% or >100% to include padding. Another visual option ``--scatter`` will give a scatter plot of the flux rather than the flux +/- error band.
+and can be < 0% or >100% to include padding. Another visual option ``--scatter`` will give a scatter plot of the flux rather than the flux 1-sigma error band.
+
+Plots include a label ``PLATE-MJD-FIBER`` by default (or ``PLATE-MJD-FIBER-EXPID`` for a single exposure).  Add the option ``--label-pos <VALIGN>-<HALIGN>`` option to change its position, with ``<VALIGN> = top, center, bottom`` and ``<HALIGN> = left, center, right``.  Use ``--label-pos none`` to remove the label.  Use ``--no-grid`` to remove the default wavelength grid lines.
 
 Several options are available to see data beyond just object flux.  Use ``--show-sky`` to show the subtracted sky (modeled) flux, ``--add-sky`` to show the total of object flux and modeled sky flux, ``--show-mask`` to show grayed regions where data has been masked out because it is deemed invalid, and ``--show-dispersion`` to show wavelength dispersion.
+
+You will sometimes want to see data that would normally be masked as invalid. To include pixels with a particular `mask bit <http://www.sdss3.org/dr10/algorithms/bitmask_sppixmask.php>`_ set, use the ``--allow-mask`` option, e.g.::
+
+    bossplot --allow-mask 'BRIGHTSKY|SCATTEREDLIGHT'
+
+Note that multiple flags can be combined using the logical-or symbol ``|``, but this requires quoting as shown above. To show all data, including any invalid pixels, use the ``--show-invalid`` option.
 
 The ``bossplot`` command will automatically download the appropriate data file if necessary.  This is 'conservative':  if an existing local file can be used to satisfy a request, no new files will be downloaded.
 
