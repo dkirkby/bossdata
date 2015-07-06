@@ -271,9 +271,20 @@ class Database(object):
             spAll.
         quasar_catalog_name(str): The name of the BOSS quasar catalog to use, or use the
             :attr:`default <bossdata.path.Finder.default_quasar_catalog_name>` if this is None.
+        autocreate(bool): If set to False, prevents the creation of a DB if it does not already
+            exist, including preventing the download of metadata files.  The instance attribute
+            `initialized` signals whether a Database instance is backed by a DB.  Leave this
+            as default unless you have a good reason not to.
+        allow_full_replace(bool): Allow use of FULL DB in case where FULL exists but LITE does
+            not.  Leave this as default unless you have a good reason not to.
+
+    Attributes:
+        :ivar initialized(bool): signals whether a Database instance is backed by a DB
+        :ivar db_catalog(str): indicates the catalog this DB is for (e.g. FULL, QUASAR)
+        :ivar db_path(str): Filesystem path to the DB
     """
     def __init__(self, finder=None, mirror=None, lite=True, quasar_catalog=False,
-                 quasar_catalog_name=None, verbose=False):
+                 quasar_catalog_name=None, verbose=False, autocreate=True, allow_full_replace=True):
 
         if finder is None:
             finder = bossdata.path.Finder(verbose=verbose)
@@ -285,15 +296,17 @@ class Database(object):
         if quasar_catalog:
             assert not lite, 'No lite format available of BOSS quasar catalog.'
             remote_path = finder.get_quasar_catalog_path(quasar_catalog_name)
-            local_path = mirror.local_path(remote_path)
-            assert local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
+            self.local_path = mirror.local_path(remote_path)
+            assert self.local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
                 local_path)
-            db_path = local_path.replace('.fits', '.db')
+            self.db_path = self.local_path.replace('.fits', '.db')
             lite_db_used = False
             # Create the database if necessary.
-            if not os.path.isfile(db_path):
-                local_path = mirror.get(remote_path)
-                create_meta_full(local_path, db_path)
+            if not os.path.isfile(self.db_path):
+                self.local_path = mirror.get(remote_path)
+                if autocreate:
+                    create_meta_full(self.local_path, db_path)
+            self.db_catalog = 'QUASAR'
         else:
             # Pre-build all our paths, test for (and store) the existence of the DB files
             remote_paths = [finder.get_sp_all_path(lite=True),
@@ -303,57 +316,70 @@ class Database(object):
                         Database._db_path_helper(local_paths[1], lite=False)]
             db_paths_exist = [os.path.isfile(path) for path in db_paths]
 
-            db_path = None
-            local_path = None
+            self.db_path = None
+            self.local_path = None
             lite_db_used = True
 
             # Create the database if necessary.
             # Could make this more compact now that all the logic is foiled out.
             # lite is [0], full is [1]
             if lite and db_paths_exist[0]:        # lite branch, and lite DB exists
-                db_path = db_paths[0]
+                self.db_path = db_paths[0]
+                self.local_path = local_paths[0]
             elif not lite and db_paths_exist[1]:  # full branch, and full DB exists
-                db_path = db_paths[1]
+                self.db_path = db_paths[1]
+                self.local_path = local_paths[1]
                 lite_db_used = False
-            elif lite and not db_paths_exist[0]:  # lite branch and lite DB NOT exists
-                if db_paths_exist[1]:             # ...but full does
-                    db_path = db_paths[1]
+            elif lite and not db_paths_exist[0] and allow_full_replace:
+                if db_paths_exist[1]:             # lite branch, and lite DB NOT exists
+                    self.db_path = db_paths[1]    # ...but full does
                     lite_db_used = False
                 else:                             # Neither DB's exist, so get files, create DB
-                    local_path = mirror.get(remote_paths)
-                    if local_path == local_paths[0]:    # lite
-                        db_path = db_paths[0]
-                        create_meta_lite(local_path, db_path)
+                    self.local_path = mirror.get(remote_paths)
+                    if self.local_path == local_paths[0]:    # lite
+                        self.db_path = db_paths[0]
+                        if autocreate:
+                            create_meta_lite(self.local_path, db_path)
                     else:                               # full
-                        db_path = db_paths[1]
+                        self.db_path = db_paths[1]
                         lite_db_used = False
-                        create_meta_full(local_path, db_path)
+                        if autocreate:
+                            create_meta_full(self.local_path, db_path)
             else:                                   # full branch and full DB NOT exists
-                db_path = db_paths[1]
+                self.db_path = db_paths[1]
                 lite_db_used = False
-                local_path = mirror.get(remote_paths[1])
-                create_meta_full(local_path, db_path)
+                self.local_path = mirror.get(remote_paths[1])
+                if autocreate:
+                    create_meta_full(self.local_path, db_path)
+            self.db_catalog = 'LITE' if lite_db_used else 'FULL'
 
         # Connect to the database.
-        self.connection = sqlite3.connect(db_path)
-        self.cursor = self.connection.cursor()
+        if os.path.isfile(self.db_path):
+            self.connection = sqlite3.connect(self.db_path)
+            self.cursor = self.connection.cursor()
 
-        # Return TEXT values as ASCII strings when possible, instead of unicode.
-        self.connection.text_factory = sqlite3.OptimizedUnicode
+            # Return TEXT values as ASCII strings when possible, instead of unicode.
+            self.connection.text_factory = sqlite3.OptimizedUnicode
 
-        # Look up and save the column definitions.
-        self.cursor.execute('PRAGMA table_info(`meta`)')
-        self.column_names = []
-        self.column_dtypes = []
-        for column_def in self.cursor:
-            index, name, dtype = column_def[:3]
-            self.column_names.append(str(name))
-            self.column_dtypes.append(sql_type_map[dtype])
+            # Look up and save the column definitions.
+            self.cursor.execute('PRAGMA table_info(`meta`)')
+            self.column_names = []
+            self.column_dtypes = []
+            for column_def in self.cursor:
+                index, name, dtype = column_def[:3]
+                self.column_names.append(str(name))
+                self.column_dtypes.append(sql_type_map[dtype])
 
-        # Look up and save the number of rows in the database.
-        self.cursor.execute('SELECT COUNT(*) FROM meta')
-        self.num_rows = self.cursor.fetchone()[0]
-        self.lite = lite_db_used
+            # Look up and save the number of rows in the database.
+            self.cursor.execute('SELECT COUNT(*) FROM meta')
+            self.num_rows = self.cursor.fetchone()[0]
+
+            # This should be deprecated for self.db_catalog
+            self.lite = lite_db_used
+
+            self.initialized = True
+        else:
+            self.initialized = False
 
     def prepare_columns(self, column_names):
         """Validate column names and lookup their types.

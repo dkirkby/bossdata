@@ -1,0 +1,173 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Licensed under a MIT style license - see LICENSE.rst
+
+"""Query the meta data for BOSS observations.
+"""
+
+from __future__ import division,print_function
+
+import os.path
+
+from astropy.utils.compat import argparse
+import bossdata.meta as bdm
+import bossdata.path as bdp
+
+def main():
+    # Initialize and parse command-line arguments.
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--verbose', action = 'store_true',
+        help = 'Provide verbose output.')
+
+    parser.add_argument('--catalogs', type = str, default='FULL,LITE,QUASAR', metavar='FULL|LITE|QUASAR',
+        help = 'Catalog names to target, separated by commas',)
+
+    parser.add_argument('--db-index-print', action = 'store_true',
+        help = 'Dump DB indexes, after any changes.')
+    parser.add_argument('--db-index-update', type = str, default=None, metavar='INDEX_FILE',
+        help = 'Update DB indexes according to the specified file.')
+    parser.add_argument('--db-index-reset', action = 'store_true',
+        help = 'Delete DB indexes, leaving primary-key only.')
+    parser.add_argument('--db-compact', action = 'store_true', help = 'Attempts to shrink DB.')
+
+    parser.add_argument('--prune', action = 'store_true',
+        help = 'Delete source data that has already been stored in catalog DB\'s.')
+
+    parser.add_argument('--env', action = 'store_true',
+        help = 'Print out the current bossdata environment settings.')
+    args = parser.parse_args()
+
+    # Figure out our list of catalog objects.  These will not autocreate the DB (or download any
+    # files) if the DB's do not already exist.  Rather than replicate the logic of the Database
+    # init function, allow for "uninitialized" Database (check bool 'initialized' instance var)
+    # by passing new constructor arg "autocreate=False"
+    target_catalogs = args.catalogs.split(',')
+
+    # Anything that requires us having initialized Databse instances
+    if args.db_index_print or args.db_index_reset or args.db_index_update or args.db_compact or args.prune:
+        if args.verbose:
+            print("Entered DB processing branch")
+
+        dbs = []
+        if "LITE" in target_catalogs:
+            dbs.append( bdm.Database(lite=True, verbose=args.verbose, autocreate=False) )
+        if "FULL" in target_catalogs:
+            dbs.append( bdm.Database(lite=False, verbose=args.verbose, autocreate=False) )
+        if "QUASAR" in target_catalogs:
+            dbs.append( bdm.Database(lite=False, quasar_catalog=True,
+                quasar_catalog_name=bdp.Finder.default_quasar_catalog_name,
+                verbose=args.verbose, autocreate=False) )
+        if args.verbose:
+            print("DB list being used: {}".format([db.db_catalog for db in dbs]))
+
+        # We care about order here:  It is RESET, then UPDATE, then COMPACT, then PRINT
+        index_update_list = None
+        for db in [d for d in dbs if d.initialized]:
+            if args.db_index_reset:
+                if args.verbose:
+                    print("Reseting Indexes...")
+                reset_indexes(db)
+            if args.db_index_update:
+                if args.verbose:
+                    print("Updating Indexes...")
+                index_update_list = update_indexes(db, index_update_list, args.db_index_update, args.verbose)
+            if args.db_compact:
+                if args.verbose:
+                    print("Compacting DB...")
+                compact_db(db)
+            if args.db_index_print:
+                if args.verbose:
+                    print("Printing Indexes...")
+                print_indexes(db)
+
+            # Not a DB operation per se, but we only want to do this on DB's that have been
+            # initialized
+            if args.prune:
+                if args.verbose:
+                    print("Pruning files for metadata DB's...")
+                prune_meta_files(db)
+
+    # And stuff that doesn't need the DB's to exist
+    if args.env:
+        print_env()
+
+    print("All done!")
+
+def print_env():
+    boss_env = get_env()
+    print("BOSSDATA Environment variables:")
+    for k,v in boss_env.items():
+        print("\t{:20s}\t{}".format(k,v))
+
+def get_env():
+    env_vars = ["BOSS_LOCAL_ROOT", "BOSS_DATA_URL", "BOSS_SAS_PATH", "BOSS_REDUX_VERSION"]
+    boss_env = {}
+    for name in env_vars:
+        boss_env[name]=os.environ.get(name, None)
+
+    return boss_env
+
+def prune_meta_files(meta_db):
+    if os.path.isfile(meta_db.local_path) and meta_db.initialized:
+        print("Deleting metadata file:\n\t{}".format(meta_db.local_path))
+        os.remove(meta_db.local_path)
+
+def compact_db(meta_db):
+    meta_db.cursor.execute("VACUUM")
+
+def print_indexes(meta_db):
+    def _col_names(sql_str):
+        return sql_str[sql_str.rindex('(')+1:sql_str.rindex(')')]
+
+    print("INDEXES for catalog {}".format(meta_db.db_catalog))
+    for row in get_indexes(meta_db):
+        print("\t\"{}\" on table \"{}\" on rows ({})".format(row[0], row[1], _col_names(row[2])))
+    print("")
+
+def get_indexes(meta_db):
+    return meta_db.cursor.execute("SELECT name, tbl_name, sql FROM sqlite_master "\
+                    "WHERE type='index' and name not like 'sqlite_autoindex%'").fetchall()
+
+def reset_indexes(meta_db, verbose=False):
+    indexes = get_indexes(meta_db)
+    cnt = len(indexes)
+    for row in indexes:
+        if verbose:
+            print("Dropping index {}".format(row[0]))
+        meta_db.cursor.execute("DROP INDEX {}".format(row[0]))
+    print("Dropped {} indexes from {}".format(cnt, meta_db.db_catalog))
+
+def update_indexes(meta_db, update_list, update_file, verbose=False):
+    def _update(db_catalog, index_name, index_columns):
+        if db_catalog.upper() == meta_db.db_catalog:
+            print("Updating for {}:{}:{}".format(db_catalog,index_name,index_columns))
+            meta_db.cursor.execute(
+                "CREATE INDEX IF NOT EXISTS {} ON meta ({})".format(index_name, index_columns))
+
+    if update_list is not None:
+        for ut in update_list:
+            _update(ut[0], ut[1], ut[2])
+        return update_list
+
+    new_update_list = []
+    with open(update_file, 'r') as f:
+        for line in f:
+            linesplit = line.strip().split('.')
+            if len(linesplit) != 2:
+                if verbose and line.strip() != "":
+                    print("Skipping invalid line in update file:\n\t{}".format(line))
+                continue
+
+            name_and_columns = linesplit[1].strip().split('=')
+            if len( name_and_columns) != 2:
+                if verbose:
+                    print("Skipping invalid name and columns in update file:\n\t{}".format(linesplit[1]))
+                continue
+            new_update_list.append( (linesplit[0], name_and_columns[0], name_and_columns[1]) )
+
+            _update(linesplit[0], name_and_columns[0], name_and_columns[1])
+
+        return new_update_list
+
+if __name__ == '__main__':
+    main()

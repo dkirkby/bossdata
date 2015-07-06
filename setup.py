@@ -58,6 +58,7 @@ setup(
         'bin/bossfetch',
         'bin/bossquery',
         'bin/bossplot',
+        'bin/bosslocalmgr'
     ],
     #include_package_data=True,
     #zip_safe=False,
