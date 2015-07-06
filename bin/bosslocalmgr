@@ -7,7 +7,9 @@
 
 from __future__ import division,print_function
 
+import sys
 import os.path
+import posixpath
 
 from astropy.utils.compat import argparse
 import bossdata.meta as bdm
@@ -35,6 +37,13 @@ def main():
 
     parser.add_argument('--env', action = 'store_true',
         help = 'Print out the current bossdata environment settings.')
+
+    parser.add_argument('--total-files', action = 'store_true',
+        help = 'Print out file space summary.')
+
+    if len(sys.argv)==1:
+        parser.print_help()
+        sys.exit(1)
     args = parser.parse_args()
 
     # Figure out our list of catalog objects.  These will not autocreate the DB (or download any
@@ -50,13 +59,15 @@ def main():
 
         dbs = []
         if "LITE" in target_catalogs:
-            dbs.append( bdm.Database(lite=True, verbose=args.verbose, autocreate=False) )
+            dbs.append( bdm.Database(lite=True, verbose=args.verbose, autocreate=False,
+                allow_full_replace=False) )
         if "FULL" in target_catalogs:
-            dbs.append( bdm.Database(lite=False, verbose=args.verbose, autocreate=False) )
+            dbs.append( bdm.Database(lite=False, verbose=args.verbose, autocreate=False,
+                allow_full_replace=False) )
         if "QUASAR" in target_catalogs:
             dbs.append( bdm.Database(lite=False, quasar_catalog=True,
                 quasar_catalog_name=bdp.Finder.default_quasar_catalog_name,
-                verbose=args.verbose, autocreate=False) )
+                verbose=args.verbose, autocreate=False, allow_full_replace=False) )
         if args.verbose:
             print("DB list being used: {}".format([db.db_catalog for db in dbs]))
 
@@ -90,8 +101,45 @@ def main():
     # And stuff that doesn't need the DB's to exist
     if args.env:
         print_env()
+    if args.total_files:
+        display_file_space()
 
     print("All done!")
+
+# Begin actual various implementations
+def display_file_space():
+    boss_env = get_env()
+    file_type_data = get_file_stats(boss_env["BOSS_LOCAL_ROOT"])
+
+def get_file_stats(dirpath, in_lite=False):
+    # catalog of tuples; key = file-type, tuple is (count, size)
+    _metadata_files = ["spAll-v5_7_0-lite.dat", "spAll-v5_7_0-lite.fits",
+        "spAll-v5_7_2.dat", "spAll-v5_7_2.fits", "DR12Q.fits"]
+    catalog = {}
+
+    dirpath, dirnames, filenames = os.walk(dirpath)
+    for f in filenames:
+        # spec, spec-lite, frame, cframe, metadata
+        filetype = "other"
+        if f.startswith("spec-") and f.endswith(".fits"):
+            if in_lite:
+                filetype = "spec-lite"
+            else:
+                filetype = "spec"
+        elif f.startswith("spCFrame") and f.endswith(".fits"):
+            filetype = "cframe"
+        elif f.startswith("spFrame") and f.endswith(".fits"):
+            filetype = "frame"
+        elif f.endswith(".db") or len([m for m in _metadata_files if f.startswith(m)]) > 0:
+            filetype = "meta"
+        catalog.setdefault(filetype, [0,0])[0:1] = [list[0]+1, list[1]+os.path.getsize(posixpath.join(dirpath, f)) ]
+
+    for d in dirnames:
+        sub_catalog = get_file_stats(posixpath.join(dirpath, d), in_lite or dirpath == "lite")
+        for k, v in sub_catalog.items():
+            catalog.setdefault(k, [0,0])[0:1] = v
+
+    return catalog
 
 def print_env():
     boss_env = get_env()
