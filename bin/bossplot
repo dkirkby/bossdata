@@ -351,7 +351,11 @@ def main():
         # Only save un-masked rows.
         valid = ~(spectra[0]['wavelength'].mask)
         table = astropy.table.Table(spectra[0][valid])
-        table.write(save_name, format='ascii.basic')
+        try:
+            table.write(save_name, format='ascii.basic')
+        except IOError as e:
+            print('Unable to save data: {}.'.format(str(e)))
+            return -1
         if args.verbose:
             print('Saved data to {}'.format(save_name))
 
@@ -482,7 +486,11 @@ def main():
         save_name = args.save_plot
         if save_name == '':
             save_name = plot_label + '.png'
-        figure.savefig(save_name)
+        try:
+            figure.savefig(save_name)
+        except IOError as e:
+            print('Unable to save plot: {}.'.format(str(e)))
+            return -1
         if args.verbose:
             print('Saved plot to {}'.format(save_name))
     if not args.no_display:
