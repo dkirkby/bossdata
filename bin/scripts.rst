@@ -113,6 +113,12 @@ Plots include a label ``PLATE-MJD-FIBER`` by default (or ``PLATE-MJD-FIBER-EXPID
 
 Several options are available to see data beyond just object flux.  Use ``--show-sky`` to show the subtracted sky (modeled) flux, ``--add-sky`` to show the total of object flux and modeled sky flux, ``--show-mask`` to show grayed regions where data has been masked out because it is deemed invalid, and ``--show-dispersion`` to show wavelength dispersion.
 
+You will sometimes want to see data that would normally be masked as invalid. To include pixels with a particular `mask bit <http://www.sdss3.org/dr10/algorithms/bitmask_sppixmask.php>`_ set, use the ``--allow-mask`` option, e.g.::
+
+    bossplot --allow-mask BRIGHTSKY|SCATTEREDLIGHT
+    
+To show all data, including any invalid pixels, use the ``--show-invalid`` option.
+
 The ``bossplot`` command will automatically download the appropriate data file if necessary.  This is 'conservative':  if an existing local file can be used to satisfy a request, no new files will be downloaded.
 
 Spectra can be plotted from different data files. By default the spec-lite data file is used for a coadd or the spec file for an individual exposure.  Use the ``--frame`` or ``--cframe`` options to plot a single-exposure spectrum from a plate ``spFrame`` file or its flux-calibrated equivalent ``spCFrame`` file.  Use the ``--platefile`` option to plot the combined spectrum from an ``spPlate`` file. See the :doc:`/overview` for details.
