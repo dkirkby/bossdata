@@ -291,14 +291,16 @@ def main():
                 pixel_quality_mask=pixel_quality_mask, **data_args)[0])
             plot_colors.append('black')
             if args.verbose:
-                print('Showing coadd of {:d} exposures.'.format(platefile.num_exposures))
+                print('Showing coadd of {:d} blue+red exposures.'.format(
+                    platefile.num_exposures))
                 print_mask_summary('Coadd (AND)', platefile.get_pixel_masks(fibers)[0])
         else:
             spectra.append(specfile.get_valid_data(pixel_quality_mask=pixel_quality_mask,
                 **data_args))
             plot_colors.append('black')
             if args.verbose:
-                print('Showing coadd of {:d} exposures.'.format(specfile.num_exposures))
+                print('Showing coadd of {:d} blue+red exposures.'.format(
+                    specfile.num_exposures))
                 print_mask_summary('Coadd (AND)',specfile.get_pixel_mask())
     elif args.frame or args.cframe:
         fibers = np.array([args.fiber],dtype=int)
