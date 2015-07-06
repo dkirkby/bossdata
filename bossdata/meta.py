@@ -333,6 +333,7 @@ class Database(object):
             elif lite and not db_paths_exist[0] and allow_full_replace:
                 if db_paths_exist[1]:             # lite branch, and lite DB NOT exists
                     self.db_path = db_paths[1]    # ...but full does
+                    self.local_path = local_paths[1]
                     lite_db_used = False
                 else:                             # Neither DB's exist, so get files, create DB
                     self.local_path = mirror.get(remote_paths)
