@@ -5,7 +5,7 @@
 """ Plot a single BOSS spectrum.
 """
 
-from __future__ import division,print_function
+from __future__ import division, print_function
 
 from astropy.utils.compat import argparse
 
@@ -23,6 +23,7 @@ import bossdata.remote
 import bossdata.spec
 import bossdata.bits
 import bossdata.plate
+
 
 def auto_range(range_str, abs_lo, abs_hi, default_limits, data_lo=None, data_hi=None):
     """
@@ -46,6 +47,7 @@ def auto_range(range_str, abs_lo, abs_hi, default_limits, data_lo=None, data_hi=
     """
     if data_hi is None:
         data_hi = data_lo
+
     def _limit_parser(limit, default_limit, data):
         try:
             if limit.endswith('%'):
@@ -74,7 +76,7 @@ def auto_range(range_str, abs_lo, abs_hi, default_limits, data_lo=None, data_hi=
         def_lo, def_hi = parsed.groups()
         default_lo = _limit_parser(def_lo, 0, data_lo)
         default_hi = _limit_parser(def_hi, 0, data_hi)
-    else: #Assume e.g. limits from get_xlim
+    else:  # Assume e.g. limits from get_xlim
         default_lo, default_hi = default_limits
 
     # The range must be have the format [ <lo> : <hi> ]
@@ -88,73 +90,99 @@ def auto_range(range_str, abs_lo, abs_hi, default_limits, data_lo=None, data_hi=
         raise ValueError('Must have min < max in range {}.'.format(range_str))
     return new_lo, new_hi
 
+
 def print_mask_summary(label, mask_values):
     if np.any(mask_values):
         print('{0} pixel mask summary:'.format(label))
         bit_summary = bossdata.bits.summarize_bitmask_values(
-            bossdata.bits.SPPIXMASK,mask_values)
-        for bit_name,bit_count in bit_summary.iteritems():
-            print('{0:5d} {1}'.format(bit_count,bit_name))
+            bossdata.bits.SPPIXMASK, mask_values)
+        for bit_name, bit_count in bit_summary.iteritems():
+            print('{0:5d} {1}'.format(bit_count, bit_name))
     else:
         print('No pixels masked.')
 
+
 def main():
     # Initialize and parse command-line arguments.
-    parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter,
-        description = 'Plot a single BOSS spectrum.')
-    parser.add_argument('--verbose', action = 'store_true',
-        help = 'Provide verbose output.')
-    parser.add_argument('--plate',type = int, default = 6641, metavar = 'PLATE',
-        help = 'Plate number of spectrum to plot.')
-    parser.add_argument('--mjd',type = int, default = 56383, metavar = 'MJD',
-        help = 'Modified Julian date of plate observation to use.')
-    parser.add_argument('--fiber',type = int,default = 30, metavar = 'FIBER',
-        help = 'Fiber number identifying the spectrum of the requested PLATE-MJD to plot.')
-    parser.add_argument('--exposure',type = int,default = None, metavar = 'EXP',
-        help = 'Exposure sequence number starting from 0, or plot the coadd if not set.')
-    parser.add_argument('--camera',type = str, choices = ['blue','red','both'],
-        default = 'both', help = 'Camera to use when plotting a single exposure.')
-    parser.add_argument('--allow-mask', type = str, default = None,
-        help = 'SPPIXMASK bit names to allow in valid data. Separate multiple names with |.')
-    parser.add_argument('--show-invalid', action='store_true',
-        help = 'Include pixels with invalid data in the plot (implies --scatter).')
-    parser.add_argument('--platefile', action='store_true',
-        help = 'Plot the combined spectrum from an spPlate file.')
-    parser.add_argument('--frame', action='store_true',
-        help = 'Plot a single exposure spectrum from an uncalibrated spFrame file.')
-    parser.add_argument('--cframe', action='store_true',
-        help = 'Plot a single exposure spectrum from a calibrated spCFrame file.')
-    parser.add_argument('--save-plot', type=str, default=None, const='', nargs='?',
-        metavar='FILE', help = ('Save the generated plot to specified name ' +
-            '(uses {plot-label}.png if name omitted).'))
-    parser.add_argument('--save-data', type=str, default=None, const='', nargs='?',
-        metavar='FILE', help = ('Save the spectrum data to specified name ' +
-            '(uses {plot-label}.dat if name omitted).'))
-    parser.add_argument('--no-display', action = 'store_true',
-        help = 'Do not display the image on screen (useful for batch processing).')
-    parser.add_argument('--scatter', action = 'store_true',
-        help = 'Show scatter of flux instead of a flux error band.')
-    parser.add_argument('--show-mask', action = 'store_true',
-        help = 'Indicate pixels with invalid data using vertical lines.')
-    parser.add_argument('--show-dispersion', action = 'store_true',
-        help = 'Show the wavelength dispersion using the right-hand axis.')
-    parser.add_argument('--show-sky', action = 'store_true',
-        help = 'Show the subtracted sky flux instead of the object flux.')
-    parser.add_argument('--add-sky', action = 'store_true',
-        help = 'Add the subtracted sky to the object flux (overrides show-sky).')
-    parser.add_argument('--flux-range', type=str, default='[0.5%:99.5%]', metavar='[MIN:MAX]',
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description='Plot a single BOSS spectrum.')
+    parser.add_argument(
+        '--verbose', action='store_true', help='Provide verbose output.')
+    parser.add_argument(
+        '--plate', type=int, default=6641, metavar='PLATE',
+        help='Plate number of spectrum to plot.')
+    parser.add_argument(
+        '--mjd', type=int, default=56383, metavar='MJD',
+        help='Modified Julian date of plate observation to use.')
+    parser.add_argument(
+        '--fiber', type=int, default=30, metavar='FIBER',
+        help='Fiber number identifying the spectrum of the requested PLATE-MJD to plot.')
+    parser.add_argument(
+        '--exposure', type=int, default=None, metavar='EXP',
+        help='Exposure sequence number starting from 0, or plot the coadd if not set.')
+    parser.add_argument(
+        '--camera', type=str, choices=['blue', 'red', 'both'],
+        default='both', help='Camera to use when plotting a single exposure.')
+    parser.add_argument(
+        '--allow-mask', type=str, default=None,
+        help='SPPIXMASK bit names to allow in valid data. Separate multiple names with |.')
+    parser.add_argument(
+        '--show-invalid', action='store_true',
+        help='Include pixels with invalid data in the plot (implies --scatter).')
+    parser.add_argument(
+        '--platefile', action='store_true',
+        help='Plot the combined spectrum from an spPlate file.')
+    parser.add_argument(
+        '--frame', action='store_true',
+        help='Plot a single exposure spectrum from an uncalibrated spFrame file.')
+    parser.add_argument(
+        '--cframe', action='store_true',
+        help='Plot a single exposure spectrum from a calibrated spCFrame file.')
+    parser.add_argument(
+        '--save-plot', type=str, default=None, const='', nargs='?', metavar='FILE',
+        help='Save the generated plot to specified name '
+             '(uses {plot-label}.png if name omitted).')
+    parser.add_argument(
+        '--save-data', type=str, default=None, const='', nargs='?', metavar='FILE',
+        help='Save the spectrum data to specified name '
+             '(uses {plot-label}.dat if name  omitted).')
+    parser.add_argument(
+        '--no-display', action='store_true',
+        help='Do not display the image on screen (useful for batch processing).')
+    parser.add_argument(
+        '--scatter', action='store_true',
+        help='Show scatter of flux instead of a flux error band.')
+    parser.add_argument(
+        '--show-mask', action='store_true',
+        help='Indicate pixels with invalid data using vertical lines.')
+    parser.add_argument(
+        '--show-dispersion', action='store_true',
+        help='Show the wavelength dispersion using the right-hand axis.')
+    parser.add_argument(
+        '--show-sky', action='store_true',
+        help='Show the subtracted sky flux instead of the object flux.')
+    parser.add_argument(
+        '--add-sky', action='store_true',
+        help='Add the subtracted sky to the object flux (overrides show-sky).')
+    parser.add_argument(
+        '--flux-range', type=str, default='[0.5%:99.5%]', metavar='[MIN:MAX]',
         help='Custom flux axis range, e.g. [0:100], [1%%:99%%], [0:].')
-    parser.add_argument('--wlen-range', type=str, default=None, metavar='[MIN:MAX]',
+    parser.add_argument(
+        '--wlen-range', type=str, default=None, metavar='[MIN:MAX]',
         help='Custom wavelength axis range, e.g. [4000:8000], [-5%%:105%%].')
-    parser.add_argument('--wdisp-range', type=str, default=None, metavar='[MIN:MAX]',
+    parser.add_argument(
+        '--wdisp-range', type=str, default=None, metavar='[MIN:MAX]',
         help='Custom dispersion axis range, e.g. [0:2], [0:].')
-    parser.add_argument('--label-pos', metavar='POS', default='top-left',choices=[
-        'none','top-left','top-center','top-right','center-left','center-center',
-        'center-right','bottom-left','bottom-center','bottom-right'],
+    parser.add_argument(
+        '--label-pos', metavar='POS', default='top-left',
+        choices=['none', 'top-left', 'top-center', 'top-right', 'center-left', 'center-center',
+                 'center-right', 'bottom-left', 'bottom-center', 'bottom-right'],
         help='Label position, e.g. top-right, bottom-left, center-center.')
-    parser.add_argument('--no-grid', action='store_true',
-        help='Do not draw wavelength grid lines.')
-    parser.add_argument('--figsize', type=str, default='12,8', metavar='WIDTH,HEIGHT',
+    parser.add_argument(
+        '--no-grid', action='store_true', help='Do not draw wavelength grid lines.')
+    parser.add_argument(
+        '--figsize', type=str, default='12,8', metavar='WIDTH,HEIGHT',
         help='Figure dimensions in inches.')
     args = parser.parse_args()
 
@@ -175,7 +203,7 @@ def main():
     else:
         try:
             pixel_quality_mask = bossdata.bits.bitmask_from_text(
-                bossdata.bits.SPPIXMASK,args.allow_mask)
+                bossdata.bits.SPPIXMASK, args.allow_mask)
         except ValueError as e:
             print(e)
             return -1
@@ -206,7 +234,7 @@ def main():
                 print('Exposure summary:')
                 print(plan.exposure_table)
             spec_index = plan.get_spectrograph_index(args.fiber)
-            if args.camera in ('red','both'):
+            if args.camera in ('red', 'both'):
                 red_name = plan.get_exposure_name(
                     args.exposure, 'red', args.fiber, calibrated=args.cframe)
                 if red_name is None:
@@ -215,7 +243,7 @@ def main():
                 frames['red'] = bossdata.plate.FrameFile(
                     mirror.get(os.path.join(frame_path, red_name)),
                     index=spec_index, calibrated=args.cframe)
-            if args.camera in ('blue','both'):
+            if args.camera in ('blue', 'both'):
                 blue_name = plan.get_exposure_name(
                     args.exposure, 'blue', args.fiber, calibrated=args.cframe)
                 if blue_name is None:
@@ -233,12 +261,12 @@ def main():
                 print('Exposure summary:')
                 print(platefile.exposure_table)
         else:
-            lite=(args.exposure is None)
+            lite = (args.exposure is None)
             remote_paths = [finder.get_spec_path(plate=args.plate, mjd=args.mjd,
                             fiber=args.fiber, lite=lite)]
             if lite:    # If lite, we can use the Full file if it exists but lite does not
-                remote_paths.append(finder.get_spec_path(plate=args.plate, mjd=args.mjd,
-                                fiber=args.fiber, lite=False))
+                remote_paths.append(finder.get_spec_path(
+                    plate=args.plate, mjd=args.mjd, fiber=args.fiber, lite=False))
             local_paths = []
             local_path = mirror.get(remote_paths, local_paths=local_paths)
             specfile = bossdata.spec.SpecFile(local_path)
@@ -255,7 +283,7 @@ def main():
     # Check for an invalid exposure index.
     if args.exposure is not None and (args.exposure < 0 or args.exposure >= num_exposures):
         print('The value --exposure {} is outside the allowed range 0-{}.'.format(
-            args.exposure, num_exposures-1))
+            args.exposure, num_exposures - 1))
         if not args.verbose:
             print('Use the --verbose option for details on the available exposures.')
         return -1
@@ -283,61 +311,61 @@ def main():
         right_axis.set_ylabel('Dispersion (pixels)')
 
     # We will potentially plot two spectra.
-    spectra = [ ]
-    plot_colors = [ ]
-    data_args = dict(include_wdisp=args.show_dispersion,
-        include_sky=args.show_sky or args.add_sky)
+    spectra = []
+    plot_colors = []
+    data_args = dict(
+        include_wdisp=args.show_dispersion, include_sky=args.show_sky or args.add_sky)
     if args.exposure is None:
         if args.platefile:
-            fibers = np.array([args.fiber],dtype=int)
-            spectra.append(platefile.get_valid_data(fibers,
-                pixel_quality_mask=pixel_quality_mask, **data_args)[0])
+            fibers = np.array([args.fiber], dtype=int)
+            spectra.append(platefile.get_valid_data(
+                fibers, pixel_quality_mask=pixel_quality_mask, **data_args)[0])
             plot_colors.append('black')
             if args.verbose:
                 print('Showing coadd of {:d} blue+red exposures.'.format(
                     platefile.num_exposures))
                 print_mask_summary('Coadd (AND)', platefile.get_pixel_masks(fibers)[0])
         else:
-            spectra.append(specfile.get_valid_data(pixel_quality_mask=pixel_quality_mask,
-                **data_args))
+            spectra.append(specfile.get_valid_data(
+                pixel_quality_mask=pixel_quality_mask, **data_args))
             plot_colors.append('black')
             if args.verbose:
                 print('Showing coadd of {:d} blue+red exposures.'.format(
                     specfile.num_exposures))
-                print_mask_summary('Coadd (AND)',specfile.get_pixel_mask())
+                print_mask_summary('Coadd (AND)', specfile.get_pixel_mask())
     elif args.frame or args.cframe:
-        fibers = np.array([args.fiber],dtype=int)
+        fibers = np.array([args.fiber], dtype=int)
         exposure_id = plan.exposures['science'][args.exposure]['EXPID']
         if args.verbose:
             print('Showing exposure {:08d}.'.format(exposure_id))
-        if args.camera in ('blue','both'):
-            spectra.append(frames['blue'].get_valid_data(fibers,
-                pixel_quality_mask=pixel_quality_mask, **data_args)[0])
+        if args.camera in ('blue', 'both'):
+            spectra.append(frames['blue'].get_valid_data(
+                fibers, pixel_quality_mask=pixel_quality_mask, **data_args)[0])
             plot_colors.append('blue')
             if args.verbose:
-                print_mask_summary('Blue',frames['blue'].get_pixel_masks(fibers)[0])
-        if args.camera in ('red','both'):
-            spectra.append(frames['red'].get_valid_data(fibers,
-                pixel_quality_mask=pixel_quality_mask, **data_args)[0])
+                print_mask_summary('Blue', frames['blue'].get_pixel_masks(fibers)[0])
+        if args.camera in ('red', 'both'):
+            spectra.append(frames['red'].get_valid_data(
+                fibers, pixel_quality_mask=pixel_quality_mask, **data_args)[0])
             plot_colors.append('red')
             if args.verbose:
-                print_mask_summary('Red',frames['red'].get_pixel_masks(fibers)[0])
+                print_mask_summary('Red', frames['red'].get_pixel_masks(fibers)[0])
     else:
         exposure_id = specfile.exposure_table[args.exposure]['exp']
         if args.verbose:
             print('Showing exposure {:08d}.'.format(exposure_id))
-        if args.camera in ('blue','both'):
-            spectra.append(specfile.get_valid_data(args.exposure,'blue',
-                pixel_quality_mask=pixel_quality_mask, **data_args))
+        if args.camera in ('blue', 'both'):
+            spectra.append(specfile.get_valid_data(
+                args.exposure, 'blue', pixel_quality_mask=pixel_quality_mask, **data_args))
             plot_colors.append('blue')
             if args.verbose:
-                print_mask_summary('Blue',specfile.get_pixel_mask(args.exposure,'blue'))
-        if args.camera in ('red','both'):
-            spectra.append(specfile.get_valid_data(args.exposure,'red',
-                pixel_quality_mask=pixel_quality_mask, **data_args))
+                print_mask_summary('Blue', specfile.get_pixel_mask(args.exposure, 'blue'))
+        if args.camera in ('red', 'both'):
+            spectra.append(specfile.get_valid_data(
+                args.exposure, 'red', pixel_quality_mask=pixel_quality_mask, **data_args))
             plot_colors.append('red')
             if args.verbose:
-                print_mask_summary('Red',specfile.get_pixel_mask(args.exposure,'red'))
+                print_mask_summary('Red', specfile.get_pixel_mask(args.exposure, 'red'))
 
     # Determine this plot's label and use it for the plot window title.
     plot_label = '{plate}-{mjd}-{fiber}'.format(
@@ -364,14 +392,14 @@ def main():
         if args.verbose:
             print('Saved data to {}'.format(save_name))
 
-    wlen_min,wlen_max = +np.inf,-np.inf
+    wlen_min, wlen_max = +np.inf, -np.inf
     flux_lo, flux_hi = np.array([], dtype=float), np.array([], dtype=float)
     wdisp_data = np.array([], dtype=float)
     wlen_data = np.array([], dtype=float)
-    x_mask = [ ]
-    for data,plot_color in zip(spectra,plot_colors):
+    x_mask = []
+    for data, plot_color in zip(spectra, plot_colors):
 
-        wlen,dflux = data['wavelength'][:],data['dflux'][:]
+        wlen, dflux = data['wavelength'][:], data['dflux'][:]
         if args.add_sky:
             flux = data['sky'][:] + data['flux'][:]
         elif args.show_sky:
@@ -380,17 +408,18 @@ def main():
             flux = data['flux'][:]
 
         if args.scatter:
-            left_axis.scatter(wlen,flux,color=plot_color,marker='.',s=0.1)
+            left_axis.scatter(wlen, flux, color=plot_color, marker='.', s=0.1)
         elif args.show_invalid:
             left_axis.scatter(wlen.data, flux.data, color=plot_color, marker='.', s=0.1)
         else:
-            left_axis.fill_between(wlen,flux-dflux,flux+dflux,color=plot_color,alpha=0.5)
+            left_axis.fill_between(
+                wlen, flux - dflux, flux + dflux, color=plot_color, alpha=0.5)
 
         num_masked = np.count_nonzero(data.mask)
         if args.show_mask and num_masked > 0:
             bad_pixels = np.where(data.mask)
             for x in data.data['wavelength'][bad_pixels]:
-                x_mask.extend([x,x,None])
+                x_mask.extend([x, x, None])
 
         if args.show_dispersion:
             wdisp = data['wdisp'][:]
@@ -398,17 +427,17 @@ def main():
                 right_axis.plot(wlen.data, wdisp.data, ls='-', color=plot_color)
                 wdisp_data = np.append(wdisp_data, wdisp.data)
             else:
-                right_axis.plot(wlen,wdisp, ls='-', color=plot_color)
+                right_axis.plot(wlen, wdisp, ls='-', color=plot_color)
                 wdisp_data = numpy.ma.append(wdisp_data, data['wdisp'][:])
 
         # Update the plot wavelength limits to include this data.
         if args.show_invalid:
-            wlen_min = min(wlen_min,np.min(wlen.data))
-            wlen_max = max(wlen_max,np.max(wlen.data))
+            wlen_min = min(wlen_min, np.min(wlen.data))
+            wlen_max = max(wlen_max, np.max(wlen.data))
         else:
             # Only use pixels with valid data to update the limits.
-            wlen_min = min(wlen_min,np.ma.min(wlen))
-            wlen_max = max(wlen_max,np.ma.max(wlen))
+            wlen_min = min(wlen_min, np.ma.min(wlen))
+            wlen_max = max(wlen_max, np.ma.max(wlen))
 
         # Update the list of fluxes that we will use to auto-range the vertical scale.
         if args.show_invalid:
@@ -430,8 +459,8 @@ def main():
     # Set the wavelength axis range.
     if args.wlen_range:
         try:
-            left_axis.set_xlim(*auto_range(args.wlen_range,
-                wlen_min, wlen_max,
+            left_axis.set_xlim(*auto_range(
+                args.wlen_range, wlen_min, wlen_max,
                 parser.get_default('wlen_range') or left_axis.get_xlim()))
         except ValueError as e:
             print(e)
@@ -441,15 +470,15 @@ def main():
     if args.flux_range:
         try:
             if args.show_invalid:
-                left_axis.set_ylim(*auto_range(args.flux_range,
-                    np.min(flux_lo), np.max(flux_lo),
+                left_axis.set_ylim(*auto_range(
+                    args.flux_range, np.min(flux_lo), np.max(flux_lo),
                     parser.get_default('flux_range') or left_axis.get_ylim(),
                     data_lo=flux_lo, data_hi=flux_lo))
             else:
-                valid = (~flux_lo.mask & ~flux_hi.mask & (wlen_data > wlen_min) &
-                    (wlen_data < wlen_max))
-                left_axis.set_ylim(*auto_range(args.flux_range,
-                    np.min(flux_lo[valid]), np.max(flux_hi[valid]),
+                valid = (~flux_lo.mask & ~flux_hi.mask &
+                         (wlen_data > wlen_min) & (wlen_data < wlen_max))
+                left_axis.set_ylim(*auto_range(
+                    args.flux_range, np.min(flux_lo[valid]), np.max(flux_hi[valid]),
                     parser.get_default('flux_range') or left_axis.get_ylim(),
                     data_lo=flux_lo[valid], data_hi=flux_hi[valid]))
         except ValueError as e:
@@ -460,8 +489,8 @@ def main():
     if args.show_dispersion and args.wdisp_range:
         try:
             valid = ~wdisp_data.mask & (wlen_data > wlen_min) & (wlen_data < wlen_max)
-            right_axis.set_ylim(*auto_range(args.wdisp_range,
-                np.min(wdisp_data[valid]), np.max(wdisp_data[valid]),
+            right_axis.set_ylim(*auto_range(
+                args.wdisp_range, np.min(wdisp_data[valid]), np.max(wdisp_data[valid]),
                 parser.get_default('wdisp_range') or right_axis.get_ylim(),
                 wdisp_data[valid]))
         except ValueError as e:
@@ -480,8 +509,9 @@ def main():
         valign, halign = args.label_pos.split('-')
         x = dict(left=0.02, center=0.5, right=0.98)[halign]
         y = dict(top=0.98, center=0.5, bottom=0.02)[valign]
-        plt.annotate(plot_label, xy=(x,y), xycoords='axes fraction',
-            xytext=(x,y), textcoords='axes fraction',
+        plt.annotate(
+            plot_label, xy=(x, y), xycoords='axes fraction',
+            xytext=(x, y), textcoords='axes fraction',
             horizontalalignment=halign, verticalalignment=valign, fontsize=20)
 
     if not args.no_grid:
