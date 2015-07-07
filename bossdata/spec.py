@@ -60,8 +60,8 @@ def get_exposure_table(header):
         dtype=('i4', 'i4', 'i4', 'i4', 'i4', 'i4', 'i4'))
     for exp_num in sorted(exposures.keys()):
         info = exposures[exp_num]
-        exposure_table.add_row(
-            (exp_num, info['arc'], info['flat'],
+        exposure_table.add_row((
+            exp_num, info['arc'], info['flat'],
             info['b1'], info['b2'], info['r1'], info['r2']))
     return exposure_table
 
