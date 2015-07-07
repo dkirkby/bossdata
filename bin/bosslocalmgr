@@ -15,31 +15,54 @@ from astropy.utils.compat import argparse
 import bossdata.meta as bdm
 import bossdata.path as bdp
 
+env_vars = ["BOSS_LOCAL_ROOT", "BOSS_DATA_URL", "BOSS_SAS_PATH", "BOSS_REDUX_VERSION"]
+# De-unixfy these via... posixpath, I guess
+# Blanks/None will not be set
+boss_default_env = [None, None, "/sas/dr12/boss", "v5_7_0"]
+quasar_default_env = [None, None, "/sas/dr12/boss", "DR12Q"]
+sequels_default_env = [None, None, "/sas/dr12/boss", "v5_7_2"]
+
 def main():
     # Initialize and parse command-line arguments.
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--verbose', action = 'store_true',
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description = "A utility for managing disk space and the metadata DB files for BOSSDATA.")
+
+    overall_group = parser.add_argument_group('Utility-wide Options')
+    overall_group.add_argument('--verbose', action = 'store_true',
         help = 'Provide verbose output.')
-
-    parser.add_argument('--catalogs', type = str, default='FULL,LITE,QUASAR', metavar='FULL|LITE|QUASAR',
+    overall_group.add_argument('--catalogs', type = str, default='FULL,LITE,QUASAR', metavar='FULL|LITE|QUASAR',
         help = 'Catalog names to target, separated by commas',)
+    overall_group.add_argument('--env', action = 'store_true',
+    help = 'Print out the current bossdata environment settings.')
 
-    parser.add_argument('--db-index-print', action = 'store_true',
-        help = 'Dump DB indexes, after any changes.')
-    parser.add_argument('--db-index-update', type = str, default=None, metavar='INDEX_FILE',
+    db_group = parser.add_argument_group('Metadata DB Management')
+    db_group.add_argument('--db-index-print', action = 'store_true',
+        help = 'Dump DB indexes, after any c+hanges.')
+    db_group.add_argument('--db-index-update', type = str, default=None, metavar='INDEX_FILE',
         help = 'Update DB indexes according to the specified file.')
-    parser.add_argument('--db-index-reset', action = 'store_true',
+    db_group.add_argument('--db-index-reset', action = 'store_true',
         help = 'Delete DB indexes, leaving primary-key only.')
-    parser.add_argument('--db-compact', action = 'store_true', help = 'Attempts to shrink DB.')
-
-    parser.add_argument('--prune', action = 'store_true',
+    db_group.add_argument('--db-compact', action = 'store_true', help = 'Attempts to shrink DB.')
+    db_group.add_argument('--prune', action = 'store_true',
         help = 'Delete source data that has already been stored in catalog DB\'s.')
 
-    parser.add_argument('--env', action = 'store_true',
-        help = 'Print out the current bossdata environment settings.')
-
-    parser.add_argument('--total-files', action = 'store_true',
+    file_group = parser.add_argument_group('File Management')
+    file_group.add_argument('--total-files', action = 'store_true',
         help = 'Print out file space summary.')
+    file_group.add_argument('-amin', type = int, default = 0, metavar = 'N',
+        help = 'File was last accessed at least N minutes again.')
+    file_group.add_argument('-atime', type = int, default = 0, metavar = 'N',
+        help = 'File was last accessed at least N*24 hours ago.')
+    file_group.add_argument('-cmin', type = int, default = 0, metavar = 'N',
+        help = 'File was created at least N minutes again.')
+    file_group.add_argument('-ctime', type = int, default = 0, metavar = 'N',
+        help = 'File was created at least N*24 hours ago.')
+    file_group.add_argument('--delete', action = 'store_true',
+        help = 'Deletes files that match file criteria.')
+
+    # parser.add_argument('--set-env-type', type = str, default = None, metavar="BOSS|QUASAR|SEQUELS",
+    #     help = 'Sets environment to specified defaults.')
+
 
     if len(sys.argv)==1:
         parser.print_help()
@@ -99,10 +122,13 @@ def main():
                 prune_meta_files(db)
 
     # And stuff that doesn't need the DB's to exist
-    if args.env:
-        print_env()
     if args.total_files:
         display_file_space()
+
+    # if args.set_env_type:
+    #     set_env(args.set_env_type)
+    if args.env:
+        print_env()
 
     print("All done!")
 
@@ -110,6 +136,17 @@ def main():
 def display_file_space():
     boss_env = get_env()
     file_type_data = get_file_stats(boss_env["BOSS_LOCAL_ROOT"])
+    total_file_size, total_count = 0, 0
+
+    print("File storage data:")
+    print("{:15s}|{:7s}|{:20s}".format("File Type", "Count", "Total Size (kB)"))
+    print("-"*15 + "|" + "-"*7 + "|" + "-"*20)
+    for k,v in file_type_data.items():
+        print("{:15s}|{:7d}|{:20d}".format(k, v[0], int(round(v[1]/1024))))
+        total_file_size += v[1]
+        total_count += v[0]
+    print("-"*15 + "|" + "-"*7 + "|" + "-"*20)
+    print("{:15s}|{:7d}|{:20d}".format("TOTAL", total_count, int(round(total_file_size/1024))))
 
 def get_file_stats(dirpath, in_lite=False):
     # catalog of tuples; key = file-type, tuple is (count, size)
@@ -117,27 +154,28 @@ def get_file_stats(dirpath, in_lite=False):
         "spAll-v5_7_2.dat", "spAll-v5_7_2.fits", "DR12Q.fits"]
     catalog = {}
 
-    dirpath, dirnames, filenames = os.walk(dirpath)
-    for f in filenames:
-        # spec, spec-lite, frame, cframe, metadata
-        filetype = "other"
-        if f.startswith("spec-") and f.endswith(".fits"):
-            if in_lite:
-                filetype = "spec-lite"
-            else:
-                filetype = "spec"
-        elif f.startswith("spCFrame") and f.endswith(".fits"):
-            filetype = "cframe"
-        elif f.startswith("spFrame") and f.endswith(".fits"):
-            filetype = "frame"
-        elif f.endswith(".db") or len([m for m in _metadata_files if f.startswith(m)]) > 0:
-            filetype = "meta"
-        catalog.setdefault(filetype, [0,0])[0:1] = [list[0]+1, list[1]+os.path.getsize(posixpath.join(dirpath, f)) ]
+    for dirpath, dirnames, filenames in os.walk(dirpath):
+        for f in filenames:
+            # spec, spec-lite, frame, cframe, metadata
+            filetype = "other"
+            if f.startswith("spec-") and f.endswith(".fits"):
+                if in_lite:
+                    filetype = "spec-lite"
+                else:
+                    filetype = "spec"
+            elif f.startswith("spCFrame") and f.endswith(".fits"):
+                filetype = "cframe"
+            elif f.startswith("spFrame") and f.endswith(".fits"):
+                filetype = "frame"
+            elif f.endswith(".db") or len([m for m in _metadata_files if f.startswith(m)]) > 0:
+                filetype = "meta"
+            list = catalog.setdefault(filetype, [0,0])
+            list[0:1] = [list[0]+1, list[1]+os.path.getsize(posixpath.join(dirpath, f)) ]
 
-    for d in dirnames:
-        sub_catalog = get_file_stats(posixpath.join(dirpath, d), in_lite or dirpath == "lite")
-        for k, v in sub_catalog.items():
-            catalog.setdefault(k, [0,0])[0:1] = v
+        for d in dirnames:
+            sub_catalog = get_file_stats(posixpath.join(dirpath, d), in_lite or dirpath == "lite")
+            for k, v in sub_catalog.items():
+                catalog.setdefault(k, [0,0])[0:1] = v
 
     return catalog
 
@@ -147,8 +185,24 @@ def print_env():
     for k,v in boss_env.items():
         print("\t{:20s}\t{}".format(k,v))
 
+# This is a bit tricky as it reuqires restarting the e.g. shell to make permanent;
+# child processes can't modify the parent environment... could tell the user what
+# to do, but this seems like a better job of for a set pre-made shell scripts.
+def set_env(env_type):
+    if env_type == "BOSS":
+        paired_env_vars = zip(env_vars, boss_default_env)
+    elif env_type == "QUASAR":
+        paired_env_vars = zip(env_vars, quasar_default_env)
+    elif env_type == "SEQUELS":
+        paired_env_vars = zip(env_vars, sequels_default_env)
+    else:
+        print("Unrecognized environment/catalog type: {}".format(env_type))
+        return
+    for var_name, var_value in paired_env_vars:
+        if var_value is not None and var_value != "":
+            os.environ[var_name] = var_value
+
 def get_env():
-    env_vars = ["BOSS_LOCAL_ROOT", "BOSS_DATA_URL", "BOSS_SAS_PATH", "BOSS_REDUX_VERSION"]
     boss_env = {}
     for name in env_vars:
         boss_env[name]=os.environ.get(name, None)

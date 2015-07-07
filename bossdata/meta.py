@@ -305,7 +305,7 @@ class Database(object):
             if not os.path.isfile(self.db_path):
                 if autocreate:
                     self.local_path = mirror.get(remote_path)
-                    create_meta_full(self.local_path, db_path)
+                    create_meta_full(self.local_path, self.db_path)
             self.db_catalog = 'QUASAR'
         else:
             # Pre-build all our paths, test for (and store) the existence of the DB files
