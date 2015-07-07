@@ -279,5 +279,5 @@ class Manager(object):
             except OSError as e:
                 if e.errno != 17:
                     raise e
-        return self.download(remote_paths[0], local_paths[0],
-            progress_min_size=progress_min_size)
+        return self.download(
+            remote_paths[0], local_paths[0], progress_min_size=progress_min_size)
