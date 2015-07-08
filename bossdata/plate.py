@@ -124,7 +124,7 @@ class Plan(object):
         if fiber < 1 or fiber > self.num_fibers:
             raise ValueError('Invalid fiber {} should be in the range 1-{} for plate {}.'
                              .format(fiber, self.num_fibers, self.plate))
-        return 1 if fiber <= self.num_fibers//2 else 2
+        return 1 if fiber <= self.num_fibers // 2 else 2
 
     def get_exposure_name(self, sequence_number, camera, fiber, calibrated=True):
         """Get the name of a science exposure from this plan.
@@ -260,7 +260,7 @@ class TraceSet(object):
         for i in range(self.ntrace):
             x = np.copy(xpos[i])
             if self.has_jump and not ignore_jump:
-                t = (x - self.xjump_lo)/(self.xjump_hi - self.xjump_lo)
+                t = (x - self.xjump_lo) / (self.xjump_hi - self.xjump_lo)
                 below = x < self.xjump_hi
                 above = x >= self.xjump_lo
                 jump_frac = 1.0 * (~below) + t * (below & above)
@@ -466,7 +466,7 @@ class FrameFile(object):
         Raises:
             ValueError: Fiber number is out of the valid range for this spectrograph.
         """
-        offset = fiber - self.num_fibers*(self.index - 1) - 1
+        offset = fiber - self.num_fibers * (self.index - 1) - 1
         if np.any((offset < 0) | (offset >= self.num_fibers)):
             raise ValueError('Fiber number out of range for this spectrograph.')
         return offset
