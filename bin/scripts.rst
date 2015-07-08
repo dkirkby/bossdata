@@ -44,6 +44,7 @@ Note that specifying `--full` will only (and always) use the full DB or catalog 
 
 The `--quasar-catalog` option can be used to query the `BOSS quasar catalog <http://www.sdss.org/dr12/algorithms/boss-dr12-quasar-catalog/>`_ instead of spAll. By default, the current version of the catalog will be used; use the `--quasar-catalog-name` option to specify an earlier version.
 
+The ```--platelist`` option can be used to query the `BOSS plate list database <http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/platelist.html>`_ instead of spAll.
 
 .. _bossfetch:
 
@@ -95,6 +96,28 @@ Plot the spectrum of a single BOSS observation, identified by its PLATE, MJD of 
 This should open a new window containing the plot that you will need to close in order to exit the program.  To also save your plot, add the ``--save-plot`` option with a filename that has a standard graphics format extension (pdf,png,...).  If you omit the filename, ``--save-plot`` uses the name ``bossplot-{plate}-{mjd}-{fiber}.png``. To save plots directly without displaying them, also use the ``--no-display`` option.
 
 You can also save the data shown in a plot using ``--save-data`` with an optional filename (the default is ``bossplot-{plate}-{mjd}-{fiber}.dat``).  Data is saved using the `ascii.basic <http://docs.astropy.org/en/latest/api/astropy.io.ascii.Basic.html#astropy.io.ascii.Basic>`_ format and only wavelengths with valid data are included in the output.
+
+Use ``--wlen-range [MIN:MAX]`` to specify a wavelength range over which to plot (x-axis), overriding the default, auto-detected range.  Similarly, ``--flux-range [MIN:MAX]`` and ``--wdisp-range [MIN:MAX]`` work for the flux (left y-axis) and dispersion (right y-axis).  MIN and MAX can be either blank (which means use the default value), an absolute value (1000), or a percentage (10%), and percentages and absolute values may be mixed.  Working examples::
+
+    --wlen-range [:7500]
+    --wlen-range [10%:90%]
+    --wlen-range [10%:8000]
+
+Note that a percentage value between 0-100% is interpreted as a percentile for vertical (flux, wdisp) axes. In all other cases, percentage values specify a limit value equal to a fraction of the full range ``[lo:hi]``::
+
+    limit = lo + fraction*(hi - lo)
+
+and can be < 0% or >100% to include padding. Another visual option ``--scatter`` will give a scatter plot of the flux rather than the flux 1-sigma error band.
+
+Plots include a label ``PLATE-MJD-FIBER`` by default (or ``PLATE-MJD-FIBER-EXPID`` for a single exposure).  Add the option ``--label-pos <VALIGN>-<HALIGN>`` option to change its position, with ``<VALIGN> = top, center, bottom`` and ``<HALIGN> = left, center, right``.  Use ``--label-pos none`` to remove the label.  Use ``--no-grid`` to remove the default wavelength grid lines.
+
+Several options are available to see data beyond just object flux.  Use ``--show-sky`` to show the subtracted sky (modeled) flux, ``--add-sky`` to show the total of object flux and modeled sky flux, ``--show-mask`` to show grayed regions where data has been masked out because it is deemed invalid, and ``--show-dispersion`` to show wavelength dispersion.
+
+You will sometimes want to see data that would normally be masked as invalid. To include pixels with a particular `mask bit <http://www.sdss3.org/dr10/algorithms/bitmask_sppixmask.php>`_ set, use the ``--allow-mask`` option, e.g.::
+
+    bossplot --allow-mask 'BRIGHTSKY|SCATTEREDLIGHT'
+
+Note that multiple flags can be combined using the logical-or symbol ``|``, but this requires quoting as shown above. To show all data, including any invalid pixels, use the ``--show-invalid`` option.
 
 The ``bossplot`` command will automatically download the appropriate data file if necessary.  This is 'conservative':  if an existing local file can be used to satisfy a request, no new files will be downloaded.
 

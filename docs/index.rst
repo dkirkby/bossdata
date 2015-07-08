@@ -3,22 +3,20 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to bossdata's documentation!
-======================================
+bossdata
+========
 
-Contents:
+A python package for working with `spectroscopic data <http://www.sdss.org/dr12/spectro/spectro_basics/>`_ from the `Sloan Digital Sky Survey <http://www.sdss.org>`_.
 
 .. toctree::
    :maxdepth: 2
 
-   readme
    installation
    overview
    scripts
    envvar
    usage
    contributing
-   authors
    history
 
 Modules API Reference

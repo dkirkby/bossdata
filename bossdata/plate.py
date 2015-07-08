@@ -12,6 +12,8 @@ import numpy as np
 import numpy.ma
 import numpy.polynomial.legendre
 
+import astropy.table
+
 import fitsio
 
 from bossdata.spec import get_exposure_table
@@ -97,6 +99,13 @@ class Plan(object):
             self.num_science_exposures = 0
         # Remember the number of fibers on this plate.
         self.num_fibers = get_num_fibers(self.plate)
+        # Build a table of science exposure info.
+        self.exposure_table = astropy.table.Table(
+            names=('exp', 'mjd', 'exptime', 'cameras'), dtype=('i4', 'i4', 'f4', 'S12'))
+        for exposure in self.exposures['science']:
+            self.exposure_table.add_row((
+                exposure['EXPID'], exposure['MJD'], exposure['EXPTIME'],
+                ','.join(sorted(exposure['SPECS']))))
 
     def get_spectrograph_index(self, fiber):
         """Get the spectrograph index 1,2 for the specified fiber.
@@ -113,9 +122,8 @@ class Plan(object):
             ValueError: fiber is outside the allowed range 1-1000 (1-640) for this plate.
         """
         if fiber < 1 or fiber > self.num_fibers:
-            raise ValueError(
-                'Invalid fiber {} should be in the range 1-{} for plate {}.',format(
-                fiber, self.num_fibers, self.plate))
+            raise ValueError('Invalid fiber {} should be in the range 1-{} for plate {}.'
+                             .format(fiber, self.num_fibers, self.plate))
         return 1 if fiber <= self.num_fibers//2 else 2
 
     def get_exposure_name(self, sequence_number, camera, fiber, calibrated=True):

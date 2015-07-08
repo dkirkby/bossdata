@@ -5,7 +5,7 @@
 """Query the meta data for BOSS observations.
 """
 
-from __future__ import division,print_function
+from __future__ import division, print_function
 
 import os.path
 
@@ -13,42 +13,62 @@ from astropy.utils.compat import argparse
 
 import bossdata.meta
 
+
 def main():
     # Initialize and parse command-line arguments.
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--verbose', action = 'store_true',
-        help = 'Provide verbose output.')
-    parser.add_argument('--full', action = 'store_true',
-        help = 'Use the full meta database instead of the lite version.')
-    parser.add_argument('--what', type = str, default = 'PLATE,MJD,FIBER', metavar = 'COLS',
-        help = 'List of comma-separated columns to return from the query.')
-    parser.add_argument('--where', type = str, default = None, metavar = 'SEL',
-        help = 'Selections to restrict the query results.')
-    parser.add_argument('--max-rows', type = int, default = 1000, metavar = 'N',
-        help = 'Maximum number of query result rows to process.')
-    parser.add_argument('--print', action = 'store_true',
-        help = 'Print the query results.')
-    parser.add_argument('--save', type = str, default = None, metavar = 'FILE',
-        help = 'Save results to the specified file, whose extension determines the format.')
-    parser.add_argument('--no-clobber', action = 'store_true',
-        help = 'Do not overwrite any existing save file with the same name.')
-    parser.add_argument('--sort', type = str, default = None, metavar = 'SORT',
-        help = 'Sort; follows SQL syntax, columns listed in order of sort priority, DESC optionally specified to reverse order.')
-    parser.add_argument('--quasar-catalog', action='store_true',
+    parser.add_argument('--verbose', action='store_true', help='Provide verbose output.')
+    parser.add_argument(
+        '--full', action='store_true',
+        help='Use the full meta database instead of the lite version.')
+    parser.add_argument(
+        '--what', type=str, default='PLATE,MJD,FIBER', metavar='COLS',
+        help='List of comma-separated columns to return from the query.')
+    parser.add_argument(
+        '--where', type=str, default=None, metavar='SEL',
+        help='Selections to restrict the query results.')
+    parser.add_argument(
+        '--max-rows', type=int, default=1000, metavar='N',
+        help='Maximum number of query result rows to process.')
+    parser.add_argument('--print', action='store_true', help='Print the query results.')
+    parser.add_argument(
+        '--save', type=str, default=None, metavar='FILE',
+        help='Save results to the specified file, whose extension determines the format.')
+    parser.add_argument(
+        '--no-clobber', action='store_true',
+        help='Do not overwrite any existing save file with the same name.')
+    parser.add_argument(
+        '--sort', type=str, default=None, metavar='SORT',
+        help='Sort; follows SQL syntax, columns listed in order of sort priority, '
+             'DESC optionally specified to reverse order.')
+    parser.add_argument(
+        '--quasar-catalog', action='store_true',
         help='Query quasar catalog instead of spAll.')
-    parser.add_argument('--quasar-catalog-name', type=str, default=bossdata.path.Finder.default_quasar_catalog_name,
+    parser.add_argument(
+        '--quasar-catalog-name', type=str,
+        default=bossdata.path.Finder.default_quasar_catalog_name,
         help='Use the specified BOSS quasar catalog name.')
+    parser.add_argument(
+        '--platelist', action='store_true',
+        help='Query the platelist catalog instead of spAll')
     args = parser.parse_args()
 
     # Use the "lite" version of spAll unless --full is requested.
-    # There is no "lite" version of the quasar catalog.
-    use_lite = not (args.full or args.quasar_catalog)
+    # There is no "lite" version of the quasar or platelist catalogs.
+    use_lite = not (args.full or args.quasar_catalog or args.platelist)
+
+    # The platelist does not have per-fiber metadata so silently remove FIBER from
+    # the default list of columns to return.
+    if args.platelist and args.what == 'PLATE,MJD,FIBER':
+        args.what = 'PLATE,MJD'
 
     try:
-        meta_db = bossdata.meta.Database(lite=use_lite, quasar_catalog=args.quasar_catalog,
-            quasar_catalog_name=args.quasar_catalog_name, verbose=args.verbose)
+        meta_db = bossdata.meta.Database(
+            lite=use_lite, quasar_catalog=args.quasar_catalog,
+            quasar_catalog_name=args.quasar_catalog_name, platelist=args.platelist,
+            verbose=args.verbose)
         table = meta_db.select_all(args.what, args.where, args.sort, max_rows=args.max_rows)
-    except (RuntimeError,ValueError) as e:
+    except (RuntimeError, ValueError) as e:
         print(e)
         return -1
 
@@ -68,15 +88,15 @@ def main():
         print(table)
 
     if args.save:
-        root,ext = os.path.splitext(args.save)
-        if ext in ('.dat','.txt'):
-             table.write(args.save, format='ascii')
+        root, ext = os.path.splitext(args.save)
+        if ext in ('.dat', '.txt'):
+            table.write(args.save, format='ascii')
         else:
             try:
                 table.write(args.save, overwrite=(not args.no_clobber))
                 if args.verbose:
                     print('Results saved to {}.'.format(args.save))
-            except Exception,e:
+            except Exception as e:
                 print('Results could not be saved to {}.'.format(args.save))
                 print(e)
 
