@@ -340,17 +340,17 @@ class Database(object):
                         self.local_path = mirror.get(remote_paths)
                         if self.local_path == local_paths[0]:    # lite
                             self.db_path = db_paths[0]
-                            create_meta_lite(self.local_path, db_path)
+                            create_meta_lite(self.local_path, self.db_path)
                         else:                               # full
                             self.db_path = db_paths[1]
                             lite_db_used = False
-                            create_meta_full(self.local_path, db_path)
+                            create_meta_full(self.local_path, self.db_path)
             else:                                   # full branch and full DB NOT exists
                 self.db_path = db_paths[1]
                 lite_db_used = False
                 if autocreate:
                     self.local_path = mirror.get(remote_paths[1])
-                    create_meta_full(self.local_path, db_path)
+                    create_meta_full(self.local_path, self.db_path)
             self.db_catalog = 'LITE' if lite_db_used else 'FULL'
 
         # Connect to the database.

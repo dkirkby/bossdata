@@ -135,7 +135,7 @@ class Manager(object):
         url = self.data_url + '/' + remote_path.lstrip('/')
         try:
             request = requests.get(url, stream=True, auth=self.authorization,
-                                   timeout=(3.05, 27))
+                                   timeout=(5, 90))
             if request.status_code != requests.codes.ok:
                 raise RuntimeError('HTTP request returned error code {} for {}.'.format(
                     request.status_code, url))

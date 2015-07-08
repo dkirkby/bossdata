@@ -7,16 +7,19 @@
 
 from __future__ import division,print_function
 
-import sys
-import os.path
-import posixpath
+import sys, time
+import os.path, posixpath
+import locale, fnmatch
 
 from astropy.utils.compat import argparse
 import bossdata.meta as bdm
 import bossdata.path as bdp
 
+# Let Python figure out from OS/Env what the locale is
+locale.setlocale(locale.LC_ALL, '')
+
 env_vars = ["BOSS_LOCAL_ROOT", "BOSS_DATA_URL", "BOSS_SAS_PATH", "BOSS_REDUX_VERSION"]
-# De-unixfy these via... posixpath, I guess
+# Need to de-unixfy these via... posixpath, I guess
 # Blanks/None will not be set
 boss_default_env = [None, None, "/sas/dr12/boss", "v5_7_0"]
 quasar_default_env = [None, None, "/sas/dr12/boss", "DR12Q"]
@@ -33,11 +36,13 @@ def main():
     overall_group.add_argument('--catalogs', type = str, default='FULL,LITE,QUASAR', metavar='FULL|LITE|QUASAR',
         help = 'Catalog names to target, separated by commas',)
     overall_group.add_argument('--env', action = 'store_true',
-    help = 'Print out the current bossdata environment settings.')
+        help = 'Print out the current bossdata environment settings.')
+    overall_group.add_argument('--set-env', type = str, default = None, metavar="BOSS|QUASAR|SEQUELS",
+        help = 'Temporarily sets environment to specified defaults.')
 
     db_group = parser.add_argument_group('Metadata DB Management')
     db_group.add_argument('--db-index-print', action = 'store_true',
-        help = 'Dump DB indexes, after any c+hanges.')
+        help = 'Dump DB indexes, after any changes.')
     db_group.add_argument('--db-index-update', type = str, default=None, metavar='INDEX_FILE',
         help = 'Update DB indexes according to the specified file.')
     db_group.add_argument('--db-index-reset', action = 'store_true',
@@ -57,17 +62,20 @@ def main():
         help = 'File was created at least N minutes again.')
     file_group.add_argument('-ctime', type = int, default = 0, metavar = 'N',
         help = 'File was created at least N*24 hours ago.')
+    file_group.add_argument('-filename', type = str, default = None, metavar = 'SUBSTRING',
+        help = 'File name substring that must be matched; filename wildcarding supported.')
     file_group.add_argument('--delete', action = 'store_true',
         help = 'Deletes files that match file criteria.')
-
-    # parser.add_argument('--set-env-type', type = str, default = None, metavar="BOSS|QUASAR|SEQUELS",
-    #     help = 'Sets environment to specified defaults.')
-
+    file_group.add_argument('--delete-test', action = 'store_true',
+        help = 'Prints files that --delete would remove.')
 
     if len(sys.argv)==1:
         parser.print_help()
         sys.exit(1)
     args = parser.parse_args()
+
+    if args.set_env:
+        set_env(args.set_env)
 
     # Figure out our list of catalog objects.  These will not autocreate the DB (or download any
     # files) if the DB's do not already exist.  Rather than replicate the logic of the Database
@@ -122,11 +130,20 @@ def main():
                 prune_meta_files(db)
 
     # And stuff that doesn't need the DB's to exist
+    if args.delete_test:
+        curr_boss_env = get_env()
+        print("Delete DRY-RUN: Files that would be deleted are:")
+        delete_files(curr_boss_env["BOSS_LOCAL_ROOT"], args.amin, args.atime, args.cmin,
+                    args.ctime, args.filename, dry_run=True)
+    if args.delete:
+        if(raw_input("Are you sure you want to proceed with deleting files (y|anthing)?") == y):
+            curr_boss_env = get_env()
+            delete_files(args.amin, args.atime, args.cmin, args.ctime, args.filename)
+        else:
+            print("Abandoning file delete with no changes made.")
     if args.total_files:
         display_file_space()
 
-    # if args.set_env_type:
-    #     set_env(args.set_env_type)
     if args.env:
         print_env()
 
@@ -134,24 +151,28 @@ def main():
 
 # Begin actual various implementations
 def display_file_space():
-    boss_env = get_env()
-    file_type_data = get_file_stats(boss_env["BOSS_LOCAL_ROOT"])
+    curr_boss_env = get_env()
+    file_type_data = get_file_stats(curr_boss_env["BOSS_LOCAL_ROOT"])
     total_file_size, total_count = 0, 0
 
     print("File storage data:")
     print("{:15s}|{:7s}|{:20s}".format("File Type", "Count", "Total Size (kB)"))
     print("-"*15 + "|" + "-"*7 + "|" + "-"*20)
     for k,v in file_type_data.items():
-        print("{:15s}|{:7d}|{:20d}".format(k, v[0], int(round(v[1]/1024))))
+        print("{:15s}|{:7s}|{:20s}".format(k,
+            locale.format("%d", v[0], grouping=True),
+            locale.format("%d", int(round(v[1]/1024)), grouping=True)))
         total_file_size += v[1]
         total_count += v[0]
     print("-"*15 + "|" + "-"*7 + "|" + "-"*20)
-    print("{:15s}|{:7d}|{:20d}".format("TOTAL", total_count, int(round(total_file_size/1024))))
+    print("{:15s}|{:7s}|{:20s}".format("TOTAL",
+        locale.format("%d", total_count, grouping=True),
+        locale.format("%d", int(round(total_file_size/1024)), grouping=True)))
 
 def get_file_stats(dirpath, in_lite=False):
     # catalog of tuples; key = file-type, tuple is (count, size)
-    _metadata_files = ["spAll-v5_7_0-lite.dat", "spAll-v5_7_0-lite.fits",
-        "spAll-v5_7_2.dat", "spAll-v5_7_2.fits", "DR12Q.fits"]
+    _metadata_files = ["spAll-v5_7_?-lite.dat", "spAll-v5_7_?.dat.gz",
+        "spAll-v5_7_?.fits", "DR12Q.*"]
     catalog = {}
 
     for dirpath, dirnames, filenames in os.walk(dirpath):
@@ -163,21 +184,49 @@ def get_file_stats(dirpath, in_lite=False):
                     filetype = "spec-lite"
                 else:
                     filetype = "spec"
+            elif f.startswith("spPlate") and f.endswith(".fits"):
+                filetype = "plate"
             elif f.startswith("spCFrame") and f.endswith(".fits"):
                 filetype = "cframe"
             elif f.startswith("spFrame") and f.endswith(".fits"):
                 filetype = "frame"
-            elif f.endswith(".db") or len([m for m in _metadata_files if f.startswith(m)]) > 0:
+            elif f.endswith(".db") or len([m for m in _metadata_files if fnmatch.fnmatch(f, m)]) > 0:
                 filetype = "meta"
-            list = catalog.setdefault(filetype, [0,0])
-            list[0:1] = [list[0]+1, list[1]+os.path.getsize(posixpath.join(dirpath, f)) ]
+                print("Found meta file: {}".format(f))
+            count_size = catalog.setdefault(filetype, [0,0])
+            count_size[0:1] = [count_size[0]+1,
+                                count_size[1]+os.path.getsize(posixpath.join(dirpath, f)) ]
 
+        '''
         for d in dirnames:
-            sub_catalog = get_file_stats(posixpath.join(dirpath, d), in_lite or dirpath == "lite")
+            sub_catalog = get_file_stats(posixpath.join(dirpath, d),
+                                            in_lite or dirpath == "lite")
             for k, v in sub_catalog.items():
                 catalog.setdefault(k, [0,0])[0:1] = v
-
+        '''
     return catalog
+
+def delete_files(dirpath, amin, atime, cmin, ctime, substring, dry_run=False):
+    for dirpath, dirnames, filenames in os.walk(dirpath):
+        for f in filenames:
+            print(posixpath.join(dirpath, f))
+            stat = os.stat(posixpath.join(dirpath, f))
+            now = time.time()
+            print(stat.st_atime, now - atime*86400)
+            print(stat)
+            if ((atime > 0 and stat.st_atime < now - atime*86400) or atime == 0) and \
+                    ((amin > 0 and stat.st_atime < now - amin*60) or amin == 0) and \
+                    ((ctime > 0 and stat.st_ctime < now - ctime*86400) or ctime == 0) and \
+                    ((cmin > 0 and stat.st_ctime < now - cmin*60) or cmin == 0) and \
+                    ((substring is not None and fnmatch.fnmatch(f, substring)) or substring is None):
+                # Delete it!
+                if not dry_run:
+                    os.remove(posixpath.join(dirpath, f))
+                else:
+                    print(posixpath.join(dirpath, f))
+                # For now just leave empty directories... no harm, just clutter.
+        for d in dirnames:
+            delete_files(posixpath.join(dirpath, d), amin, atime, cmin, ctime, substring, dry_run)
 
 def print_env():
     boss_env = get_env()
@@ -203,11 +252,11 @@ def set_env(env_type):
             os.environ[var_name] = var_value
 
 def get_env():
-    boss_env = {}
+    curr_boss_env = {}
     for name in env_vars:
-        boss_env[name]=os.environ.get(name, None)
+        curr_boss_env[name]=os.environ.get(name, None)
 
-    return boss_env
+    return curr_boss_env
 
 def prune_meta_files(meta_db):
     if os.path.isfile(meta_db.local_path) and meta_db.initialized:
