@@ -24,11 +24,18 @@ on using the :mod:`bossdata.path` and :mod:`bossdata.remote` modules together.
 
 from __future__ import division, print_function
 
-import os
+import os, time
 import posixpath
 
 from bossdata.plate import get_num_fibers
 
+def touch_path_mtime(path):
+    try :
+        time_tup = (int(time.time()), os.stat(path).st_mtime) # (atime, mtime)
+        os.utime(path, time_tup)
+    except Exception as e:
+        return False
+    return True
 
 class Finder(object):
     """Initialize a path finder object.

@@ -17,6 +17,7 @@ import astropy.table
 import fitsio
 
 from bossdata.spec import get_exposure_table
+import bossdata.path
 
 
 def get_num_fibers(plate):
@@ -48,6 +49,7 @@ class Plan(object):
     def __init__(self, path):
         self.plate = None
         self.exposures = {}
+        bossdata.path.touch_path_mtime(path)
         with open(path, 'r') as f:
             for line in f:
                 if not line.startswith('SPEXP'):

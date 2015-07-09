@@ -66,7 +66,7 @@ def main():
         help = 'File name substring that must be matched; filename wildcarding supported.')
     file_group.add_argument('--delete', action = 'store_true',
         help = 'Deletes files that match file criteria.')
-    file_group.add_argument('--delete-test', action = 'store_true',
+    file_group.add_argument('--dry-run', action = 'store_true',
         help = 'Prints files that --delete would remove.')
 
     if len(sys.argv)==1:
@@ -76,6 +76,7 @@ def main():
 
     if args.set_env:
         set_env(args.set_env)
+    curr_boss_env = get_env()
 
     # Figure out our list of catalog objects.  These will not autocreate the DB (or download any
     # files) if the DB's do not already exist.  Rather than replicate the logic of the Database
@@ -129,20 +130,21 @@ def main():
                     print("Pruning files for metadata DB's...")
                 prune_meta_files(db)
 
-    # And stuff that doesn't need the DB's to exist
-    if args.delete_test:
-        curr_boss_env = get_env()
-        print("Delete DRY-RUN: Files that would be deleted are:")
-        delete_files(curr_boss_env["BOSS_LOCAL_ROOT"], args.amin, args.atime, args.cmin,
-                    args.ctime, args.filename, dry_run=True)
+    # And stuff that don't need the DB's to exist
     if args.delete:
-        if(raw_input("Are you sure you want to proceed with deleting files (y|anthing)?") == y):
-            curr_boss_env = get_env()
+        # Once to run through what it WOULD be like...
+        if args.dry_run:
+            print("Delete DRY-RUN: Files that would be deleted are:")
+            delete_files(curr_boss_env["BOSS_LOCAL_ROOT"], args.amin, args.atime, args.cmin,
+                        args.ctime, args.filename, dry_run=True)
+        #Second time to (optionally) actually do it
+        if(raw_input("Are you sure you want to proceed with deleting files (y|anthing)?") == "y"):
             delete_files(args.amin, args.atime, args.cmin, args.ctime, args.filename)
         else:
             print("Abandoning file delete with no changes made.")
     if args.total_files:
-        display_file_space()
+        display_file_space(curr_boss_env["BOSS_LOCAL_ROOT"], args.amin, args.atime, args.cmin,
+                    args.ctime, args.filename)
 
     if args.env:
         print_env()
@@ -150,9 +152,9 @@ def main():
     print("All done!")
 
 # Begin actual various implementations
-def display_file_space():
+def display_file_space(dirpath, amin, atime, cmin, ctime, substring):
     curr_boss_env = get_env()
-    file_type_data = get_file_stats(curr_boss_env["BOSS_LOCAL_ROOT"])
+    file_type_data = get_file_stats(dirpath, amin, atime, cmin, ctime, substring)
     total_file_size, total_count = 0, 0
 
     print("File storage data:")
@@ -169,13 +171,31 @@ def display_file_space():
         locale.format("%d", total_count, grouping=True),
         locale.format("%d", int(round(total_file_size/1024)), grouping=True)))
 
-def get_file_stats(dirpath, in_lite=False):
+def filter_oswalk(dirpath, amin, atime, cmin, ctime, substring):
+    ret = []
+    for root, dirs, files in os.walk(dirpath):
+        ret_files = []
+        for f in files:
+            stat = os.stat(posixpath.join(root, f))
+            now = time.time()
+            if ((atime > 0 and stat.st_atime < now - atime*86400) or atime == 0) and \
+                    ((amin > 0 and stat.st_atime < now - amin*60) or amin == 0) and \
+                    ((ctime > 0 and stat.st_ctime < now - ctime*86400) or ctime == 0) and \
+                    ((cmin > 0 and stat.st_ctime < now - cmin*60) or cmin == 0) and \
+                    ((substring is not None and fnmatch.fnmatch(f, substring)) or substring is None):
+                ret_files.append(f)
+        if len(ret_files) > 0:
+            ret.append((root, dirs, ret_files))
+    return ret
+
+def get_file_stats(dirpath, amin, atime, cmin, ctime, substring, in_lite=False):
     # catalog of tuples; key = file-type, tuple is (count, size)
     _metadata_files = ["spAll-v5_7_?-lite.dat", "spAll-v5_7_?.dat.gz",
         "spAll-v5_7_?.fits", "DR12Q.*"]
     catalog = {}
 
-    for dirpath, dirnames, filenames in os.walk(dirpath):
+    tup_tree = filter_oswalk(dirpath, amin, atime, cmin, ctime, substring)
+    for dirpath, dirnames, filenames in tup_tree:
         for f in filenames:
             # spec, spec-lite, frame, cframe, metadata
             filetype = "other"
@@ -196,37 +216,18 @@ def get_file_stats(dirpath, in_lite=False):
             count_size = catalog.setdefault(filetype, [0,0])
             count_size[0:1] = [count_size[0]+1,
                                 count_size[1]+os.path.getsize(posixpath.join(dirpath, f)) ]
-
-        '''
-        for d in dirnames:
-            sub_catalog = get_file_stats(posixpath.join(dirpath, d),
-                                            in_lite or dirpath == "lite")
-            for k, v in sub_catalog.items():
-                catalog.setdefault(k, [0,0])[0:1] = v
-        '''
     return catalog
 
 def delete_files(dirpath, amin, atime, cmin, ctime, substring, dry_run=False):
-    for dirpath, dirnames, filenames in os.walk(dirpath):
+    tup_tree = filter_oswalk(dirpath, amin, atime, cmin, ctime, substring)
+    for dirpath, dirnames, filenames in tup_tree:
         for f in filenames:
-            print(posixpath.join(dirpath, f))
-            stat = os.stat(posixpath.join(dirpath, f))
-            now = time.time()
-            print(stat.st_atime, now - atime*86400)
-            print(stat)
-            if ((atime > 0 and stat.st_atime < now - atime*86400) or atime == 0) and \
-                    ((amin > 0 and stat.st_atime < now - amin*60) or amin == 0) and \
-                    ((ctime > 0 and stat.st_ctime < now - ctime*86400) or ctime == 0) and \
-                    ((cmin > 0 and stat.st_ctime < now - cmin*60) or cmin == 0) and \
-                    ((substring is not None and fnmatch.fnmatch(f, substring)) or substring is None):
+            if not dry_run:
                 # Delete it!
-                if not dry_run:
-                    os.remove(posixpath.join(dirpath, f))
-                else:
-                    print(posixpath.join(dirpath, f))
-                # For now just leave empty directories... no harm, just clutter.
-        for d in dirnames:
-            delete_files(posixpath.join(dirpath, d), amin, atime, cmin, ctime, substring, dry_run)
+                os.remove(posixpath.join(dirpath, f))
+            else:
+                print(posixpath.join(dirpath, f))
+            # For now just leave empty directories... no harm, just clutter.
 
 def print_env():
     boss_env = get_env()

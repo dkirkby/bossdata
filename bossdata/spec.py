@@ -15,6 +15,7 @@ import fitsio
 
 import astropy.table
 
+import bossdata.path
 
 def get_exposure_table(header):
     """Parse FITS header keywords to extract exposure info.
@@ -86,6 +87,7 @@ class SpecFile(object):
     """
     def __init__(self, path):
         self.hdulist = fitsio.FITS(path, mode=fitsio.READONLY)
+        bossdata.path.touch_path_mtime(path)
         self.lite = (len(self.hdulist) == 4)
         self.header = self.hdulist[0].read_header()
         # Look up the available exposures.

@@ -22,7 +22,6 @@ from progressbar import ProgressBar, Percentage, Bar
 import bossdata.path
 import bossdata.remote
 
-
 def sql_create_table(table_name, recarray_dtype, renaming_rules={}, primary_key=None):
     """Prepare an SQL statement to create a database for a numpy structured array.
 
@@ -126,6 +125,7 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
 
     # Pass-1 uses only the first 100 lines to automatically determine the column names and
     # types.
+    bossdata.path.touch_path_mtime(sp_all_path)
     lines = ''
     with gzip.open(sp_all_path) as f:
         for i in range(100):
@@ -191,6 +191,7 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
     position = 0
 
     # Open the FITs file.
+    bossdata.path.touch_path_mtime(catalog_path)
     with fitsio.FITS(catalog_path) as hdulist:
         # This just reads the headers but still takes 15-20 seconds.
         # The equivalent operation with astropy.io.fits takes 15-20 minutes!
@@ -369,6 +370,11 @@ class Database(object):
 
         # Connect to the database.
         if os.path.isfile(self.db_path):
+            # We're setting this to know when this was last used, but by accessing it via
+            # bosslocalmgr we're reseting the access time to now.  So DB's will never
+            # get old as far as the tool is concerned.  Is this actually a problem?
+            bossdata.path.touch_path_mtime(self.db_path)
+
             self.connection = sqlite3.connect(self.db_path)
             self.cursor = self.connection.cursor()
 
