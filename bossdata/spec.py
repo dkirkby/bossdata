@@ -16,10 +16,10 @@ import fitsio
 import astropy.table
 
 
-def get_exposure_table(header):
-    """Parse FITS header keywords to extract exposure info.
+class Exposures(object):
+    """Table of exposure info extracted from FITS header keywords.
 
-    Uses the NEXP and EXPID01-12 keywords that are present in the header of HDU0
+    Uses the NEXP and EXPIDnn keywords that are present in the header of HDU0
     in spPlate and spec FITS files.
 
     Args:
@@ -33,37 +33,51 @@ def get_exposure_table(header):
         keyword described each of the four spectrographs, or n=0 if this spectrograph
         is not present for this exposure.
     """
-    num_exposures = header['NEXP']
-    exposures = {}
-    expid_pattern = re.compile('([br][12])-([0-9]{8})-([0-9]{8})-([0-9]{8})')
-    for i in range(num_exposures):
-        spec_id, exp_num, flat_num, arc_num = expid_pattern.match(
-            header['EXPID{0:02d}'.format(i + 1)]).groups()
-        if exp_num in exposures:
-            info = exposures[exp_num]
-            # Check that the arc and flat exposure numbers agree.
-            if info['arc'] != arc_num:
-                raise RuntimeError(
-                    'Found inconsistent arcs for expid {}.'.format(exp_num))
-            if info['flat'] != flat_num:
-                raise RuntimeError(
-                    'Found inconsistent flats for expid {}.'.format(exp_num))
-        else:
-            # Initialize a new record with zeros to indicate a missing camera.
-            info = dict(arc=arc_num, flat=flat_num, b1=0, b2=0, r1=0, r2=0)
-        # Record which EXP<nn> we found this spectrograph in.
-        info[spec_id] = i + 1
-        exposures[exp_num] = info
-    # Build a table of exposure info sorted by exposure number.
-    exposure_table = astropy.table.Table(
-        names=('exp', 'arc', 'flat', 'b1', 'b2', 'r1', 'r2'),
-        dtype=('i4', 'i4', 'i4', 'i4', 'i4', 'i4', 'i4'))
-    for exp_num in sorted(exposures.keys()):
-        info = exposures[exp_num]
-        exposure_table.add_row((
-            exp_num, info['arc'], info['flat'],
-            info['b1'], info['b2'], info['r1'], info['r2']))
-    return exposure_table
+    def __init__(self, header):
+        num_exposures = header['NEXP']
+        expid_pattern = re.compile('([br][12])-([0-9]{8})-([0-9]{8})-([0-9]{8})')
+        exposure_set = set()
+        self.table = astropy.table.Table(
+            names=('offset', 'camera', 'science', 'flat', 'arc'),
+            dtype=('i4', 'S2', 'i4', 'i4', 'i4'))
+        for i in range(num_exposures):
+            camera, science_num, flat_num, arc_num = expid_pattern.match(
+                header['EXPID{0:02d}'.format(i + 1)]).groups()
+            self.table.add_row((i, camera, int(science_num), int(flat_num), int(arc_num)))
+            exposure_set.add(int(science_num))
+        self.sequence = sorted(exposure_set)
+        self.num_exposures = len(exposure_set)
+
+    def get_info(self, exposure_index, camera):
+        """Get info about the specified exposure.
+
+        Args:
+            exposure_index(int): The sequence number for the requested exposure,
+                starting from zero.
+            camera(str): One of b1,b2,r1,r2.
+
+        Returns:
+            A structured array with information about the requested exposure.
+
+        Raises:
+            ValueError: Invalid exposure_index or camera.
+            RuntimeError: Exposure not present.
+        """
+        if camera not in ('b1', 'b2', 'r1', 'r2'):
+            raise ValueError(
+                'Invalid camera "{}", expected b1, b2, r1, or r2.'.format(camera))
+        if exposure_index < 0 or exposure_index >= self.num_exposures:
+            raise ValueError('Invalid exposure_index {}, expected 0-{}.'.format(
+                exposure_index, self.num_exposures))
+        science_num = self.sequence[exposure_index]
+        row = (self.table['science'] == science_num) & (self.table['camera'] == camera)
+        if not np.any(row):
+            raise RuntimeError('No exposure[{}] = {:08d} found for {}.'.format(
+                exposure_index, science_num, camera))
+        if np.count_nonzero(row) > 1:
+            raise RuntimeError('Multiple {} exposures {:08d} found for {}.'.format(
+                flavor, exp_id, camera))
+        return self.table[row][0]
 
 
 class SpecFile(object):
@@ -90,9 +104,9 @@ class SpecFile(object):
         self.header = self.hdulist[0].read_header()
         # Look up the available exposures.
         self.num_exposures = self.header['NEXP']
-        self.exposure_table = get_exposure_table(self.header)
+        self.exposures = Exposures(self.header)
 
-    def get_exposure_hdu(self, exposure_index=None, camera=None):
+    def get_exposure_hdu(self, exposure_index, camera):
         """Lookup the HDU for one exposure.
 
         This method will not work on "lite" files, which do not include individual
@@ -102,34 +116,19 @@ class SpecFile(object):
             exposure_index(int): Individual exposure to use, specified as a sequence number
                 starting from zero, for the first exposure, and increasing up to
                 `self.num_exposures-1`.
-            camera(str): Which camera to use. Must be either 'blue' or 'red'.
+            camera(str): Which camera to use. Must be one of b1,b2,r1,r2.
 
         Returns:
             hdu: The HDU containing data for the requested exposure.
 
         Raises:
-            ValueError: Invalid exposure_index or camera.
-            RuntimeError: This camera is missing for this exposure or this is a lite
-                file with no individual exposures.
+            RuntimeError: individual exposures not available in lite file.
         """
-        if exposure_index < 0 or exposure_index >= self.num_exposures:
-            raise ValueError('exposure index must be in the range 0-{0}.'.format(
-                self.num_exposures - 1))
-        if camera not in ('blue', 'red'):
-            raise ValueError('camera must be either "blue" or "red".')
         if self.lite:
             raise RuntimeError('individual exposures not available in lite file.')
 
-        info = self.exposure_table[exposure_index]
-        if camera == 'blue':
-            hdu_index = 3 + info['b1'] + info['b2']
-        else:
-            hdu_index = 3 + info['r1'] + info['r2']
-        if hdu_index == 0:
-            raise RuntimeError('Missing {0} camera for exposure {1}.'.format(
-                camera, info['exp']))
-
-        return self.hdulist[hdu_index]
+        info = self.exposures.get_info(exposure_index, camera)
+        return self.hdulist[4 + info['offset']]
 
     def get_pixel_mask(self, exposure_index=None, camera=None):
         """Get the pixel mask for a specified exposure or the combined coadd.
@@ -141,8 +140,8 @@ class SpecFile(object):
             exposure_index(int): Individual exposure to use, specified as a sequence number
                 starting from zero, for the first exposure, and increasing up to
                 `self.num_exposures-1`. Uses the co-added spectrum when the value is None.
-            camera(str): Which camera to use. Must be either 'b' (blue) or 'r' (red) unless
-                exposure_index is None, in which case this argument is ignored.
+            camera(str): Which camera to use. Must be either 'b1', 'b2' (blue) or 'r1', 'r2'
+                (red) unless exposure_index is None, in which case this argument is ignored.
 
         Returns:
             numpy.ndarray: Array of integers, one per pixel, encoding the mask bits defined
@@ -169,8 +168,8 @@ class SpecFile(object):
             exposure_index(int): Individual exposure to use, specified as a sequence number
                 starting from zero, for the first exposure, and increasing up to
                 `self.num_exposures-1`. Uses the co-added spectrum when the value is None.
-            camera(str): Which camera to use. Must be either 'b' (blue) or 'r' (red) unless
-                exposure_index is None, in which case this argument is ignored.
+            camera(str): Which camera to use. Must be either 'b1', 'b2' (blue) or 'r1', 'r2'
+                (red) unless exposure_index is None, in which case this argument is ignored.
             pixel_quality_mask(int): An integer value interpreted as a bit pattern using the
                 bits defined in :attr:`bossdata.bits.SPPIXMASK` (see also
                 http://www.sdss3.org/dr10/algorithms/bitmask_sppixmask.php). Any bits set in

@@ -256,10 +256,10 @@ def main():
             remote_path = finder.get_plate_spec_path(plate=args.plate, mjd=args.mjd)
             local_path = mirror.get(remote_path)
             platefile = bossdata.plate.PlateFile(local_path)
-            num_exposures = len(platefile.exposure_table)
+            num_exposures = platefile.exposures.num_exposures
             if args.verbose:
                 print('Exposure summary:')
-                print(platefile.exposure_table)
+                print(platefile.exposures.table)
         else:
             lite = (args.exposure is None)
             remote_paths = [finder.get_spec_path(plate=args.plate, mjd=args.mjd,
@@ -270,10 +270,10 @@ def main():
             local_paths = []
             local_path = mirror.get(remote_paths, local_paths=local_paths)
             specfile = bossdata.spec.SpecFile(local_path)
-            num_exposures = len(specfile.exposure_table)
+            num_exposures = specfile.exposures.num_exposures
             if args.verbose:
                 print('Exposure summary:')
-                print(specfile.exposure_table)
+                print(specfile.exposures.table)
                 if local_path != local_paths[0]:
                     print('Using local full spec file instead of downloading lite file.')
     except (RuntimeError, ValueError) as e:
@@ -351,21 +351,29 @@ def main():
             if args.verbose:
                 print_mask_summary('Red', frames['red'].get_pixel_masks(fibers)[0])
     else:
-        exposure_id = specfile.exposure_table[args.exposure]['exp']
-        if args.verbose:
-            print('Showing exposure {:08d}.'.format(exposure_id))
+        # Which spectrograph is this fiber on for this plate?
+        num_fibers = bossdata.plate.get_num_fibers(args.plate)
+        spec_index = '1' if args.fiber <= num_fibers // 2 else '2'
         if args.camera in ('blue', 'both'):
+            camera = 'b' + spec_index
+            exposure_id = specfile.exposures.get_info(args.exposure, camera)['science']
+            if args.verbose:
+                print('Showing blue exposure {:08d}.'.format(exposure_id))
             spectra.append(specfile.get_valid_data(
-                args.exposure, 'blue', pixel_quality_mask=pixel_quality_mask, **data_args))
+                args.exposure, camera, pixel_quality_mask=pixel_quality_mask, **data_args))
             plot_colors.append('blue')
             if args.verbose:
-                print_mask_summary('Blue', specfile.get_pixel_mask(args.exposure, 'blue'))
+                print_mask_summary('Blue', specfile.get_pixel_mask(args.exposure, camera))
         if args.camera in ('red', 'both'):
+            camera = 'r' + spec_index
+            exposure_id = specfile.exposures.get_info(args.exposure, camera)['science']
+            if args.verbose:
+                print('Showing red exposure {:08d}.'.format(exposure_id))
             spectra.append(specfile.get_valid_data(
-                args.exposure, 'red', pixel_quality_mask=pixel_quality_mask, **data_args))
+                args.exposure, camera, pixel_quality_mask=pixel_quality_mask, **data_args))
             plot_colors.append('red')
             if args.verbose:
-                print_mask_summary('Red', specfile.get_pixel_mask(args.exposure, 'red'))
+                print_mask_summary('Red', specfile.get_pixel_mask(args.exposure, camera))
 
     # Determine this plot's label and use it for the plot window title.
     plot_label = '{plate}-{mjd}-{fiber}'.format(
