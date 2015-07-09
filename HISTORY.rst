@@ -63,3 +63,8 @@ History
 * Adds command-line options to customize bossplot axes, add labels and grids, and display invalid data.
 * General documentation cleanup.
 * Better error handling in bossplot.
+
+0.2.6 (???)
+-----------
+
+* Fix issues #74
