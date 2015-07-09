@@ -16,7 +16,7 @@ import astropy.table
 
 import fitsio
 
-from bossdata.spec import get_exposure_table
+from bossdata.spec import Exposures
 
 
 def get_num_fibers(plate):
@@ -289,7 +289,7 @@ class PlateFile(object):
         self.num_fibers = self.header['NAXIS2']
         # Look up the number of exposures used for this coadd.
         self.num_exposures = self.header['NEXP']
-        self.exposure_table = get_exposure_table(self.header)
+        self.exposures = Exposures(self.header)
         # Calculate the common wavelength grid from header keywords.
         num_pixels = self.header['NAXIS1']
         loglam_min = self.header['COEFF0']
