@@ -197,7 +197,7 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
         # The equivalent operation with astropy.io.fits takes 15-20 minutes!
 
         # table = hdulist[1].read(rows=[position,position+chunk_size])
-        table = hdulist[1][position:(position+chunk_size)]
+        table = hdulist[1][position:(position + chunk_size)]
 
         # Create a new database file.
         sql, num_cols = sql_create_table(
@@ -233,7 +233,7 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
                     update_var += 1
 
             position += chunk_size
-            end_position = position+chunk_size
+            end_position = position + chunk_size
             if end_position > maxcount:
                 end_position = maxcount
                 if position > maxcount:

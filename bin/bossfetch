@@ -187,7 +187,7 @@ def main():
     if args.save:
         with open(args.save, 'w') as f:
             for remote_path in remote_paths:
-                f.write(remote_path+'\n')
+                f.write(remote_path + '\n')
         print('Saved {0} remote file names to {1}.'.format(num_files, args.save))
         return 0
 
@@ -208,7 +208,7 @@ def main():
             num_local, num_files, 100 * num_local / num_files, local_bytes / Mb))
         print('This command would download {} new files.'.format(num_files - num_local))
         if num_local < num_files and num_local > 0:
-            fetch_bytes = (local_bytes/num_local) * (num_files - num_local)
+            fetch_bytes = (local_bytes / num_local) * (num_files - num_local)
             print('Estimated total download size is {:.1f} Mb.'.format(fetch_bytes / Mb))
         return 0
 
@@ -222,12 +222,12 @@ def main():
     # Launch subprocesses to handle subsets of remote paths.
     if num_files < args.nproc:
         args.nproc = num_files
-    chunk_size = (len(remote_paths) + args.nproc - 1)//args.nproc
+    chunk_size = (len(remote_paths) + args.nproc - 1) // args.nproc
     processes = []
     for i in range(args.nproc):
         # The last chunk will be shorter if the number of paths does not evenly divide
         # between the subprocesses.
-        chunk = remote_paths[i*chunk_size:(i+1)*chunk_size]
+        chunk = remote_paths[i * chunk_size:(i + 1) * chunk_size]
         process = multiprocessing.Process(target=fetch, args=(chunk, response_queue))
         processes.append(process)
         process.start()
@@ -263,11 +263,11 @@ def main():
 
     if args.verbose:
         print('Fetched {:.1f} Mb for {:d} files.'.format(
-            num_bytes/float(1 << 20), num_fetched))
+            num_bytes / float(1 << 20), num_fetched))
 
     if num_fetched != num_files:
         print('WARNING: {:d} of {:d} files were not fetched.'.format(
-            num_files-num_fetched, num_files),
+            num_files - num_fetched, num_files),
             'Re-run the command after any problems are fixed.')
 
 if __name__ == '__main__':
