@@ -14,6 +14,7 @@ import locale, fnmatch
 from astropy.utils.compat import argparse
 import bossdata.meta as bdm
 import bossdata.path as bdp
+import datetime
 
 # Let Python figure out from OS/Env what the locale is
 locale.setlocale(locale.LC_ALL, '')
@@ -62,8 +63,8 @@ def main():
         help = 'File was created at least N minutes again.')
     file_group.add_argument('-ctime', type = int, default = 0, metavar = 'N',
         help = 'File was created at least N*24 hours ago.')
-    file_group.add_argument('-filename', type = str, default = None, metavar = 'SUBSTRING',
-        help = 'File name substring that must be matched; filename wildcarding supported.')
+    file_group.add_argument('-name', type = str, default = None, metavar = 'NAME',
+        help = 'File name that must be matched; filename wildcarding supported.')
     file_group.add_argument('--delete', action = 'store_true',
         help = 'Deletes files that match file criteria.')
     file_group.add_argument('--dry-run', action = 'store_true',
@@ -130,21 +131,21 @@ def main():
                     print("Pruning files for metadata DB's...")
                 prune_meta_files(db)
 
-    # And stuff that don't need the DB's to exist
+    # And ops that don't need the DB's to exist
     if args.delete:
         # Once to run through what it WOULD be like...
         if args.dry_run:
             print("Delete DRY-RUN: Files that would be deleted are:")
             delete_files(curr_boss_env["BOSS_LOCAL_ROOT"], args.amin, args.atime, args.cmin,
-                        args.ctime, args.filename, dry_run=True)
+                        args.ctime, args.name, dry_run=True)
         #Second time to (optionally) actually do it
-        if(raw_input("Are you sure you want to proceed with deleting files (y|anthing)?") == "y"):
-            delete_files(args.amin, args.atime, args.cmin, args.ctime, args.filename)
+        if(raw_input("Are you sure you want to proceed with deleting files (y|anything)?") == "y"):
+            delete_files(curr_boss_env["BOSS_LOCAL_ROOT"], args.amin, args.atime, args.cmin, args.ctime, args.name)
         else:
             print("Abandoning file delete with no changes made.")
     if args.total_files:
         display_file_space(curr_boss_env["BOSS_LOCAL_ROOT"], args.amin, args.atime, args.cmin,
-                    args.ctime, args.filename)
+                    args.ctime, args.name)
 
     if args.env:
         print_env()
@@ -195,12 +196,12 @@ def get_file_stats(dirpath, amin, atime, cmin, ctime, substring, in_lite=False):
     catalog = {}
 
     tup_tree = filter_oswalk(dirpath, amin, atime, cmin, ctime, substring)
-    for dirpath, dirnames, filenames in tup_tree:
+    for root, dirnames, filenames in tup_tree:
         for f in filenames:
             # spec, spec-lite, frame, cframe, metadata
             filetype = "other"
             if f.startswith("spec-") and f.endswith(".fits"):
-                if in_lite:
+                if in_lite or "lite" in root:  # How else to tell? File size better...
                     filetype = "spec-lite"
                 else:
                     filetype = "spec"
@@ -212,10 +213,9 @@ def get_file_stats(dirpath, amin, atime, cmin, ctime, substring, in_lite=False):
                 filetype = "frame"
             elif f.endswith(".db") or len([m for m in _metadata_files if fnmatch.fnmatch(f, m)]) > 0:
                 filetype = "meta"
-                print("Found meta file: {}".format(f))
             count_size = catalog.setdefault(filetype, [0,0])
             count_size[0:1] = [count_size[0]+1,
-                                count_size[1]+os.path.getsize(posixpath.join(dirpath, f)) ]
+                                count_size[1]+os.path.getsize(posixpath.join(root, f)) ]
     return catalog
 
 def delete_files(dirpath, amin, atime, cmin, ctime, substring, dry_run=False):
