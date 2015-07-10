@@ -209,7 +209,7 @@ def get_file_stats(dirpath, amin, atime, cmin, ctime, substring, in_lite=False):
                 filetype = "plate"
             elif f.startswith("spCFrame") and f.endswith(".fits"):
                 filetype = "cframe"
-            elif f.startswith("spFrame") and f.endswith(".fits"):
+            elif f.startswith("spFrame") and f.endswith(".fits.gz"):
                 filetype = "frame"
             elif f.endswith(".db") or len([m for m in _metadata_files if fnmatch.fnmatch(f, m)]) > 0:
                 filetype = "meta"

@@ -285,6 +285,7 @@ class PlateFile(object):
     """
     def __init__(self, path):
         self.hdulist = fitsio.FITS(path, mode=fitsio.READONLY)
+        bossdata.path.touch_path_mtime(path)
         self.header = self.hdulist[0].read_header()
         # Look up the number of fibers.
         self.num_fibers = self.header['NAXIS2']
@@ -441,6 +442,7 @@ class FrameFile(object):
         self.index = index
         self.calibrated = calibrated
         self.hdulist = fitsio.FITS(path, mode=fitsio.READONLY)
+        bossdata.path.touch_path_mtime(path)
         self.header = self.hdulist[0].read_header()
         # Look up the number of fibers.
         self.num_fibers = self.header['NAXIS2']
