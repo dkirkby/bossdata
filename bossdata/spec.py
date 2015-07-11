@@ -15,6 +15,53 @@ import fitsio
 
 import astropy.table
 
+def get_fiducial_pixel_offset(wlen, wlen_grid=1e-4, fid_lambda=3500.26):
+    """
+    Returns the nearest pixel index offset from the start of the BOSS co-add fiducial
+    wavelength grid.
+
+    Modified from code from @dmargala.
+
+    Note on defualt value of 3500.26:
+        Data from e.g. frames will have wlen's that go much below this (e.g. ~2875 for
+    3586-55181-0001 exp1), though possibly always masked.  (It seems) the default value here
+    (3500.26) should be considered the lowest useful wlen, and is the lowest ever in a
+    co-added spectra.
+
+    Args:
+        wlen (float): central wavelength (log10 if wlen <= 6 or linear if wlen > 6) of first pixel
+        wlen_grid (float, optional): log10 spacing between pixel centers
+        fid_lambda (float, optional): The starting wavelength (log10 or linear; as wlen)
+    Returns:
+        pixel index offset from the start of the fiducial wavelength grid.
+    """
+    wlen_log10 = wlen if wlen <= 6 else np.log10(wlen)
+    fid_lambda_log10 = fid_lambda if fid_lambda <= 6 else np.log10(fid_lambda)
+
+    delta = (wlen_log10 - fid_lambda_log10) / wlen_grid
+    offset = np.rint(delta).astype(int)
+
+    return offset
+
+def spectra_to_fiducial_offset(data):
+    """
+    Returns a spectra ndarray padded and offset (and masked, if the passed in type is a
+    MaskedArray) so that it wlen bin is aligned with is array indexing.  This is done by
+    getting the offset for data['wavelength'][0], ignorning any mask, from
+    get_fiducial_pixel_offset.
+
+    This is indeded for use with co-added spectra only.
+
+    Args:
+        data (numpy.ndarray):  Data to be aligned
+    Returns:
+        numpy.ndarray containing data and, potentially, padding values.
+    """
+    offset = get_fiducial_pixel_offset(data.view(type=np.ndarray)['wavelength'][0])
+    new_data = np.ma.zeros((4800,), dtype = data.dtype)
+    new_data[:] = np.ma.masked
+    new_data[offset:(offset+data.shape[0])] = data
+    return new_data
 
 class Exposures(object):
     """Table of exposure info extracted from FITS header keywords.
