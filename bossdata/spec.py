@@ -58,7 +58,9 @@ def spectra_to_fiducial_offset(data):
         numpy.ndarray containing data and, potentially, padding values.
     """
     offset = get_fiducial_pixel_offset(data.view(type=np.ndarray)['wavelength'][0])
-    new_data = np.ma.zeros((4800,), dtype = data.dtype)
+    new_shape = list(data.shape)
+    new_shape[0] = 4800
+    new_data = np.ma.zeros(tuple(new_shape), dtype = data.dtype)
     new_data[:] = np.ma.masked
     new_data[offset:(offset+data.shape[0])] = data
     return new_data
