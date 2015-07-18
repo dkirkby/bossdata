@@ -12,6 +12,7 @@ import gzip
 import sqlite3
 import stat
 import re
+import time
 
 import numpy as np
 import astropy.table
@@ -363,8 +364,10 @@ class Database(object):
             self.column_dtypes.append(sql_type_map[dtype])
 
         # Look up and save the number of rows in the database.
-        self.cursor.execute('SELECT COUNT(*) FROM meta')
+        start_timme = time.time()
+        self.cursor.execute('SELECT COUNT(PLATE) FROM meta')
         self.num_rows = self.cursor.fetchone()[0]
+        print("Init select took {} secs.".format(time.time()-start_time))
         self.lite = lite_db_used
 
     def prepare_columns(self, column_names):
