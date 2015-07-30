@@ -156,7 +156,7 @@ class SpecFile(object):
             return hdu['mask'][:]
 
     def get_valid_data(self, exposure_index=None, camera=None, pixel_quality_mask=None,
-                       include_wdisp=False, include_sky=False):
+                       include_wdisp=False, include_sky=False, ivar=False, loglam=False):
         """Get the valid data for a specified exposure or the combined coadd.
 
         You will probably find yourself using this idiom often::
@@ -179,14 +179,18 @@ class SpecFile(object):
                 applied if this value is None.
             include_wdisp: Include a wavelength dispersion column in the returned data.
             include_sky: Include a sky flux column in the returned data.
+            ivar: Replace ``dflux`` with ``ivar`` (inverse variance) in the returned data.
+            loglam: Replace ``wavelength`` with ``loglam`` (``log10(wavelength)``) in the
+                returned data.
 
         Returns:
             numpy.ma.MaskedArray: Masked array of per-pixel records. Pixels with no valid data
                 are included but masked. The record for each pixel has at least the following
-                named fields: wavelength in Angstroms, flux and dflux in 1e-17
-                ergs/s/cm2/Angstrom. Wavelength values are strictly increasing and dflux is
-                calculated as ivar**-0.5 for pixels with valid data. Optional fields are
-                wdisp in constant-log10-lambda pixels and sky in 1e-17 ergs/s/cm2/Angstrom.
+                named fields: wavelength in Angstroms (or loglam), flux and dflux in 1e-17
+                ergs/s/cm2/Angstrom (or flux and ivar). Wavelength values are strictly
+                increasing and dflux is calculated as ivar**-0.5 for pixels with valid data.
+                Optional fields are wdisp in constant-log10-lambda pixels and sky in 1e-17
+                ergs/s/cm2/Angstrom.
         """
         # Look up the HDU for this spectrum and its pixel quality bitmap.
         if exposure_index is None:
@@ -208,16 +212,24 @@ class SpecFile(object):
         good_pixels = ~bad_pixels
 
         # Create and fill the unmasked structured array of data.
-        dtype = [('wavelength', np.float32), ('flux', np.float32), ('dflux', np.float32)]
+        dtype = [('loglam' if loglam else 'wavelength', np.float32),
+            ('flux', np.float32), ('ivar' if ivar else 'dflux', np.float32)]
         if include_wdisp:
             dtype.append(('wdisp', np.float32))
         if include_sky:
             dtype.append(('sky', np.float32))
         data = np.empty(num_pixels, dtype=dtype)
-        data['wavelength'][:] = np.power(10.0, hdu['loglam'][:])
+        if loglam:
+            data['loglam'][:] = hdu['loglam'][:]
+        else:
+            data['wavelength'][:] = np.power(10.0, hdu['loglam'][:])
         data['flux'][:] = hdu['flux'][:]
-        data['dflux'][good_pixels] = 1.0 / np.sqrt(ivar[good_pixels])
-        data['dflux'][bad_pixels] = 0.0
+        if ivar:
+            data['ivar'][good_pixels] = ivar[good_pixels]
+            data['ivar'][bad_pixels] = 0.0
+        else:
+            data['dflux'][good_pixels] = 1.0 / np.sqrt(ivar[good_pixels])
+            data['dflux'][bad_pixels] = 0.0
         if include_wdisp:
             data['wdisp'][:] = hdu['wdisp'][:]
         if include_sky:
