@@ -16,22 +16,36 @@ import fitsio
 import astropy.table
 
 
-def get_fiducial_pixel_index(wavelength, coeff=1e-4, log10lam0=np.log10(3500.26)):
+def get_fiducial_pixel_index(wavelength):
         """
         Convert a wavelength to a fiducial pixel index.
 
         Args:
             wavelength(float): Input wavelength in Angstroms.
-            coef(float): Linear coefficient used for the conversion.
-            log10lam0(float): log10 of the wavelength (in Angstroms) corresponding
-                to pixel index zero.
 
         Returns:
             int: Index relative to the fiducial wavelength grid. If the input wavelength
                 is not exactly on the fiducial grid, the result will be rounded in
                 log10(wavelength).
         """
-        return np.round((np.log10(wavelength) - log10lam0)/coeff).astype(int)
+        return np.round((np.log10(wavelength) -
+                        _fiducial_log10lam0)/_fiducial_coef).astype(int)
+
+_fiducial_coef = 1e-4
+_fiducial_log10lam0 = np.log10(3500.26)
+
+fiducial_pixel_index_range = (0, 4800)
+"""
+Range of fiducial pixel indices covering all spectra.
+
+Pixel indices are calculated by :func:`get_fiducial_pixel_index`.
+"""
+
+fiducial_wavelengths = np.power(10., _fiducial_log10lam0 +
+                                _fiducial_coef * np.arange(*fiducial_pixel_index_range))
+"""
+Array of fiducial pixel values in Angstroms covering all spectra.
+"""
 
 
 class Exposures(object):
@@ -93,8 +107,8 @@ class Exposures(object):
             raise RuntimeError('No exposure[{}] = {:08d} found for {}.'.format(
                 exposure_index, science_num, camera))
         if np.count_nonzero(row) > 1:
-            raise RuntimeError('Multiple {} exposures {:08d} found for {}.'.format(
-                flavor, exp_id, camera))
+            raise RuntimeError(
+                'Found multiple {} exposures {:08d}.'.format(camera, exposure_index))
         return self.table[row][0]
 
 
@@ -175,7 +189,7 @@ class SpecFile(object):
 
     def get_valid_data(self, exposure_index=None, camera=None, pixel_quality_mask=None,
                        include_wdisp=False, include_sky=False, use_ivar=False,
-                       use_loglam=False):
+                       use_loglam=False, trimmed_grid=True):
         """Get the valid data for a specified exposure or the combined coadd.
 
         You will probably find yourself using this idiom often::
@@ -202,6 +216,9 @@ class SpecFile(object):
                 data.
             use_loglam: Replace ``wavelength`` with ``loglam`` (``log10(wavelength)``) in
                 the returned data.
+            trimmed_grid: Return an array using the trimmed wavelength grid stored in the
+                spec file.  If False, the returned array is padded (with zero ivar pixels)
+                to cover the full fiducial range, if necessary.
 
         Returns:
             numpy.ma.MaskedArray: Masked array of per-pixel records. Pixels with no valid data
@@ -233,7 +250,7 @@ class SpecFile(object):
 
         # Create and fill the unmasked structured array of data.
         dtype = [('loglam' if use_loglam else 'wavelength', np.float32),
-            ('flux', np.float32), ('ivar' if use_ivar else 'dflux', np.float32)]
+                 ('flux', np.float32), ('ivar' if use_ivar else 'dflux', np.float32)]
         if include_wdisp:
             dtype.append(('wdisp', np.float32))
         if include_sky:
