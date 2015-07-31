@@ -544,6 +544,10 @@ class FrameFile(object):
                 assumed to contain valid data.
             include_wdisp: Include a wavelength dispersion column in the returned data.
             include_sky: Include a sky flux column in the returned data.
+            use_ivar: Replace ``dflux`` with ``ivar`` (inverse variance) in the returned
+                data.
+            use_loglam: Replace ``wavelength`` with ``loglam`` (``log10(wavelength)``) in
+                the returned data.
 
         Returns:
             numpy.ma.MaskedArray: Masked array of shape (nfibers,npixels). Pixels with no
@@ -601,15 +605,22 @@ class FrameFile(object):
         good_pixels = ~bad_pixels
 
         # Create and fill the unmasked structured array of data.
-        dtype = [('wavelength', np.float32), ('flux', np.float32), ('dflux', np.float32)]
+        dtype = [('loglam' if use_loglam else 'wavelength', np.float32),
+                 ('flux', np.float32), ('ivar' if use_ivar else 'dflux', np.float32)]
         if include_wdisp:
             dtype.append(('wdisp', np.float32))
         if include_sky:
             dtype.append(('sky', np.float32))
         data = np.empty((num_fibers, num_pixels), dtype=dtype)
-        data['wavelength'][:] = np.power(10.0, self.loglam[offsets])
+        if use_loglam:
+            data['loglam'][:] = self.loglam[offsets]
+        else:
+            data['wavelength'][:] = np.power(10.0, self.loglam[offsets])
         data['flux'][:] = self.flux[offsets]
-        data['dflux'][:][good_pixels] = 1.0 / np.sqrt(self.ivar[offsets][good_pixels])
+        if use_ivar:
+            data['ivar'][:][good_pixels] = self.ivar[offsets][good_pixels]
+        else:
+            data['dflux'][:][good_pixels] = 1.0 / np.sqrt(self.ivar[offsets][good_pixels])
         if include_wdisp:
             data['wdisp'][:] = self.wdisp[offsets]
         if include_sky:
