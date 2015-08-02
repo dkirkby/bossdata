@@ -364,8 +364,8 @@ class PlateFile(object):
                 data.
             use_loglam: Replace ``wavelength`` with ``loglam`` (``log10(wavelength)``) in
                 the returned data.
-            fiducial_grid: Return co-added data using the fiducial wavelength grid defined
-                by :attr:`fiducial_pixel_index_range`.  If False, the returned array uses
+            fiducial_grid: Return co-added data using the :attr:`fiducial wavelength grid
+                <bossdata.spec.fiducial_loglam>`.  If False, the returned array uses
                 the native grid of the SpecFile, which generally trims pixels on both ends
                 that have zero inverse variance.  Set this value True to ensure that all
                 co-added spectra use aligned wavelength grids when this matters.

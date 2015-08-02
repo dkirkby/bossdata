@@ -20,6 +20,38 @@ def get_fiducial_pixel_index(wavelength):
         """
         Convert a wavelength to a fiducial pixel index.
 
+        The fiducial wavelength grid used by all SDSS co-added spectra is
+        logarithmically spaced::
+
+            wavelength = wavelength0 * 10**(coef * index)
+
+        The value ``coef = 1e-4`` is encoded in the FITS HDU headers of SDSS
+        coadded data files with the keyword ``CD1_1`` (and sometimes also
+        ``COEFF1``).  The value of ``wavelength0`` defines ``index = 0`` and is
+        similarly encoded as ``CRVAL1`` (and sometimes also ``COEFF0``). However,
+        its value is not constant between different SDSS co-added spectra because
+        varying amounts of invalid data are trimmed.  This function adopts the
+        constant value 3500.26 Angstrom corresponding to ``index = 0``:
+
+        >>> get_fiducial_pixel_index(3500.26)
+        0.0
+
+        Note that the return value is a float so that wavelengths not on the
+        fiducial grid can be converted and detected:
+
+        >>> get_fiducial_pixel_index(3500.5)
+        0.29776960129179741
+
+        The calculation is automatically broadcast over an input wavelength array:
+
+        >>> wlen = np.arange(4000,4400,100)
+        >>> get_fiducial_pixel_index(wlen)
+        array([ 579.596863  ,  686.83551692,  791.4898537 ,  893.68150552])
+
+        Use :attr:`fiducial_pixel_index_range` for an index range that covers all
+        SDSS spectra and :attr:`fiducial_loglam` to covert integer indices to
+        wavelengths.
+
         Args:
             wavelength(float): Input wavelength in Angstroms.
 
@@ -34,15 +66,32 @@ _fiducial_log10lam0 = np.log10(3500.26)
 
 fiducial_pixel_index_range = (0, 4800)
 """
-Range of fiducial pixel indices covering all spectra.
+Range of fiducial pixel indices that covers all spectra.
 
-Pixel indices are calculated by :func:`get_fiducial_pixel_index`.
+Use :func:`get_fiducial_pixel_index` to calculate fiducial pixel indices.
 """
 
 fiducial_loglam = (_fiducial_log10lam0 +
                    _fiducial_coef * np.arange(*fiducial_pixel_index_range))
 """
 Array of fiducial log10(wavelength in Angstroms) covering all spectra.
+
+Lookup the log10(wavelength) or wavelength corresponding to a particular
+integral pixel index using:
+
+>>> fiducial_loglam[100]
+3.554100305027835
+>>> 10**fiducial_loglam[100]
+3581.7915291606305
+
+The bounding wavelengths of this range are:
+
+>>> 10**fiducial_loglam[[0,-1]]
+array([  3500.26      ,  10568.18251472])
+
+The :meth:`SpecFile.get_valid_data` and :meth:`PlateFile.get_valid_data()
+<bossdata.plate.PlateFile.get_valid_data>` methods provide a ``fiducial_grid``
+option that returns data using this grid.
 """
 
 
@@ -214,8 +263,8 @@ class SpecFile(object):
                 data.
             use_loglam: Replace ``wavelength`` with ``loglam`` (``log10(wavelength)``) in
                 the returned data.
-            fiducial_grid: Return co-added data using the fiducial wavelength grid defined
-                by :attr:`fiducial_pixel_index_range`.  If False, the returned array uses
+            fiducial_grid: Return co-added data using the :attr:`fiducial wavelength grid
+                <fiducial_loglam>`.  If False, the returned array uses
                 the native grid of the SpecFile, which generally trims pixels on both ends
                 that have zero inverse variance.  Set this value True to ensure that all
                 co-added spectra use aligned wavelength grids when this matters.
@@ -228,6 +277,10 @@ class SpecFile(object):
                 increasing and dflux is calculated as ivar**-0.5 for pixels with valid data.
                 Optional fields are wdisp in constant-log10-lambda pixels and sky in 1e-17
                 ergs/s/cm2/Angstrom.
+
+        Raises:
+            ValueError: fiducial grid is not supported for individual exposures.
+            RuntimeError: co-added wavelength grid is not aligned with the fiducial grid.
         """
         # Look up the HDU for this spectrum and its pixel quality bitmap.
         if exposure_index is None:
