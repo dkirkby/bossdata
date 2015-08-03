@@ -390,7 +390,7 @@ def main():
         if save_name == '':
             save_name = plot_label + '.dat'
         # Only save un-masked rows.
-        valid = ~(spectra[0]['wavelength'].mask)
+        valid = ~(spectra[0]['flux'].mask)
         table = astropy.table.Table(spectra[0][valid])
         try:
             table.write(save_name, format='ascii.basic')
@@ -423,9 +423,9 @@ def main():
             left_axis.fill_between(
                 wlen, flux - dflux, flux + dflux, color=plot_color, alpha=0.5)
 
-        num_masked = np.count_nonzero(data.mask)
+        num_masked = np.count_nonzero(flux.mask)
         if args.show_mask and num_masked > 0:
-            bad_pixels = np.where(data.mask)
+            bad_pixels = np.where(flux.mask)
             for x in data.data['wavelength'][bad_pixels]:
                 x_mask.extend([x, x, None])
 

@@ -276,7 +276,9 @@ class SpecFile(object):
                 ergs/s/cm2/Angstrom (or flux and ivar). Wavelength values are strictly
                 increasing and dflux is calculated as ivar**-0.5 for pixels with valid data.
                 Optional fields are wdisp in constant-log10-lambda pixels and sky in 1e-17
-                ergs/s/cm2/Angstrom.
+                ergs/s/cm2/Angstrom. The wavelength (or loglam) field is never masked and
+                all other fields are masked when ivar is zero or a pipeline flag is set (and
+                not allowed by ``pixel_quality_mask``).
 
         Raises:
             ValueError: fiducial grid is not supported for individual exposures.
@@ -341,4 +343,8 @@ class SpecFile(object):
         else:
             mask = bad_pixels
 
-        return numpy.ma.MaskedArray(data, mask=mask)
+        result = numpy.ma.MaskedArray(data, mask=mask)
+        # Wavelength values are always valid.
+        result['loglam' if use_loglam else 'wavelength'].mask = False
+
+        return result

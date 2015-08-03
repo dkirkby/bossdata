@@ -377,7 +377,9 @@ class PlateFile(object):
                 dflux in 1e-17 ergs/s/cm2/Angstrom (or flux and ivar). Wavelength values
                 are strictly increasing and dflux is calculated as ivar**-0.5 for pixels
                 with valid data. Optional fields are wdisp in constant-log10-lambda pixels
-                and sky in 1e-17 ergs/s/cm2/Angstrom.
+                and sky in 1e-17 ergs/s/cm2/Angstrom. The wavelength (or loglam) field is
+                never masked and all other fields are masked when ivar is zero or a
+                pipeline flag is set (and not allowed by ``pixel_quality_mask``).
         """
         offsets = self.get_fiber_offsets(fibers)
         num_fibers = len(offsets)
@@ -442,7 +444,11 @@ class PlateFile(object):
         else:
             mask = bad_pixels
 
-        return numpy.ma.MaskedArray(data, mask=mask)
+        result = numpy.ma.MaskedArray(data, mask=mask)
+        # Wavelength values are always valid.
+        result['loglam' if use_loglam else 'wavelength'].mask = False
+
+        return result
 
 
 class FrameFile(object):
@@ -556,6 +562,9 @@ class FrameFile(object):
                 ergs/s/cm2/Angstrom. Wavelength values are strictly increasing and dflux is
                 calculated as ivar**-0.5 for pixels with valid data. Optional fields are
                 wdisp in constant-log10-lambda pixels and sky in 1e-17 ergs/s/cm2/Angstrom.
+                The wavelength (or loglam) field is never masked and
+                all other fields are masked when ivar is zero or a pipeline flag is set (and
+                not allowed by ``pixel_quality_mask``).
         """
         offsets = self.get_fiber_offsets(fibers)
         num_fibers = len(offsets)
@@ -626,4 +635,8 @@ class FrameFile(object):
         if include_sky:
             data['sky'][:] = self.sky[offsets]
 
-        return numpy.ma.MaskedArray(data, mask=bad_pixels)
+        result = numpy.ma.MaskedArray(data, mask=mask)
+        # Wavelength values are always valid.
+        result['loglam' if use_loglam else 'wavelength'].mask = False
+
+        return result
