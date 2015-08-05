@@ -111,22 +111,21 @@ Before you submit a pull request, check that it meets these guidelines:
 Version Update Checklist
 ------------------------
 
-1. Start a new release candidate branch, e.g::
+#. Start a new release candidate branch, e.g::
 
     git checkout -b 0.2.1rc
     git push -u origin 0.2.1rc
 
-2. Update the `version` in `setup.py`
-3. Update the `__version__` in `__init__.py`
-4. Create a pull request on github for this branch (its ok that it doesn't have any new code yet).
-5. Iterate on changes. You can get a list of merges to master since the last tagged release using::
+#. Update the ``version`` in ``setup.py``
+#. Update the ``__version__`` in ``__init__.py``
+#. Add a brief description of the changes to ``HISTORY.rst`` and update the ``What's New`` section of ``DESCRIPTION.rst`` (which is what pypi will display for this release). You can get a list of merges to master since the last tagged release using::
 
     git log --oneline --merges `git describe --tags --abbrev=0`..HEAD
 
-6. Add a brief description of the changes to ``HISTORY.rst`` and update the ``What's New`` section of `DESCRIPTION.rst` (which is what pypi will display for this release).
-7. Push changes to github, which will trigger a Travis integration test of the release-candidate branch.
-8. Merge the pull request.
-9. Update local master and tag the new version, e.g::
+#. Push changes to github, which will trigger a Travis integration test of the release-candidate branch.
+#. Create a pull request on github for this branch and ask someone else to review it and give feedback.
+#. Merge the pull request.
+#. Update local master and tag the new version, e.g::
 
     git fetch
     git checkout master
@@ -135,9 +134,23 @@ Version Update Checklist
     git push --tags
     git branch -d 0.2.1rc
 
-9. Submit the changes to pypi::
+#. Submit the changes to pypi::
 
     python setup.py sdist bdist_wheel upload
+
+#. Update the ``version`` in ``setup.py`` and ``__version__`` in ``__init__.py`` to indicate that master is under development, e.g. to ``0.2.2dev``.
+#. Reset the ``What's New`` section of ``DESCRIPTION.rst`` and add a new entry at the bottom of ``HISTORY.rst``, e.g::
+
+    0.2.2 (unreleased)
+    ------------------
+
+    * No changes yet.
+
+#. Update master so that new topic branches will include these changes, e.g::
+
+    git add setup.py speclite/__init__.py HISTORY.rst DESCRIPTION.rst
+    git commit -m 'Start development on version 0.2.2'
+    git push
 
 New External Depencency Checklist
 ---------------------------------

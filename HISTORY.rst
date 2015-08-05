@@ -64,8 +64,9 @@ History
 * General documentation cleanup.
 * Better error handling in bossplot.
 
-0.2.6 (???)
------------
+0.2.6 (2015-08-05)
+------------------
 
 * Fix issues #67 #74 #86
+* The ``camera`` arg to ``SpecFile.get_valid_data`` (and related methods) should now be ``b1``, ``b2``, ``r1``, ``r2`` instead of ``blue`` or ``red``.
 * New options for the ``get_valid_data`` methods: ``use_ivar``, ``use_loglam``, ``fiducial_grid``.
