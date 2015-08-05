@@ -6,6 +6,8 @@ include README.rst
 
 recursive-include bin *
 recursive-include tests *
+
+recursive-exclude examples *
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
 

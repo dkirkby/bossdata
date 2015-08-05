@@ -67,4 +67,5 @@ History
 0.2.6 (???)
 -----------
 
-* Fix issues #74
+* Fix issues #67 #74 #86
+* New options for the ``get_valid_data`` methods: ``use_ivar``, ``use_loglam``, ``fiducial_grid``.
