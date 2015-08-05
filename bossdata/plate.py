@@ -16,7 +16,7 @@ import astropy.table
 
 import fitsio
 
-from bossdata.spec import Exposures
+from bossdata.spec import Exposures, fiducial_loglam, get_fiducial_pixel_index
 
 
 def get_num_fibers(plate):
@@ -345,7 +345,8 @@ class PlateFile(object):
         return self.masks[offsets]
 
     def get_valid_data(self, fibers, pixel_quality_mask=None,
-                       include_wdisp=False, include_sky=False):
+                       include_wdisp=False, include_sky=False, use_ivar=False,
+                       use_loglam=False, fiducial_grid=False):
         """Get the valid for the specified fibers.
 
         Args:
@@ -359,14 +360,26 @@ class PlateFile(object):
                 for each individual exposure. No mask is applied if this value is None.
             include_wdisp: Include a wavelength dispersion column in the returned data.
             include_sky: Include a sky flux column in the returned data.
+            use_ivar: Replace ``dflux`` with ``ivar`` (inverse variance) in the returned
+                data.
+            use_loglam: Replace ``wavelength`` with ``loglam`` (``log10(wavelength)``) in
+                the returned data.
+            fiducial_grid: Return co-added data using the :attr:`fiducial wavelength grid
+                <bossdata.spec.fiducial_loglam>`.  If False, the returned array uses
+                the native grid of the SpecFile, which generally trims pixels on both ends
+                that have zero inverse variance.  Set this value True to ensure that all
+                co-added spectra use aligned wavelength grids when this matters.
 
         Returns:
             numpy.ma.MaskedArray: Masked array of shape (nfibers,npixels). Pixels with no
                 valid data are included but masked. The record for each pixel has at least
-                the following named fields: wavelength in Angstroms, flux and dflux in 1e-17
-                ergs/s/cm2/Angstrom. Wavelength values are strictly increasing and dflux is
-                calculated as ivar**-0.5 for pixels with valid data. Optional fields are
-                wdisp in constant-log10-lambda pixels and sky in 1e-17 ergs/s/cm2/Angstrom.
+                the following named fields: wavelength in Angstroms (or loglam), flux and
+                dflux in 1e-17 ergs/s/cm2/Angstrom (or flux and ivar). Wavelength values
+                are strictly increasing and dflux is calculated as ivar**-0.5 for pixels
+                with valid data. Optional fields are wdisp in constant-log10-lambda pixels
+                and sky in 1e-17 ergs/s/cm2/Angstrom. The wavelength (or loglam) field is
+                never masked and all other fields are masked when ivar is zero or a
+                pipeline flag is set (and not allowed by ``pixel_quality_mask``).
         """
         offsets = self.get_fiber_offsets(fibers)
         num_fibers = len(offsets)
@@ -386,7 +399,17 @@ class PlateFile(object):
             self.wdisp = self.hdulist[4].read()
         if include_sky and self.sky is None:
             self.sky = self.hdulist[6].read()
-        num_pixels = self.flux.shape[1]
+
+        if fiducial_grid:
+            loglam = fiducial_loglam
+            first_index = float(get_fiducial_pixel_index(10.0**self.loglam[0]))
+            if abs(first_index - round(first_index)) > 0.01:
+                raise RuntimeError('Wavelength grid not aligned with fiducial grid.')
+            trimmed = slice(first_index, first_index + pixel_bits.shape[1])
+        else:
+            loglam = self.loglam
+            trimmed = slice(None)
+        num_pixels = len(loglam)
 
         # Identify the pixels with valid data.
         ivar = self.ivar[offsets]
@@ -394,21 +417,38 @@ class PlateFile(object):
         good_pixels = ~bad_pixels
 
         # Create and fill the unmasked structured array of data.
-        dtype = [('wavelength', np.float32), ('flux', np.float32), ('dflux', np.float32)]
+        dtype = [('loglam' if use_loglam else 'wavelength', np.float32),
+                 ('flux', np.float32), ('ivar' if use_ivar else 'dflux', np.float32)]
         if include_wdisp:
             dtype.append(('wdisp', np.float32))
         if include_sky:
             dtype.append(('sky', np.float32))
-        data = np.empty((num_fibers, num_pixels), dtype=dtype)
-        data['wavelength'][:] = np.power(10.0, self.loglam)
-        data['flux'][:] = self.flux[offsets]
-        data['dflux'][:][good_pixels] = 1.0 / np.sqrt(self.ivar[offsets][good_pixels])
+        data = np.zeros((num_fibers, num_pixels), dtype=dtype)
+        if use_loglam:
+            data['loglam'][:] = loglam
+        else:
+            data['wavelength'][:] = np.power(10.0, loglam)
+        data['flux'][:,trimmed] = self.flux[offsets]
+        if use_ivar:
+            data['ivar'][:,trimmed][good_pixels] = self.ivar[offsets][good_pixels]
+        else:
+            data['dflux'][:,trimmed][good_pixels] = 1.0 / np.sqrt(self.ivar[offsets][good_pixels])
         if include_wdisp:
-            data['wdisp'][:] = self.wdisp[offsets]
+            data['wdisp'][:,trimmed] = self.wdisp[offsets]
         if include_sky:
-            data['sky'][:] = self.sky[offsets]
+            data['sky'][:,trimmed] = self.sky[offsets]
 
-        return numpy.ma.MaskedArray(data, mask=bad_pixels)
+        if fiducial_grid:
+            mask = np.ones_like(data, dtype=bool)
+            mask[:,trimmed] = bad_pixels
+        else:
+            mask = bad_pixels
+
+        result = numpy.ma.MaskedArray(data, mask=mask)
+        # Wavelength values are always valid.
+        result['loglam' if use_loglam else 'wavelength'].mask = False
+
+        return result
 
 
 class FrameFile(object):
@@ -510,6 +550,10 @@ class FrameFile(object):
                 assumed to contain valid data.
             include_wdisp: Include a wavelength dispersion column in the returned data.
             include_sky: Include a sky flux column in the returned data.
+            use_ivar: Replace ``dflux`` with ``ivar`` (inverse variance) in the returned
+                data.
+            use_loglam: Replace ``wavelength`` with ``loglam`` (``log10(wavelength)``) in
+                the returned data.
 
         Returns:
             numpy.ma.MaskedArray: Masked array of shape (nfibers,npixels). Pixels with no
@@ -518,6 +562,9 @@ class FrameFile(object):
                 ergs/s/cm2/Angstrom. Wavelength values are strictly increasing and dflux is
                 calculated as ivar**-0.5 for pixels with valid data. Optional fields are
                 wdisp in constant-log10-lambda pixels and sky in 1e-17 ergs/s/cm2/Angstrom.
+                The wavelength (or loglam) field is never masked and
+                all other fields are masked when ivar is zero or a pipeline flag is set (and
+                not allowed by ``pixel_quality_mask``).
         """
         offsets = self.get_fiber_offsets(fibers)
         num_fibers = len(offsets)
@@ -567,18 +614,29 @@ class FrameFile(object):
         good_pixels = ~bad_pixels
 
         # Create and fill the unmasked structured array of data.
-        dtype = [('wavelength', np.float32), ('flux', np.float32), ('dflux', np.float32)]
+        dtype = [('loglam' if use_loglam else 'wavelength', np.float32),
+                 ('flux', np.float32), ('ivar' if use_ivar else 'dflux', np.float32)]
         if include_wdisp:
             dtype.append(('wdisp', np.float32))
         if include_sky:
             dtype.append(('sky', np.float32))
         data = np.empty((num_fibers, num_pixels), dtype=dtype)
-        data['wavelength'][:] = np.power(10.0, self.loglam[offsets])
+        if use_loglam:
+            data['loglam'][:] = self.loglam[offsets]
+        else:
+            data['wavelength'][:] = np.power(10.0, self.loglam[offsets])
         data['flux'][:] = self.flux[offsets]
-        data['dflux'][:][good_pixels] = 1.0 / np.sqrt(self.ivar[offsets][good_pixels])
+        if use_ivar:
+            data['ivar'][:][good_pixels] = self.ivar[offsets][good_pixels]
+        else:
+            data['dflux'][:][good_pixels] = 1.0 / np.sqrt(self.ivar[offsets][good_pixels])
         if include_wdisp:
             data['wdisp'][:] = self.wdisp[offsets]
         if include_sky:
             data['sky'][:] = self.sky[offsets]
 
-        return numpy.ma.MaskedArray(data, mask=bad_pixels)
+        result = numpy.ma.MaskedArray(data, mask=mask)
+        # Wavelength values are always valid.
+        result['loglam' if use_loglam else 'wavelength'].mask = False
+
+        return result

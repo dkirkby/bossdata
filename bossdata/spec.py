@@ -16,6 +16,85 @@ import fitsio
 import astropy.table
 
 
+def get_fiducial_pixel_index(wavelength):
+        """
+        Convert a wavelength to a fiducial pixel index.
+
+        The fiducial wavelength grid used by all SDSS co-added spectra is
+        logarithmically spaced::
+
+            wavelength = wavelength0 * 10**(coef * index)
+
+        The value ``coef = 1e-4`` is encoded in the FITS HDU headers of SDSS
+        coadded data files with the keyword ``CD1_1`` (and sometimes also
+        ``COEFF1``).  The value of ``wavelength0`` defines ``index = 0`` and is
+        similarly encoded as ``CRVAL1`` (and sometimes also ``COEFF0``). However,
+        its value is not constant between different SDSS co-added spectra because
+        varying amounts of invalid data are trimmed.  This function adopts the
+        constant value 3500.26 Angstrom corresponding to ``index = 0``:
+
+        >>> get_fiducial_pixel_index(3500.26)
+        0.0
+
+        Note that the return value is a float so that wavelengths not on the
+        fiducial grid can be converted and detected:
+
+        >>> get_fiducial_pixel_index(3500.5)
+        0.29776960129179741
+
+        The calculation is automatically broadcast over an input wavelength array:
+
+        >>> wlen = np.arange(4000,4400,100)
+        >>> get_fiducial_pixel_index(wlen)
+        array([ 579.596863  ,  686.83551692,  791.4898537 ,  893.68150552])
+
+        Use :attr:`fiducial_pixel_index_range` for an index range that covers all
+        SDSS spectra and :attr:`fiducial_loglam` to covert integer indices to
+        wavelengths.
+
+        Args:
+            wavelength(float): Input wavelength in Angstroms.
+
+        Returns:
+            numpy.ndarray: Array of floating-point indices relative to the fiducial
+                wavelength grid.
+        """
+        return (np.log10(wavelength) - _fiducial_log10lam0)/_fiducial_coef
+
+_fiducial_coef = 1e-4
+_fiducial_log10lam0 = np.log10(3500.26)
+
+fiducial_pixel_index_range = (0, 4800)
+"""
+Range of fiducial pixel indices that covers all spectra.
+
+Use :func:`get_fiducial_pixel_index` to calculate fiducial pixel indices.
+"""
+
+fiducial_loglam = (_fiducial_log10lam0 +
+                   _fiducial_coef * np.arange(*fiducial_pixel_index_range))
+"""
+Array of fiducial log10(wavelength in Angstroms) covering all spectra.
+
+Lookup the log10(wavelength) or wavelength corresponding to a particular
+integral pixel index using:
+
+>>> fiducial_loglam[100]
+3.554100305027835
+>>> 10**fiducial_loglam[100]
+3581.7915291606305
+
+The bounding wavelengths of this range are:
+
+>>> 10**fiducial_loglam[[0,-1]]
+array([  3500.26      ,  10568.18251472])
+
+The :meth:`SpecFile.get_valid_data` and :meth:`PlateFile.get_valid_data()
+<bossdata.plate.PlateFile.get_valid_data>` methods provide a ``fiducial_grid``
+option that returns data using this grid.
+"""
+
+
 class Exposures(object):
     """Table of exposure info extracted from FITS header keywords.
 
@@ -75,8 +154,8 @@ class Exposures(object):
             raise RuntimeError('No exposure[{}] = {:08d} found for {}.'.format(
                 exposure_index, science_num, camera))
         if np.count_nonzero(row) > 1:
-            raise RuntimeError('Multiple {} exposures {:08d} found for {}.'.format(
-                flavor, exp_id, camera))
+            raise RuntimeError(
+                'Found multiple {} exposures {:08d}.'.format(camera, exposure_index))
         return self.table[row][0]
 
 
@@ -156,7 +235,8 @@ class SpecFile(object):
             return hdu['mask'][:]
 
     def get_valid_data(self, exposure_index=None, camera=None, pixel_quality_mask=None,
-                       include_wdisp=False, include_sky=False):
+                       include_wdisp=False, include_sky=False, use_ivar=False,
+                       use_loglam=False, fiducial_grid=False):
         """Get the valid data for a specified exposure or the combined coadd.
 
         You will probably find yourself using this idiom often::
@@ -179,14 +259,30 @@ class SpecFile(object):
                 applied if this value is None.
             include_wdisp: Include a wavelength dispersion column in the returned data.
             include_sky: Include a sky flux column in the returned data.
+            use_ivar: Replace ``dflux`` with ``ivar`` (inverse variance) in the returned
+                data.
+            use_loglam: Replace ``wavelength`` with ``loglam`` (``log10(wavelength)``) in
+                the returned data.
+            fiducial_grid: Return co-added data using the :attr:`fiducial wavelength grid
+                <fiducial_loglam>`.  If False, the returned array uses
+                the native grid of the SpecFile, which generally trims pixels on both ends
+                that have zero inverse variance.  Set this value True to ensure that all
+                co-added spectra use aligned wavelength grids when this matters.
 
         Returns:
             numpy.ma.MaskedArray: Masked array of per-pixel records. Pixels with no valid data
                 are included but masked. The record for each pixel has at least the following
-                named fields: wavelength in Angstroms, flux and dflux in 1e-17
-                ergs/s/cm2/Angstrom. Wavelength values are strictly increasing and dflux is
-                calculated as ivar**-0.5 for pixels with valid data. Optional fields are
-                wdisp in constant-log10-lambda pixels and sky in 1e-17 ergs/s/cm2/Angstrom.
+                named fields: wavelength in Angstroms (or loglam), flux and dflux in 1e-17
+                ergs/s/cm2/Angstrom (or flux and ivar). Wavelength values are strictly
+                increasing and dflux is calculated as ivar**-0.5 for pixels with valid data.
+                Optional fields are wdisp in constant-log10-lambda pixels and sky in 1e-17
+                ergs/s/cm2/Angstrom. The wavelength (or loglam) field is never masked and
+                all other fields are masked when ivar is zero or a pipeline flag is set (and
+                not allowed by ``pixel_quality_mask``).
+
+        Raises:
+            ValueError: fiducial grid is not supported for individual exposures.
+            RuntimeError: co-added wavelength grid is not aligned with the fiducial grid.
         """
         # Look up the HDU for this spectrum and its pixel quality bitmap.
         if exposure_index is None:
@@ -195,7 +291,19 @@ class SpecFile(object):
         else:
             hdu = self.get_exposure_hdu(exposure_index, camera)
             pixel_bits = hdu['mask'][:]
-        num_pixels = len(pixel_bits)
+
+        if fiducial_grid:
+            if exposure_index is not None:
+                raise ValueError('Fiducial grid not supported for individual exposures.')
+            loglam = fiducial_loglam
+            first_index = float(get_fiducial_pixel_index(10.0**hdu['loglam'][0]))
+            if abs(first_index - round(first_index)) > 0.01:
+                raise RuntimeError('Wavelength grid not aligned with fiducial grid.')
+            trimmed = slice(first_index, first_index + len(pixel_bits))
+        else:
+            loglam = hdu['loglam'][:]
+            trimmed = slice(None)
+        num_pixels = len(loglam)
 
         # Apply the pixel quality mask, if any.
         if pixel_quality_mask is not None:
@@ -208,19 +316,35 @@ class SpecFile(object):
         good_pixels = ~bad_pixels
 
         # Create and fill the unmasked structured array of data.
-        dtype = [('wavelength', np.float32), ('flux', np.float32), ('dflux', np.float32)]
+        dtype = [('loglam' if use_loglam else 'wavelength', np.float32),
+                 ('flux', np.float32), ('ivar' if use_ivar else 'dflux', np.float32)]
         if include_wdisp:
             dtype.append(('wdisp', np.float32))
         if include_sky:
             dtype.append(('sky', np.float32))
-        data = np.empty(num_pixels, dtype=dtype)
-        data['wavelength'][:] = np.power(10.0, hdu['loglam'][:])
-        data['flux'][:] = hdu['flux'][:]
-        data['dflux'][good_pixels] = 1.0 / np.sqrt(ivar[good_pixels])
-        data['dflux'][bad_pixels] = 0.0
+        data = np.zeros(num_pixels, dtype=dtype)
+        if use_loglam:
+            data['loglam'][:] = loglam
+        else:
+            data['wavelength'][:] = np.power(10.0, loglam)
+        data['flux'][trimmed][:] = hdu['flux'][:]
+        if use_ivar:
+            data['ivar'][trimmed][good_pixels] = ivar[good_pixels]
+        else:
+            data['dflux'][trimmed][good_pixels] = 1.0 / np.sqrt(ivar[good_pixels])
         if include_wdisp:
-            data['wdisp'][:] = hdu['wdisp'][:]
+            data['wdisp'][trimmed] = hdu['wdisp'][:]
         if include_sky:
-            data['sky'][:] = hdu['sky'][:]
+            data['sky'][trimmed] = hdu['sky'][:]
 
-        return numpy.ma.MaskedArray(data, mask=bad_pixels)
+        if fiducial_grid:
+            mask = np.ones(num_pixels, dtype=bool)
+            mask[trimmed][:] = bad_pixels
+        else:
+            mask = bad_pixels
+
+        result = numpy.ma.MaskedArray(data, mask=mask)
+        # Wavelength values are always valid.
+        result['loglam' if use_loglam else 'wavelength'].mask = False
+
+        return result
