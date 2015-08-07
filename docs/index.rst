@@ -16,6 +16,7 @@ A python package for working with `spectroscopic data <http://www.sdss.org/dr12/
    scripts
    envvar
    usage
+   examples
    contributing
    history
 
