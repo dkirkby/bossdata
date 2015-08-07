@@ -266,11 +266,13 @@ class Database(object):
         mirror(bossdata.remote.Manager): Object used to interact with the local mirror of BOSS
             data. If not specified, the default Manager constructor is used.
         lite(bool): Use the "lite" metadata format, which is considerably faster but only
-            provides a subset of the most commonly accessed fields.
+            provides a subset of the most commonly accessed fields. Ignored if either
+            quasar_catalog or platelist is True.
         quasar_catalog(bool): Initialize database using the BOSS quasar catalog instead of
             spAll.
         quasar_catalog_name(str): The name of the BOSS quasar catalog to use, or use the
             :attr:`default <bossdata.path.Finder.default_quasar_catalog_name>` if this is None.
+        platelist(bool): Initialize the database use the platelist catalog instead of spAll.
     """
     def __init__(self, finder=None, mirror=None, lite=True, quasar_catalog=False,
                  quasar_catalog_name=None, platelist=False, verbose=False):
@@ -283,7 +285,6 @@ class Database(object):
         # Get the local name of the metadata source file and the corresponding SQL
         # database name.
         if quasar_catalog:
-            assert not lite, 'No lite format available of BOSS quasar catalog.'
             remote_path = finder.get_quasar_catalog_path(quasar_catalog_name)
             local_path = mirror.local_path(remote_path)
             assert local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
@@ -295,7 +296,6 @@ class Database(object):
                 local_path = mirror.get(remote_path)
                 create_meta_full(local_path, db_path)
         elif platelist:
-            assert not lite, 'Lite format parsing not implemented for platelist catalog'
             remote_path = finder.get_platelist_path()
             local_path = mirror.local_path(remote_path)
             assert local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
