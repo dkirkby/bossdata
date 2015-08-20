@@ -534,8 +534,8 @@ class FrameFile(object):
             self.masks = self.hdulist[2].read()
         return self.masks[offsets]
 
-    def get_valid_data(self, fibers, pixel_quality_mask=None,
-                       include_wdisp=False, include_sky=False):
+    def get_valid_data(self, fibers, pixel_quality_mask=None, include_wdisp=False,
+        include_sky=False, use_ivar=False, use_loglam=False):
         """Get the valid for the specified fibers.
 
         Args:
@@ -635,6 +635,7 @@ class FrameFile(object):
         if include_sky:
             data['sky'][:] = self.sky[offsets]
 
+        mask = bad_pixels
         result = numpy.ma.MaskedArray(data, mask=mask)
         # Wavelength values are always valid.
         result['loglam' if use_loglam else 'wavelength'].mask = False
