@@ -48,15 +48,16 @@ class Finder(object):
             environment variables.
     """
     def __init__(self, sas_path=None, redux_version=None, verbose=True):
-        # Environment variables override the constructor args if they are set.
-        self.sas_path = os.getenv('BOSS_SAS_PATH', sas_path)
+        # Constructor args take precendence over constructor args.
+        self.sas_path = os.getenv('BOSS_SAS_PATH') if sas_path is None else sas_path
         if self.sas_path is None:
             self.sas_path = Finder.default_sas_path
             if verbose:
                 print('Using the default "{}" since $BOSS_SAS_PATH is not set.'.format(
                     self.sas_path))
 
-        self.redux_version = os.getenv('BOSS_REDUX_VERSION', redux_version)
+        self.redux_version = (os.getenv('BOSS_REDUX_VERSION') if redux_version is None
+                              else redux_version)
         if self.redux_version is None:
             self.redux_version = Finder.default_redux_version
             if verbose:

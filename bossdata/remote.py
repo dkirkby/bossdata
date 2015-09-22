@@ -59,8 +59,8 @@ class Manager(object):
         ValueError: No such directory local_root or missing data_url.
     """
     def __init__(self, data_url=None, local_root=None, verbose=True):
-        # Environment variables override the constructor args if they are set.
-        self.data_url = os.getenv('BOSS_DATA_URL', data_url)
+        # Constructor args take precendence over constructor args.
+        self.data_url = os.getenv('BOSS_DATA_URL') if data_url is None else data_url
         if self.data_url is None:
             self.data_url = Manager.default_data_url
             if verbose:
@@ -74,7 +74,7 @@ class Manager(object):
             self.authorization = None
         self.data_url = self.data_url.rstrip('/')
 
-        self.local_root = os.getenv('BOSS_LOCAL_ROOT', local_root)
+        self.local_root = os.getenv('BOSS_LOCAL_ROOT') if local_root is None else local_root
         if self.local_root is None:
             # Create a temporary directory to use.
             self.local_root = tempfile.mkdtemp(suffix='_bossdata')
