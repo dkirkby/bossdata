@@ -3,52 +3,17 @@
 History
 =======
 
-0.1.0 (2015-05-24)
+0.2.7 (unreleased)
 ------------------
 
-* First release on PyPI.
+* Fix issues #94
 
-0.2.0 (2015-06-09)
+0.2.6 (2015-08-05)
 ------------------
 
-* Fix issues #3 #5 #6
-* Add support for accessing subtracted sky flux to the `spec` module and `bossplot` script.
-* This version breaks backwards compatiblity with 0.1.0 since the previous `$BOSS_SAS_ROOT` environment variable is now named `$BOSS_SAS_PATH` and has the instrument name (usually `boss`) appended.
-* bash users can update by replacing `export BOSS_SAS_ROOT=/sas/dr12` with `export BOSS_SAS_PATH=/sas/dr12/boss` in their `.bashrc` file.
-
-0.2.1 (2015-06-13)
-------------------
-
-* Fix issues #9 #12 #13
-
-0.2.2 (2015-06-15)
-------------------
-
-* Really fix issues #9 #13.
-* Add support for finding and fetching spFrame and spCFrame files (#17).
-
-0.2.3 (2015-06-22)
-------------------
-
-* Fix issues #2 #10 #16 #18 #19 #21 #24
-* New command-line options include:
-
- * bossfetch: --globus, --dry-run
- * bossplot: --save-data
- * bossquery: --sort
-
-* The main new library functionality is support for using wavelengths and dispersions encoded as "trace sets" in spFrame files via :class:`bossdata.plate.TraceSet`.
-
-0.2.4 (2015-06-29)
-------------------
-
-* Fix issues #11 #36 #41 #43 #45 #50
-* New command-line options include:
-
- * bossfetch: --plate-name, --mjd-name, --fiber-name
- * bosscatalog: --quasar-catalog, --quasar-catalog-name
-
-* The main new functionality is support for querying the quasar catalog, using different data sources, and built-in defaults for any of the four environment variables that is not set.
+* Fix issues #67 #74 #86
+* The ``camera`` arg to ``SpecFile.get_valid_data`` (and related methods) should now be ``b1``, ``b2``, ``r1``, ``r2`` instead of ``blue`` or ``red``.
+* New options for the ``get_valid_data`` methods: ``use_ivar``, ``use_loglam``, ``fiducial_grid``.
 
 0.2.5 (2015-07-06)
 ------------------
@@ -64,14 +29,49 @@ History
 * General documentation cleanup.
 * Better error handling in bossplot.
 
-0.2.6 (2015-08-05)
+0.2.4 (2015-06-29)
 ------------------
 
-* Fix issues #67 #74 #86
-* The ``camera`` arg to ``SpecFile.get_valid_data`` (and related methods) should now be ``b1``, ``b2``, ``r1``, ``r2`` instead of ``blue`` or ``red``.
-* New options for the ``get_valid_data`` methods: ``use_ivar``, ``use_loglam``, ``fiducial_grid``.
+* Fix issues #11 #36 #41 #43 #45 #50
+* New command-line options include:
 
-0.2.7 (unreleased)
+ * bossfetch: --plate-name, --mjd-name, --fiber-name
+ * bosscatalog: --quasar-catalog, --quasar-catalog-name
+
+* The main new functionality is support for querying the quasar catalog, using different data sources, and built-in defaults for any of the four environment variables that is not set.
+
+0.2.3 (2015-06-22)
 ------------------
 
-* Fix issues #94
+* Fix issues #2 #10 #16 #18 #19 #21 #24
+* New command-line options include:
+
+ * bossfetch: --globus, --dry-run
+ * bossplot: --save-data
+ * bossquery: --sort
+
+* The main new library functionality is support for using wavelengths and dispersions encoded as "trace sets" in spFrame files via :class:`bossdata.plate.TraceSet`.
+
+0.2.2 (2015-06-15)
+------------------
+
+* Really fix issues #9 #13.
+* Add support for finding and fetching spFrame and spCFrame files (#17).
+
+0.2.1 (2015-06-13)
+------------------
+
+* Fix issues #9 #12 #13
+
+0.2.0 (2015-06-09)
+------------------
+
+* Fix issues #3 #5 #6
+* Add support for accessing subtracted sky flux to the `spec` module and `bossplot` script.
+* This version breaks backwards compatiblity with 0.1.0 since the previous `$BOSS_SAS_ROOT` environment variable is now named `$BOSS_SAS_PATH` and has the instrument name (usually `boss`) appended.
+* bash users can update by replacing `export BOSS_SAS_ROOT=/sas/dr12` with `export BOSS_SAS_PATH=/sas/dr12/boss` in their `.bashrc` file.
+
+0.1.0 (2015-05-24)
+------------------
+
+* First release on PyPI.
