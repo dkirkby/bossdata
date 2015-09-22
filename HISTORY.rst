@@ -74,4 +74,4 @@ History
 0.2.7 (unreleased)
 ------------------
 
-* No changes yet.
+* Fix issues #94
