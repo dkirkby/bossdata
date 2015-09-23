@@ -7,6 +7,7 @@ History
 ------------------
 
 * Fix issues #94 #97
+* Add support for reading per-exposure flux calibration and correction vectors.
 
 0.2.6 (2015-08-05)
 ------------------
