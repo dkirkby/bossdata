@@ -9,5 +9,6 @@ import bossdata.bits
 import bossdata.meta
 import bossdata.path
 import bossdata.plate
+import bossdata.plot
 import bossdata.remote
 import bossdata.spec
