@@ -15,6 +15,9 @@ def focal_plane(xfocal, yfocal, data, mask=None, subsets=dict(),
     """
     Scatter plot of data values...
     """
+    import matplotlib.pyplot as plt
+    import matplotlib.tri
+
     fig = plt.figure(figsize=(11,8))
     fig.set_tight_layout(True)
     plt.xlim(-1.01*rmax,+1.01*rmax)
