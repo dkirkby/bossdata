@@ -33,6 +33,11 @@ class Mock(MagicMock):
         return Mock()
     def __div__(self, other):
         return Mock()
+    def __add__(self, other):
+        return Mock()
+    def __radd__(self, other):
+        return Mock()
+
 
 # List all external packages (i.e., not part of the python standard library) here that
 # we import but that ReadTheDocs can safely ignore.
