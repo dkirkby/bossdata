@@ -10,3 +10,4 @@ See also :doc:`/usage`. Use the links below to browse the API docs for each sub-
     bossdata.spec
     bossdata.bits
     bossdata.plate
+    bossdata.plot
