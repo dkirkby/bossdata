@@ -130,7 +130,13 @@ class Plan(object):
         """Get the name of a science exposure from this plan.
 
         Use the exposure name to locate FITS data files associated with
-        individual exposures.
+        individual exposures.  The supported file types are:
+        :datamodel:`spCFrame <PLATE4/spCFrame.html>`,
+        :datamodel:`spFrame <PLATE4/spFrame.html>`,
+        :datamodel:`spFluxcalib <PLATE4/spFluxcalib.html>` and
+        :datamodel:`spFluxcorr <PLATE4/spFluxcorr.html>`.
+        Note that this method returns None when the requested exposure is not present
+        in the plan, so the return value should always be checked.
 
         Args:
             sequence_number(int): Science exposure sequence number, counting from zero.
@@ -143,12 +149,11 @@ class Plan(object):
                 to be uncompressed, and all other files are assumed to be compressed.
 
         Returns:
-            str: Exposure name of the form [prefix]-[cc]-[eeeeeeee].[ext] where [cc]
+            str: Exposure name of the form [ftype]-[cc]-[eeeeeeee].[ext] where [cc]
                 identifies the spectrograph (one of b1,r1,b2,r2) and [eeeeeeee] is the
-                zero-padded exposure number. For calibrated exposures, [prefix] is
-                "spCFrame" and [ext] is "fits".  For un-calibrated exposures, [prefix]
-                is "spFrame" and [ext] is "fits.gz". Returns None if the name is
-                unknown for this camera and fiber combination.
+                zero-padded exposure number. The extension [ext] is "fits" for
+                spCFrame files and "fits.gz" for all other file types. Returns None if
+                the name is unknown for this camera and fiber combination.
 
         Raises:
             ValueError: one of the inputs is invalid.

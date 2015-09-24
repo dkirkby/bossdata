@@ -84,9 +84,15 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.linkcode',
-#    'contrib.ext.napoleon',
-    'sphinx.ext.napoleon',  # for sphinx >= 1.3, but RTD is not using this yet.
+    'sphinx.ext.napoleon',
+    'sphinx.ext.extlinks',
 ]
+
+# Configure external link shortcuts.
+extlinks = {
+    'datamodel':
+    ('http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/%s',
+     None)}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
