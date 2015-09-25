@@ -93,8 +93,7 @@ def by_fiber(data, mask=None, subsets=dict(), percentile_cut=0.0,
         plt.scatter(fiber_num[mask2], data2[mask2], vmin=vmin, vmax=vmax,
             c=data2[mask2], **options)
         remaining = remaining & ~subset
-    if subsets:
-        plt.legend(loc='lower left', scatterpoints=1, markerscale=1.0)
+    plt.legend(loc='lower left', scatterpoints=1, markerscale=1.0)
     # Plot any remaining fibers using the default options.
     mask1 = remaining[:num_fibers]
     mask2 = remaining[num_fibers:]
