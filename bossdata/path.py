@@ -177,6 +177,10 @@ class Finder(object):
 
     def get_platelist_path(self):
         """Get the location of the platelist summary file.
+
+        The :datamodel:`platelist <platelist>` contains one row per observation (PLATE-MJD),
+        unlike most other sources of metadata which contain one row per target
+        (PLATE-MJD-FIBER).
         """
         name = 'platelist.fits'
         return posixpath.join(self.redux_base, name)
