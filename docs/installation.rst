@@ -21,6 +21,14 @@ The following additional pacakges are used by bossdata and will be installed aut
  * fitsio
  * numpy
 
+Optional Dependencies
+---------------------
+
+The following packages are optional and enable additional functionality.  They will not be
+automatically installed by pip, but will be used when available.
+
+ * matplotlib (used by the bossdata.plot module and bossplot script)
+
 Quick Demonstration
 -------------------
 

@@ -6,7 +6,9 @@ History
 0.2.7 (unreleased)
 ------------------
 
-* Fix issues #94 #97
+* Fix issues #94 #97 #92 (?)
+* Add support for reading per-exposure flux calibration and correction vectors.
+* Add plot functions for per-fiber data vs fiber number or focal-plane position.
 
 0.2.6 (2015-08-05)
 ------------------
