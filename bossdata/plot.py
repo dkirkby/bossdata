@@ -12,6 +12,8 @@ flexibility.  To display a single plot, you can use the following wrapper::
     # ... call one of the plot functions ...
     plt.tight_layout()
     plt.show()
+
+See the :doc:`/examples` for details.
 """
 
 from __future__ import division, print_function
