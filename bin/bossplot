@@ -18,11 +18,7 @@ import numpy.ma
 import matplotlib.pyplot as plt
 import astropy.table
 
-import bossdata.path
-import bossdata.remote
-import bossdata.spec
-import bossdata.bits
-import bossdata.plate
+import bossdata
 
 
 def auto_range(range_str, abs_lo, abs_hi, default_limits, data_lo=None, data_hi=None):
@@ -113,8 +109,8 @@ def main():
         '--plate', type=int, default=6641, metavar='PLATE',
         help='Plate number of spectrum to plot.')
     parser.add_argument(
-        '--mjd', type=int, default=56383, metavar='MJD',
-        help='Modified Julian date of plate observation to use.')
+        '--mjd', type=int, default=None, metavar='MJD',
+        help='MJD of plate observation to use (can be omitted if only one value is possible)')
     parser.add_argument(
         '--fiber', type=int, default=30, metavar='FIBER',
         help='Fiber number identifying the spectrum of the requested PLATE-MJD to plot.')
@@ -214,6 +210,21 @@ def main():
     except ValueError as e:
         print(e)
         return -1
+
+    if args.mjd is None:
+        mjd_list = bossdata.meta.get_plate_mjd_list(
+            args.plate, finder=finder, mirror=mirror)
+        if len(mjd_list) == 0:
+            print('Plate {0:d} has not been observed with good data quality.'.format(
+                args.plate))
+            return -1
+        elif len(mjd_list) > 1:
+            print('Plate {0:d} has been observed on MJDs {1:s}.'.format(
+                args.plate, ','.join(map(str, mjd_list))))
+            print('Select one of these using the --mjd command-line argument.')
+            return -1
+        else:
+            args.mjd = mjd_list[0]
 
     if args.verbose:
         observation = '{:04d}-{:5d}-{:04d}'.format(args.plate, args.mjd, args.fiber)
