@@ -323,6 +323,8 @@ class PlateFile(object):
         self.flux = None
         self.wdisp = None
         self.sky = None
+        # Read our plug map into an astropy table.
+        self.plug_map = astropy.table.Table(self.hdulist[5].read())
 
     def get_fiber_offsets(self, fiber):
         """Convert fiber numbers to array offsets.
@@ -513,6 +515,8 @@ class FrameFile(object):
         self.flux = None
         self.wdisp = None
         self.sky = None
+        # Read our plug map into an astropy table.
+        self.plug_map = astropy.table.Table(self.hdulist[5].read())
 
     def get_fiber_offsets(self, fiber):
         """Convert fiber numbers to array offsets.
