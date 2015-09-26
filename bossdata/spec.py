@@ -162,14 +162,23 @@ class Exposures(object):
 class SpecFile(object):
     """ A BOSS spec file containing summary data for a single target.
 
-    The spec file data model is described at
-    http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/spectra/PLATE4/spec.html.
-    This class supports the full version described in the data model as well as a "lite"
-    version that does not contain the per-exposure HDUs with indices >= 4. Use the `lite`
-    attribute to detect which version an object represents.
+    A :datamodel:`spec file <spec>` contains co-added spectra for a single target of an
+    observation. This class supports the full version described in the data model as
+    well as a :datamodel:`lite version <spectra/lite/PLATE4/spec>` that does not contain
+    the per-exposure HDUs with indices >= 4. Use the `lite` attribute to detect which
+    version an object represents.
+
+    To read all co-added spectra of an observation use :class:`bossdata.plate.PlateFile`.
+    Individual exposures of a half-plate can be read using :class:`bossdata.plate.FrameFile`.
+
+    Use :meth:`get_valid_data` to access this file's spectra, or the `exposures` attribute
+    for a list of exposures used in the coadd.  See :class:`bossdata.plate.Plan` for
+    more information about the exposures used in a coadd.
 
     This class is only intended for reading the BOSS spec file format, so generic
-    operations on spectroscopic data (redshifting, etc) are intentionally not included here.
+    operations on spectroscopic data (redshifting, resampling, etc) are intentionally not
+    included here, but are instead provided in the `speclite
+    <http://speclite.readthedocs.org>`__ package.
 
     Args:
         path(str): Local path of the spec FITS file to use.  This should normally be obtained

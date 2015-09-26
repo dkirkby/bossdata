@@ -136,9 +136,9 @@ class Finder(object):
     def get_plate_spec_path(self, plate, mjd):
         """Get the path to the file containing combined spectra for a whole plate.
 
-        Combined spectra for all exposures of a plate are packaged in spPlate files
-        http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spPlate.html
-        As of DR12, these files are about 110Mb for 1000 spectra.
+        Combined spectra for all exposures of a plate are packaged in
+        :datamodel:`spPlate files <spPlate>`. As of DR12, these files are about 110Mb
+        for 1000 spectra.
 
         Args:
             plate(int): Plate number, which must be positive.
@@ -159,9 +159,10 @@ class Finder(object):
     def get_sp_all_path(self, lite=True):
         """Get the location of the metadata summary file.
 
-        The data model of the full (non-lite) file is at
-        http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/spAll.html
-        As of DR12, the full file size is about 10Gb and the lite file is about 115Mb.
+        The :datamodel:`spAll <spAll>` file provides extensive metadata for all survey
+        targets as a FITS file.  There is also a smaller "lite" version containing a
+        subset of this metadata in compressed text format. As of DR12, the full file
+        size is about 10Gb and the lite file is about 115Mb.
 
         Args:
             lite(bool): Specifies the "lite" version which contains all rows but only the
@@ -190,12 +191,11 @@ class Finder(object):
     def get_quasar_catalog_path(self, catalog_name=None):
         """Get the location of the quasar catalog file.
 
-        The data model of the quasar catalog is at
-        http://data.sdss3.org/datamodel/files/BOSS_QSO/DR12Q/DR12Q.html
+        The `quasar catalog
+        <http://data.sdss3.org/datamodel/files/BOSS_QSO/DR12Q/DR12Q.html>`__
+        is documented at
+        http://www.sdss.org/dr12/algorithms/boss-dr12-quasar-catalog/.
         As of DR12, the file size is about 513Mb.
-
-        Additional information is available at
-        http://www.sdss.org/dr12/algorithms/boss-dr12-quasar-catalog/
 
         Args:
             catalog_name(str): BOSS quasar catalog name. Will use the

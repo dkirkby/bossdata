@@ -7,6 +7,7 @@ A python package for working with `spectroscopic data <http://www.sdss.org/dr12/
 
 What's new in version 0.2.7:
 
-* Fix `issues <https://github.com/dkirkby/bossdata/issues>`__ #94 #97 #92(?)
+* Fix `issues <https://github.com/dkirkby/bossdata/issues>`__ #94 #97 #92 #100
 * Add support for reading per-exposure flux calibration and correction vectors.
 * Add plot functions for per-fiber data vs fiber number or focal-plane position.
+* Add a plug_map attribute to spPlate, spFrame, spCFrame.

@@ -88,10 +88,12 @@ extensions = [
     'sphinx.ext.extlinks',
 ]
 
-# Configure external link shortcuts.
+# Configure external link shortcuts. Usage examples:
+# :datamodel:`PLATE4/spPlate`
+# :datamodel:`spPlate <PLATE4/spPlate>`
 extlinks = {
     'datamodel':
-    ('http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/%s',
+    ('http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/%s.html',
      None)}
 
 # Add any paths that contain templates here, relative to this directory.

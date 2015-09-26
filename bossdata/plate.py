@@ -37,10 +37,12 @@ def get_num_fibers(plate):
 class Plan(object):
     """The plan file for configuring the BOSS pipeline to combine exposures of a single plate.
 
-    The datamodel for plan files is at
-    http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spPlan.html.
-    Combined plan files are small text files that list the per-spectrograph (b1,b2,r1,r2)
-    spFrame files used for a single coadd.
+    Combined :datamodel:`plan files <PLATE4/spPlan>` are small text files that list the
+    per-spectrograph (b1,b2,r1,r2) exposures used as input to a single coadd.  Use the
+    `exposure_table` attribute to access this information.  Note that
+    :class:`bossdata.spec.SpecFile` has a similar `exposures` attribute which only includes
+    exposures actually used in the final co-add, so is generally a subset of the planned
+    exposures.
 
     Args:
         path(str): The local path to a plan file.
@@ -131,10 +133,10 @@ class Plan(object):
 
         Use the exposure name to locate FITS data files associated with
         individual exposures.  The supported file types are:
-        :datamodel:`spCFrame <PLATE4/spCFrame.html>`,
-        :datamodel:`spFrame <PLATE4/spFrame.html>`,
-        :datamodel:`spFluxcalib <PLATE4/spFluxcalib.html>` and
-        :datamodel:`spFluxcorr <PLATE4/spFluxcorr.html>`.
+        :datamodel:`spCFrame <PLATE4/spCFrame>`,
+        :datamodel:`spFrame <PLATE4/spFrame>`,
+        :datamodel:`spFluxcalib <PLATE4/spFluxcalib>` and
+        :datamodel:`spFluxcorr <PLATE4/spFluxcorr>`.
         Note that this method returns None when the requested exposure is not present
         in the plan, so the return value should always be checked.
 
@@ -280,8 +282,18 @@ class TraceSet(object):
 class PlateFile(object):
     """A BOSS plate file containing combined exposures for a whole plate.
 
-    This class provides an interface to the spPlate files whose data model is at
-    http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spPlate.html
+    This class provides an interface to the :datamodel:`spPlate <PLATE4/spPlate>` data
+    product, containing all co-added spectra for a single observation.  To instead
+    read individual co-added spectra, use :class:`bossdata.spec.SpecFile`. To access
+    individual exposures of a half-plate use :class:`FrameFile`.
+
+    Use :meth:`get_valid_data` to access this plate's data and the `plug_map`
+    attribute to access this plate's `plug map <http://data.sdss3.org/datamodel/files/PLATELIST_DIR/runs/PLATERUN/plPlugMap.html>`__.
+
+    This class is only intended for reading the BOSS plate file format, so generic
+    operations on spectroscopic data (redshifting, resampling, etc) are intentionally not
+    included here, but are instead provided in the `speclite
+    <http://speclite.readthedocs.org>`__ package.
 
     Args:
         path(str): Local path of the plate FITS file to use.  This should normally be obtained
@@ -461,14 +473,18 @@ class PlateFile(object):
 class FrameFile(object):
     """A BOSS frame file containing a single exposure of one spectrograph (half plate).
 
-    This class supports both types of frame data files: the uncalibrated spFrame and
-    the calibrated spCFrame. The corresponding data models are documented at:
-
-    http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spFrame.html
-    http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spCFrame.html
+    This class supports both types of frame data files: the uncalibrated
+    :datamodel:`spFrame <PLATE4/spFrame>` and the calibrated :datamodel:`spFrame
+    <PLATE4/spCFrame>`. Use :meth:`get_valid_data` to access this plate's data and
+    the `plug_map` attribute to access this plate's `plug map <http://data.sdss3.org/datamodel/files/PLATELIST_DIR/runs/PLATERUN/plPlugMap.html>`__.
 
     BOSS spectrographs read out 500 fibers each. SDSS-I/II spectrographs (plate < 3510)
     read out 320 fibers each.
+
+    This class is only intended for reading the BOSS frame file format, so generic
+    operations on spectroscopic data (redshifting, resampling, etc) are intentionally not
+    included here, but are instead provided in the `speclite
+    <http://speclite.readthedocs.org>`__ package.
 
     Args:
         path(str): Local path of the frame FITS file to use.  This should normally be obtained
