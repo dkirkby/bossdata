@@ -118,8 +118,8 @@ def main():
         '--exposure', type=int, default=None, metavar='EXP',
         help='Exposure sequence number starting from 0, or plot the coadd if not set.')
     parser.add_argument(
-        '--camera', type=str, choices=['blue', 'red', 'both'],
-        default='both', help='Camera to use when plotting a single exposure.')
+        '--band', type=str, choices=['blue', 'red', 'both'],
+        default='both', help='band to use when plotting a single exposure.')
     parser.add_argument(
         '--allow-mask', type=str, default=None,
         help='SPPIXMASK bit names to allow in valid data. Separate multiple names with |.')
@@ -186,9 +186,9 @@ def main():
         if args.frame or args.cframe:
             print('Coadds not available from frame and cframe files.')
             return -1
-        if args.camera is not 'both':
-            print('Ignoring camera = "{0}" for combined spectrum.'.format(args.camera))
-            args.camera = 'both'
+        if args.band is not 'both':
+            print('Ignoring band = "{0}" for combined spectrum.'.format(args.band))
+            args.band = 'both'
     else:
         if args.platefile:
             print('Single exposures not available from plate files.')
@@ -245,19 +245,19 @@ def main():
                 print('Exposure summary:')
                 print(plan.exposure_table)
             ftype = 'spCFrame' if args.cframe else 'spFrame'
-            if args.camera in ('red', 'both'):
+            if args.band in ('red', 'both'):
                 red_name = plan.get_exposure_name(
                     args.exposure, 'red', args.fiber, ftype)
                 if red_name is None:
-                    print('Red camera data not available.')
+                    print('Red band data not available.')
                     return -1
                 frames['red'] = bossdata.plate.FrameFile(
                     mirror.get(os.path.join(frame_path, red_name)))
-            if args.camera in ('blue', 'both'):
+            if args.band in ('blue', 'both'):
                 blue_name = plan.get_exposure_name(
                     args.exposure, 'blue', args.fiber, ftype)
                 if blue_name is None:
-                    print('Blue camera data not available.')
+                    print('Blue band data not available.')
                     return -1
                 frames['blue'] = bossdata.plate.FrameFile(
                     mirror.get(os.path.join(frame_path, blue_name)))
@@ -347,13 +347,13 @@ def main():
         exposure_id = plan.exposures['science'][args.exposure]['EXPID']
         if args.verbose:
             print('Showing exposure {:08d}.'.format(exposure_id))
-        if args.camera in ('blue', 'both'):
+        if args.band in ('blue', 'both'):
             spectra.append(frames['blue'].get_valid_data(
                 fibers, pixel_quality_mask=pixel_quality_mask, **data_args)[0])
             plot_colors.append('blue')
             if args.verbose:
                 print_mask_summary('Blue', frames['blue'].get_pixel_masks(fibers)[0])
-        if args.camera in ('red', 'both'):
+        if args.band in ('red', 'both'):
             spectra.append(frames['red'].get_valid_data(
                 fibers, pixel_quality_mask=pixel_quality_mask, **data_args)[0])
             plot_colors.append('red')
@@ -363,7 +363,7 @@ def main():
         # Which spectrograph is this fiber on for this plate?
         num_fibers = bossdata.plate.get_num_fibers(args.plate)
         spec_index = '1' if args.fiber <= num_fibers // 2 else '2'
-        if args.camera in ('blue', 'both'):
+        if args.band in ('blue', 'both'):
             camera = 'b' + spec_index
             exposure_id = specfile.exposures.get_info(args.exposure, camera)['science']
             if args.verbose:
@@ -373,7 +373,7 @@ def main():
             plot_colors.append('blue')
             if args.verbose:
                 print_mask_summary('Blue', specfile.get_pixel_mask(args.exposure, camera))
-        if args.camera in ('red', 'both'):
+        if args.band in ('red', 'both'):
             camera = 'r' + spec_index
             exposure_id = specfile.exposures.get_info(args.exposure, camera)['science']
             if args.verbose:
