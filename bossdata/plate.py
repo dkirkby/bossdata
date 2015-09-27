@@ -128,8 +128,8 @@ class Plan(object):
                              .format(fiber, self.num_fibers, self.plate))
         return 1 if fiber <= self.num_fibers // 2 else 2
 
-    def get_exposure_name(self, sequence_number, camera, fiber, ftype='spCFrame'):
-        """Get the name of a science exposure from this plan.
+    def get_exposure_name(self, sequence_number, band, fiber, ftype='spCFrame'):
+        """Get the file name of a single science exposure data product.
 
         Use the exposure name to locate FITS data files associated with
         individual exposures.  The supported file types are:
@@ -145,7 +145,7 @@ class Plan(object):
                 Must be less than our num_science_exposures attribute.
             fiber(int): Fiber number to identify which spectrograph to use, which must
                 be in the range 1-1000 (or 1-640 for plate < 3510).
-            camera(str): Must be 'blue' or 'red'.
+            band(str): Must be 'blue' or 'red'.
             ftype(str): Type of exposure file whose name to return.  Must be one of
                 spCFrame, spFrame, spFluxcalib, spFluxcorr.  An spCFrame is assumed
                 to be uncompressed, and all other files are assumed to be compressed.
@@ -155,29 +155,29 @@ class Plan(object):
                 identifies the spectrograph (one of b1,r1,b2,r2) and [eeeeeeee] is the
                 zero-padded exposure number. The extension [ext] is "fits" for
                 spCFrame files and "fits.gz" for all other file types. Returns None if
-                the name is unknown for this camera and fiber combination.
+                the name is unknown for this band and fiber combination.
 
         Raises:
             ValueError: one of the inputs is invalid.
         """
         if sequence_number < 0 or sequence_number >= self.num_science_exposures:
             raise ValueError('Invalid sequence number ({0}) must be 0-{1}.'.format(
-                sequence_number, self.num_science_exposures))
+                sequence_number, self.num_science_exposures - 1))
         if fiber < 1 or fiber > self.num_fibers:
             raise ValueError('Invalid fiber ({}) must be 1-{} for plate {}.'.format(
                 fiber, self.num_fibers, self.plate))
-        if camera not in ('blue', 'red'):
-            raise ValueError('Invalid camera ({}) must be blue or red.'.format(camera))
+        if band not in ('blue', 'red'):
+            raise ValueError('Invalid band ({}) must be blue or red.'.format(band))
         if ftype not in ('spCFrame', 'spFrame', 'spFluxcalib', 'spFluxcorr'):
             raise ValueError('Invalid file type ({}) must be one of: '.format(ftype) +
                              'spCFrame, spFrame, spFluxcalib, spFluxcorr.')
 
-        spectrograph = camera[0] + str(self.get_spectrograph_index(fiber))
+        camera = band[0] + str(self.get_spectrograph_index(fiber))
         exposure_info = self.exposures['science'][sequence_number]
-        if spectrograph not in exposure_info['SPECS']:
+        if camera not in exposure_info['SPECS']:
             return None
         exposure_id = exposure_info['EXPID']
-        name = '{0}-{1}-{2:08d}.fits'.format(ftype, spectrograph, exposure_id)
+        name = '{0}-{1}-{2:08d}.fits'.format(ftype, camera, exposure_id)
         if ftype != 'spCFrame':
             name += '.gz'
         return name

@@ -145,7 +145,6 @@ class Exposures(object):
                     self.num_by_camera[camera], camera, num_exposures))
             camera_rows = self.table['camera'] == camera
             camera_exposures = set(self.table[camera_rows]['science'])
-            print(camera, camera_exposures)
             if camera_exposures != exposure_set:
                 raise RuntimeError('Found inconsistent {} exposures: {}. Expected: {}.'.format(
                     camera, camera_exposures, exposure_set))
@@ -199,11 +198,18 @@ class SpecFile(object):
     To read all co-added spectra of an observation use :class:`bossdata.plate.PlateFile`.
     Individual exposures of a half-plate can be read using :class:`bossdata.plate.FrameFile`.
 
-    Use :meth:`get_valid_data` to access this file's spectra, or the :class:`exposures
-    <Exposures>` attribute for a list of exposures used in the coadd.  See
-    :class:`bossdata.plate.Plan` for more information about the exposures used in a coadd.
-    The ``num_exposures`` attribute gives the number of science exposures used for this
-    target's co-added spectrum (counting a blue+red pair as one exposure).
+    The ``plate``, ``mjd`` and ``fiber`` attributes specify the target observation.
+    The ``info`` attribute contains this target's row from :datamodel:`spAll <spAll>`
+    as a structured numpy array, so its metadata can be accessed as ``info['OBJTYPE']``,
+    etc.
+
+    Use :meth:`get_valid_data` to access this target's spectra, or the :class:`exposures
+    <Exposures>` attribute for a list of exposures used in the coadd (see
+    :class:`bossdata.plate.Plan` for alternative information about the exposures used in
+    a coadd.) The ``num_exposures`` attribute gives the number of science exposures used
+    for this target's co-added spectrum (counting a blue+red pair as one exposure). Use
+    :meth:`get_exposure_name` to locate files associated the individual exposures used
+    for this co-added spectrum.
 
     This class is only intended for reading the BOSS spec file format, so generic
     operations on spectroscopic data (redshifting, resampling, etc) are intentionally not
@@ -223,6 +229,66 @@ class SpecFile(object):
         # Look up the available exposures.
         self.exposures = Exposures(self.header)
         self.num_exposures = len(self.exposures.sequence)
+        # Look up our row from spAll
+        self.info = self.hdulist[2].read()
+        # Extract our plate-mjd-fiber values.
+        self.plate = self.info['PLATE']
+        self.mjd = self.info['MJD']
+        self.fiber = self.info['FIBERID']
+
+    def get_exposure_name(self, sequence_number, band, ftype='spCFrame'):
+        """Get the file name of a single science exposure data product.
+
+        Use the exposure name to locate FITS data files associated with
+        individual exposures.  The supported file types are:
+        :datamodel:`spCFrame <PLATE4/spCFrame>`,
+        :datamodel:`spFrame <PLATE4/spFrame>`,
+        :datamodel:`spFluxcalib <PLATE4/spFluxcalib>` and
+        :datamodel:`spFluxcorr <PLATE4/spFluxcorr>`.  This method is analogous to
+        :meth:`bossdata.plate.Plan.get_exposure_name`, but operates for a single
+        target and only knows about exposures actually used in the final co-add.
+
+        Args:
+            sequence_number(int): Science exposure sequence number, counting from zero.
+                Must be less than our num_exposures attribute.
+            band(str): Must be 'blue' or 'red'.
+            ftype(str): Type of exposure file whose name to return.  Must be one of
+                spCFrame, spFrame, spFluxcalib, spFluxcorr.  An spCFrame is assumed
+                to be uncompressed, and all other files are assumed to be compressed.
+
+        Returns:
+            str: Exposure name of the form [ftype]-[cc]-[eeeeeeee].[ext] where [cc]
+                identifies the spectrograph (one of b1,r1,b2,r2) and [eeeeeeee] is the
+                zero-padded exposure number. The extension [ext] is "fits" for
+                spCFrame files and "fits.gz" for all other file types.
+
+        Raises:
+            ValueError: one of the inputs is invalid.
+        """
+        if sequence_number < 0 or sequence_number >= self.num_exposures:
+            raise ValueError('Invalid sequence number ({0}) must be 0-{1}.'.format(
+                sequence_number, self.num_exposures) - 1)
+        if band not in ('blue', 'red'):
+            raise ValueError('Invalid band ({}) must be blue or red.'.format(band))
+        if ftype not in ('spCFrame', 'spFrame', 'spFluxcalib', 'spFluxcorr'):
+            raise ValueError('Invalid file type ({}) must be one of: '.format(ftype) +
+                             'spCFrame, spFrame, spFluxcalib, spFluxcorr.')
+
+        # We don't use bossdata.plate.get_num_fibers here to avoid a circular import.
+        num_fibers = 640 if self.plate < 3510 else 1000
+
+        # Calculate the camera (b1/b2/r1/r2) for the requested and this target's fiber.
+        spec_id = 1 if self.fiber <= num_fibers // 2 else 2
+        camera = band[0] + str(spec_id)
+
+        # Get the science exposure ID number for the requested seqence number 0,1,...
+        exposure_info = self.exposures.get_info(sequence_number, camera)
+        exposure_id = exposure_info['science']
+
+        name = '{0}-{1}-{2:08d}.fits'.format(ftype, camera, exposure_id)
+        if ftype != 'spCFrame':
+            name += '.gz'
+        return name
 
     def get_exposure_hdu(self, exposure_index, camera):
         """Lookup the HDU for one exposure.
