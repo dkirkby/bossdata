@@ -10,7 +10,9 @@ History
 * Add support for reading per-exposure flux calibration and correction vectors.
 * Add plot functions for per-fiber data vs fiber number or focal-plane position.
 * Add a plug_map attribute to spPlate, spFrame, spCFrame.
+* FrameFile infers the spectrograph index and whether flux calibration has been applied.
 * bossdata infers MJD when possible.
+* bossplot option "--camera" renamed to "--band".
 
 0.2.6 (2015-08-05)
 ------------------
