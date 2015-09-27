@@ -101,6 +101,11 @@ class Exposures(object):
     Uses the NEXP and EXPIDnn keywords that are present in the header of HDU0
     in spPlate and spec FITS files.
 
+    The `table` and `num_exposures` attributes are populated by the constructor.
+    Note that `num_exposures` includes both red and blue exposures and that only
+    one spectrograph will be included (b1+r1 or b2+r2) depending on the fiber.
+    Use :meth:`get_info` to get information about a specific exposure.
+
     Args:
         header(dict): dictionary of FITS header keyword, value pairs.
 
@@ -155,7 +160,7 @@ class Exposures(object):
                 exposure_index, science_num, camera))
         if np.count_nonzero(row) > 1:
             raise RuntimeError(
-                'Found multiple {} exposures {:08d}.'.format(camera, exposure_index))
+                'Found multiple {} exposures[{}].'.format(camera, exposure_index))
         return self.table[row][0]
 
 
@@ -171,9 +176,9 @@ class SpecFile(object):
     To read all co-added spectra of an observation use :class:`bossdata.plate.PlateFile`.
     Individual exposures of a half-plate can be read using :class:`bossdata.plate.FrameFile`.
 
-    Use :meth:`get_valid_data` to access this file's spectra, or the `exposures` attribute
-    for a list of exposures used in the coadd.  See :class:`bossdata.plate.Plan` for
-    more information about the exposures used in a coadd.
+    Use :meth:`get_valid_data` to access this file's spectra, or the :class:`exposures
+    <Exposures>` attribute for a list of exposures used in the coadd.  See
+    :class:`bossdata.plate.Plan` for more information about the exposures used in a coadd.
 
     This class is only intended for reading the BOSS spec file format, so generic
     operations on spectroscopic data (redshifting, resampling, etc) are intentionally not
