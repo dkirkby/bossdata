@@ -480,13 +480,15 @@ class FrameFile(object):
     """A BOSS frame file containing a single exposure of one spectrograph (half plate).
 
     This class supports both types of frame data files: the uncalibrated
-    :datamodel:`spFrame <PLATE4/spFrame>` and the calibrated :datamodel:`spFrame
+    :datamodel:`spFrame <PLATE4/spFrame>` and the calibrated :datamodel:`spCFrame
     <PLATE4/spCFrame>`. Use :meth:`get_valid_data` to access this plate's data and
     the ``plug_map`` attribute to access this plate's `plug map
     <http://data.sdss3.org/datamodel/files/PLATELIST_DIR/runs/PLATERUN/plPlugMap.html>`__.
 
     BOSS spectrographs read out 500 fibers each. SDSS-I/II spectrographs (plate < 3510)
-    read out 320 fibers each.
+    read out 320 fibers each.  The ``plate``, ``camera`` and ``exposure_id`` attributes
+    provide the basic metadata for this exposure.  The complete HDU0 header is available
+    as the ``header`` attribute.
 
     This class is only intended for reading the BOSS frame file format, so generic
     operations on spectroscopic data (redshifting, resampling, etc) are intentionally not
@@ -501,14 +503,14 @@ class FrameFile(object):
         index(int): Identifies if this is the first (1) or second (2) spectrograph, which
             determines whether it has spectra for fibers 1-500 (1-320) or 501-1000 (321-640).
             You should normally obtain this value using :meth:`Plan.get_spectrograph_index`.
+            As of v0.2.7, this argument is optional and will be inferred from the file header
+            when not provided, or checked against the file header when provided.
         calibrated(bool): Identifies whether this is a calibrated (spCFrame) or
-            un-calibrated (spFrame) frame file.
+            un-calibrated (spFrame) frame file. As of v0.2.7, this argument is optional and
+            will be inferred from the file header when not provided, or checked against the
+            file header when provided.
     """
-    def __init__(self, path, index, calibrated):
-        if index not in (1, 2):
-            raise ValueError('Invalid index ({}) should be 1 or 2.'.format(index))
-        self.index = index
-        self.calibrated = calibrated
+    def __init__(self, path, index=None, calibrated=None):
         self.hdulist = fitsio.FITS(path, mode=fitsio.READONLY)
         self.header = self.hdulist[0].read_header()
         # Look up the number of fibers.
@@ -522,6 +524,30 @@ class FrameFile(object):
         self.sky = None
         # Read our plug map into an astropy table.
         self.plug_map = astropy.table.Table(self.hdulist[5].read())
+        # Extract some metadata from the HDU0 header.
+        self.plate = self.header['PLATEID']
+        self.exposure_id = self.header['EXPOSURE']
+        self.camera = self.header['CAMERAS'].rstrip()
+        if self.camera not in ('b1', 'b2', 'r1', 'r2'):
+            raise RuntimeError('Found unexpected camera name: {}.'.format(self.camera))
+        self.index = int(self.camera[1])
+        # Use the HDU3 (wavelength solution) dimensions to detect if this file contains
+        # flux-calibrated spectra.
+        hdr3 = self.hdulist[3].read_header()
+        naxis2 = hdr3['NAXIS2']
+        if naxis2 == self.num_fibers:
+            self.calibrated = True
+        elif naxis2 == 1:
+            self.calibrated = False
+        else:
+            raise RuntimeError('Found unexpected HDU3 NAXIS2 = {}.'.format(naxis2))
+        # Check the values of the optional index & calibrated args if they are provided.
+        if index is not None and index != self.index:
+            raise ValueError('Specified index ({}) does not match the file value ({}).'
+                             .format(index, self.index))
+        if calibrated is not None and calibrated != self.calibrated:
+            raise ValueError('Specified calibrated ({}) does not match the file value ({}).'
+                             .format(calibrated, self.calibrated))
 
     def get_fiber_offsets(self, fiber):
         """Convert fiber numbers to array offsets.

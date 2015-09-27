@@ -244,7 +244,6 @@ def main():
             if args.verbose:
                 print('Exposure summary:')
                 print(plan.exposure_table)
-            spec_index = plan.get_spectrograph_index(args.fiber)
             ftype = 'spCFrame' if args.cframe else 'spFrame'
             if args.camera in ('red', 'both'):
                 red_name = plan.get_exposure_name(
@@ -253,8 +252,7 @@ def main():
                     print('Red camera data not available.')
                     return -1
                 frames['red'] = bossdata.plate.FrameFile(
-                    mirror.get(os.path.join(frame_path, red_name)),
-                    index=spec_index, calibrated=args.cframe)
+                    mirror.get(os.path.join(frame_path, red_name)))
             if args.camera in ('blue', 'both'):
                 blue_name = plan.get_exposure_name(
                     args.exposure, 'blue', args.fiber, ftype)
@@ -262,8 +260,7 @@ def main():
                     print('Blue camera data not available.')
                     return -1
                 frames['blue'] = bossdata.plate.FrameFile(
-                    mirror.get(os.path.join(frame_path, blue_name)),
-                    index=spec_index, calibrated=args.cframe)
+                    mirror.get(os.path.join(frame_path, blue_name)))
         elif args.platefile:
             remote_path = finder.get_plate_spec_path(plate=args.plate, mjd=args.mjd)
             local_path = mirror.get(remote_path)
