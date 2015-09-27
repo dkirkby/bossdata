@@ -287,8 +287,12 @@ class PlateFile(object):
     read individual co-added spectra, use :class:`bossdata.spec.SpecFile`. To access
     individual exposures of a half-plate use :class:`FrameFile`.
 
-    Use :meth:`get_valid_data` to access this plate's data and the `plug_map`
-    attribute to access this plate's `plug map <http://data.sdss3.org/datamodel/files/PLATELIST_DIR/runs/PLATERUN/plPlugMap.html>`__.
+    Use :meth:`get_valid_data` to access this plate's data, or the :class:`exposures
+    <Exposures>` attribute for a list of exposures used in the coadd.
+    The ``num_exposures`` attribute gives the number of science exposures used for this
+    target's co-added spectrum (counting a blue+red pair as one exposure). The
+    ``plug_map`` attribute records this plate's `plug map
+    <http://data.sdss3.org/datamodel/files/PLATELIST_DIR/runs/PLATERUN/plPlugMap.html>`__.
 
     This class is only intended for reading the BOSS plate file format, so generic
     operations on spectroscopic data (redshifting, resampling, etc) are intentionally not
@@ -307,8 +311,8 @@ class PlateFile(object):
         # Look up the number of fibers.
         self.num_fibers = self.header['NAXIS2']
         # Look up the number of exposures used for this coadd.
-        self.num_exposures = self.header['NEXP']
         self.exposures = Exposures(self.header)
+        self.num_exposures = len(self.exposures.sequence)
         # Calculate the common wavelength grid from header keywords.
         num_pixels = self.header['NAXIS1']
         loglam_min = self.header['COEFF0']
@@ -478,7 +482,8 @@ class FrameFile(object):
     This class supports both types of frame data files: the uncalibrated
     :datamodel:`spFrame <PLATE4/spFrame>` and the calibrated :datamodel:`spFrame
     <PLATE4/spCFrame>`. Use :meth:`get_valid_data` to access this plate's data and
-    the `plug_map` attribute to access this plate's `plug map <http://data.sdss3.org/datamodel/files/PLATELIST_DIR/runs/PLATERUN/plPlugMap.html>`__.
+    the ``plug_map`` attribute to access this plate's `plug map
+    <http://data.sdss3.org/datamodel/files/PLATELIST_DIR/runs/PLATERUN/plPlugMap.html>`__.
 
     BOSS spectrographs read out 500 fibers each. SDSS-I/II spectrographs (plate < 3510)
     read out 320 fibers each.

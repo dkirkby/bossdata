@@ -231,7 +231,7 @@ def main():
         if args.exposure is None:
             print('Plotting combined spectrum for {}.'.format(observation))
         else:
-            print('Plotting exposure {} spectrum for {}.'.format(args.exposure, observation))
+            print('Plotting exposure[{}] spectrum for {}.'.format(args.exposure, observation))
 
     # Load spectra into memory, downloading if necessary.
     try:
@@ -245,9 +245,10 @@ def main():
                 print('Exposure summary:')
                 print(plan.exposure_table)
             spec_index = plan.get_spectrograph_index(args.fiber)
+            ftype = 'spCFrame' if args.cframe else 'spFrame'
             if args.camera in ('red', 'both'):
                 red_name = plan.get_exposure_name(
-                    args.exposure, 'red', args.fiber, calibrated=args.cframe)
+                    args.exposure, 'red', args.fiber, ftype)
                 if red_name is None:
                     print('Red camera data not available.')
                     return -1
@@ -256,7 +257,7 @@ def main():
                     index=spec_index, calibrated=args.cframe)
             if args.camera in ('blue', 'both'):
                 blue_name = plan.get_exposure_name(
-                    args.exposure, 'blue', args.fiber, calibrated=args.cframe)
+                    args.exposure, 'blue', args.fiber, ftype)
                 if blue_name is None:
                     print('Blue camera data not available.')
                     return -1
@@ -267,7 +268,7 @@ def main():
             remote_path = finder.get_plate_spec_path(plate=args.plate, mjd=args.mjd)
             local_path = mirror.get(remote_path)
             platefile = bossdata.plate.PlateFile(local_path)
-            num_exposures = platefile.exposures.num_exposures
+            num_exposures = platefile.num_exposures
             if args.verbose:
                 print('Exposure summary:')
                 print(platefile.exposures.table)
@@ -281,7 +282,7 @@ def main():
             local_paths = []
             local_path = mirror.get(remote_paths, local_paths=local_paths)
             specfile = bossdata.spec.SpecFile(local_path)
-            num_exposures = specfile.exposures.num_exposures
+            num_exposures = specfile.num_exposures
             if args.verbose:
                 print('Exposure summary:')
                 print(specfile.exposures.table)
@@ -293,8 +294,8 @@ def main():
 
     # Check for an invalid exposure index.
     if args.exposure is not None and (args.exposure < 0 or args.exposure >= num_exposures):
-        print('The value --exposure {} is outside the allowed range 0-{}.'.format(
-            args.exposure, num_exposures - 1))
+        print('The value --exposure {} is outside the allowed range 0-{} for this target.'
+            .format(args.exposure, num_exposures - 1))
         if not args.verbose:
             print('Use the --verbose option for details on the available exposures.')
         return -1

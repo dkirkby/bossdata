@@ -98,24 +98,27 @@ option that returns data using this grid.
 class Exposures(object):
     """Table of exposure info extracted from FITS header keywords.
 
-    Uses the NEXP and EXPIDnn keywords that are present in the header of HDU0
-    in spPlate and spec FITS files.
+    Parse the NEXP and EXPIDnn keywords that are present in the header of HDU0
+    in :datamodel:`spPlate <PLATE4/spPlate>` and :datamodel:`spec
+    <spectra/PLATE4/spec>` FITS files.
 
-    The `table` and `num_exposures` attributes are populated by the constructor.
-    Note that `num_exposures` includes both red and blue exposures and that only
-    one spectrograph will be included (b1+r1 or b2+r2) depending on the fiber.
-    Use :meth:`get_info` to get information about a specific exposure.
+    The constructor initializes the ``table`` attribute with column names
+    ``offset``, ``camera``, ``science``, ``flat`` and ``arc``, and creates one
+    row for each keyword EXPIDnn, where ``offset`` equals the keyword sequence
+    number nn, ``camera`` is one of b1, b2, r1, r2, and the remaining columns
+    record the science and calibration exposure numbers.
+
+    Use :meth:`get_info` to retrieve the n-th exposure for a particular camera
+    (b1, b2, r1, r2).  Note that when this class is initialized from a
+    :datamodel:`spec file <spectra/PLATE4/spec>` header, it will only describe
+    the two cameras of a single spectrograph (b1+r1 or b2+r2). The `num_by_camera`
+    attribute is a dictionary of ints indexed by camera that records the number
+    of science exposures available for that camera.
 
     Args:
         header(dict): dictionary of FITS header keyword, value pairs.
 
     Returns:
-        `astropy.table.Table`: table with columns 'exp', 'arc', 'flat', 'b1', 'b2',
-        'r1', 'r2', that give the science exposure numbers 'exp', together with the
-        corresponding 'arc' and 'flat' exposure numbers used to calibrate them.
-        The 'b1', 'b2', 'r1', 'r2' columns give the value n=1-12 of the 'EXP<n>' header
-        keyword described each of the four spectrographs, or n=0 if this spectrograph
-        is not present for this exposure.
     """
     def __init__(self, header):
         num_exposures = header['NEXP']
@@ -124,24 +127,40 @@ class Exposures(object):
         self.table = astropy.table.Table(
             names=('offset', 'camera', 'science', 'flat', 'arc'),
             dtype=('i4', 'S2', 'i4', 'i4', 'i4'))
+        self.num_by_camera = dict(b1=0, b2=0, r1=0, r2=0)
         for i in range(num_exposures):
             camera, science_num, flat_num, arc_num = expid_pattern.match(
                 header['EXPID{0:02d}'.format(i + 1)]).groups()
             self.table.add_row((i, camera, int(science_num), int(flat_num), int(arc_num)))
             exposure_set.add(int(science_num))
+            self.num_by_camera[camera] += 1
         self.sequence = sorted(exposure_set)
-        self.num_exposures = len(exposure_set)
+        # Check that the science exposures listed for each camera are self consistent.
+        num_exposures = len(self.sequence)
+        for camera in ('b1', 'b2', 'r1', 'r2'):
+            if self.num_by_camera[camera] == 0:
+                continue
+            if self.num_by_camera[camera] != num_exposures:
+                raise RuntimeError('Found {} {} exposures but expected {}.'.format(
+                    self.num_by_camera[camera], camera, num_exposures))
+            camera_rows = self.table['camera'] == camera
+            camera_exposures = set(self.table[camera_rows]['science'])
+            print(camera, camera_exposures)
+            if camera_exposures != exposure_set:
+                raise RuntimeError('Found inconsistent {} exposures: {}. Expected: {}.'.format(
+                    camera, camera_exposures, exposure_set))
 
     def get_info(self, exposure_index, camera):
-        """Get info about the specified exposure.
+        """Get information about a single camera exposure.
 
         Args:
-            exposure_index(int): The sequence number for the requested exposure,
-                starting from zero.
+            exposure_index(int): The sequence number for the requested camera
+                exposure, in the range 0 - `(num_exposures[camera]-1)`.
             camera(str): One of b1,b2,r1,r2.
 
         Returns:
-            A structured array with information about the requested exposure.
+            A structured array with information about the requested exposure,
+            corresponding to one row of our ``table`` attribute.
 
         Raises:
             ValueError: Invalid exposure_index or camera.
@@ -150,15 +169,19 @@ class Exposures(object):
         if camera not in ('b1', 'b2', 'r1', 'r2'):
             raise ValueError(
                 'Invalid camera "{}", expected b1, b2, r1, or r2.'.format(camera))
-        if exposure_index < 0 or exposure_index >= self.num_exposures:
+        if self.num_by_camera[camera] == 0:
+            raise ValueError('There are no {} exposures available.'.format(camera))
+        if exposure_index < 0 or exposure_index >= self.num_by_camera[camera]:
             raise ValueError('Invalid exposure_index {}, expected 0-{}.'.format(
-                exposure_index, self.num_exposures))
+                exposure_index, self.num_by_camera[camera] - 1))
         science_num = self.sequence[exposure_index]
         row = (self.table['science'] == science_num) & (self.table['camera'] == camera)
         if not np.any(row):
+            # This should never happen after our self-consistency checks in the ctor.
             raise RuntimeError('No exposure[{}] = {:08d} found for {}.'.format(
                 exposure_index, science_num, camera))
         if np.count_nonzero(row) > 1:
+            # This should never happen after our self-consistency checks in the ctor.
             raise RuntimeError(
                 'Found multiple {} exposures[{}].'.format(camera, exposure_index))
         return self.table[row][0]
@@ -179,6 +202,8 @@ class SpecFile(object):
     Use :meth:`get_valid_data` to access this file's spectra, or the :class:`exposures
     <Exposures>` attribute for a list of exposures used in the coadd.  See
     :class:`bossdata.plate.Plan` for more information about the exposures used in a coadd.
+    The ``num_exposures`` attribute gives the number of science exposures used for this
+    target's co-added spectrum (counting a blue+red pair as one exposure).
 
     This class is only intended for reading the BOSS spec file format, so generic
     operations on spectroscopic data (redshifting, resampling, etc) are intentionally not
@@ -196,8 +221,8 @@ class SpecFile(object):
         self.lite = (len(self.hdulist) == 4)
         self.header = self.hdulist[0].read_header()
         # Look up the available exposures.
-        self.num_exposures = self.header['NEXP']
         self.exposures = Exposures(self.header)
+        self.num_exposures = len(self.exposures.sequence)
 
     def get_exposure_hdu(self, exposure_index, camera):
         """Lookup the HDU for one exposure.
