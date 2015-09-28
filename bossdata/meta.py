@@ -486,3 +486,30 @@ class Database(object):
             assert path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
                 path)
             return path.replace('.fits', '.db')
+
+
+def get_plate_mjd_list(plate, finder=None, mirror=None):
+    """Return the list of MJD values when a plate was observed.
+
+    Uses a query of the :datamodel:`platelist <platelist>`, so this file will be
+    automatically downloaded if necessary.  Only MJD values for which the observation
+    data quality is marked "good" will be returned.
+
+    Args:
+        plate(int): Plate number.
+        finder(bossdata.path.Finder): Object used to find the names of BOSS data files. If not
+            specified, the default Finder constructor is used.
+        mirror(bossdata.remote.Manager): Object used to interact with the local mirror of BOSS
+            data. If not specified, the default Manager constructor is used.
+
+    Returns:
+        list: A list of MJD values when this plate was observed. The list will
+            be empty if this plate has never been observed.
+    """
+    platelist = Database(finder=finder, mirror=mirror, platelist=True)
+    results = platelist.select_all(where='PLATE={0:d} and PLATEQUALITY="good"'.format(plate),
+                                   what='MJD')
+    if results:
+        return list(results['MJD'])
+    else:
+        return []

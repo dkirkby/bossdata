@@ -37,10 +37,12 @@ def get_num_fibers(plate):
 class Plan(object):
     """The plan file for configuring the BOSS pipeline to combine exposures of a single plate.
 
-    The datamodel for plan files is at
-    http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spPlan.html.
-    Combined plan files are small text files that list the per-spectrograph (b1,b2,r1,r2)
-    spFrame files used for a single coadd.
+    Combined :datamodel:`plan files <PLATE4/spPlan>` are small text files that list the
+    per-spectrograph (b1,b2,r1,r2) exposures used as input to a single coadd.  Use the
+    `exposure_table` attribute to access this information.  Note that
+    :class:`bossdata.spec.SpecFile` has a similar `exposures` attribute which only includes
+    exposures actually used in the final co-add, so is generally a subset of the planned
+    exposures.
 
     Args:
         path(str): The local path to a plan file.
@@ -126,15 +128,15 @@ class Plan(object):
                              .format(fiber, self.num_fibers, self.plate))
         return 1 if fiber <= self.num_fibers // 2 else 2
 
-    def get_exposure_name(self, sequence_number, camera, fiber, ftype='spCFrame'):
-        """Get the name of a science exposure from this plan.
+    def get_exposure_name(self, sequence_number, band, fiber, ftype='spCFrame'):
+        """Get the file name of a single science exposure data product.
 
         Use the exposure name to locate FITS data files associated with
         individual exposures.  The supported file types are:
-        :datamodel:`spCFrame <PLATE4/spCFrame.html>`,
-        :datamodel:`spFrame <PLATE4/spFrame.html>`,
-        :datamodel:`spFluxcalib <PLATE4/spFluxcalib.html>` and
-        :datamodel:`spFluxcorr <PLATE4/spFluxcorr.html>`.
+        :datamodel:`spCFrame <PLATE4/spCFrame>`,
+        :datamodel:`spFrame <PLATE4/spFrame>`,
+        :datamodel:`spFluxcalib <PLATE4/spFluxcalib>` and
+        :datamodel:`spFluxcorr <PLATE4/spFluxcorr>`.
         Note that this method returns None when the requested exposure is not present
         in the plan, so the return value should always be checked.
 
@@ -143,7 +145,7 @@ class Plan(object):
                 Must be less than our num_science_exposures attribute.
             fiber(int): Fiber number to identify which spectrograph to use, which must
                 be in the range 1-1000 (or 1-640 for plate < 3510).
-            camera(str): Must be 'blue' or 'red'.
+            band(str): Must be 'blue' or 'red'.
             ftype(str): Type of exposure file whose name to return.  Must be one of
                 spCFrame, spFrame, spFluxcalib, spFluxcorr.  An spCFrame is assumed
                 to be uncompressed, and all other files are assumed to be compressed.
@@ -153,29 +155,29 @@ class Plan(object):
                 identifies the spectrograph (one of b1,r1,b2,r2) and [eeeeeeee] is the
                 zero-padded exposure number. The extension [ext] is "fits" for
                 spCFrame files and "fits.gz" for all other file types. Returns None if
-                the name is unknown for this camera and fiber combination.
+                the name is unknown for this band and fiber combination.
 
         Raises:
             ValueError: one of the inputs is invalid.
         """
         if sequence_number < 0 or sequence_number >= self.num_science_exposures:
             raise ValueError('Invalid sequence number ({0}) must be 0-{1}.'.format(
-                sequence_number, self.num_science_exposures))
+                sequence_number, self.num_science_exposures - 1))
         if fiber < 1 or fiber > self.num_fibers:
             raise ValueError('Invalid fiber ({}) must be 1-{} for plate {}.'.format(
                 fiber, self.num_fibers, self.plate))
-        if camera not in ('blue', 'red'):
-            raise ValueError('Invalid camera ({}) must be blue or red.'.format(camera))
+        if band not in ('blue', 'red'):
+            raise ValueError('Invalid band ({}) must be blue or red.'.format(band))
         if ftype not in ('spCFrame', 'spFrame', 'spFluxcalib', 'spFluxcorr'):
             raise ValueError('Invalid file type ({}) must be one of: '.format(ftype) +
                              'spCFrame, spFrame, spFluxcalib, spFluxcorr.')
 
-        spectrograph = camera[0] + str(self.get_spectrograph_index(fiber))
+        camera = band[0] + str(self.get_spectrograph_index(fiber))
         exposure_info = self.exposures['science'][sequence_number]
-        if spectrograph not in exposure_info['SPECS']:
+        if camera not in exposure_info['SPECS']:
             return None
         exposure_id = exposure_info['EXPID']
-        name = '{0}-{1}-{2:08d}.fits'.format(ftype, spectrograph, exposure_id)
+        name = '{0}-{1}-{2:08d}.fits'.format(ftype, camera, exposure_id)
         if ftype != 'spCFrame':
             name += '.gz'
         return name
@@ -280,8 +282,22 @@ class TraceSet(object):
 class PlateFile(object):
     """A BOSS plate file containing combined exposures for a whole plate.
 
-    This class provides an interface to the spPlate files whose data model is at
-    http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spPlate.html
+    This class provides an interface to the :datamodel:`spPlate <PLATE4/spPlate>` data
+    product, containing all co-added spectra for a single observation.  To instead
+    read individual co-added spectra, use :class:`bossdata.spec.SpecFile`. To access
+    individual exposures of a half-plate use :class:`FrameFile`.
+
+    Use :meth:`get_valid_data` to access this plate's data, or the :class:`exposures
+    <Exposures>` attribute for a list of exposures used in the coadd.
+    The ``num_exposures`` attribute gives the number of science exposures used for this
+    target's co-added spectrum (counting a blue+red pair as one exposure). The
+    ``plug_map`` attribute records this plate's `plug map
+    <http://data.sdss3.org/datamodel/files/PLATELIST_DIR/runs/PLATERUN/plPlugMap.html>`__.
+
+    This class is only intended for reading the BOSS plate file format, so generic
+    operations on spectroscopic data (redshifting, resampling, etc) are intentionally not
+    included here, but are instead provided in the `speclite
+    <http://speclite.readthedocs.org>`__ package.
 
     Args:
         path(str): Local path of the plate FITS file to use.  This should normally be obtained
@@ -295,8 +311,8 @@ class PlateFile(object):
         # Look up the number of fibers.
         self.num_fibers = self.header['NAXIS2']
         # Look up the number of exposures used for this coadd.
-        self.num_exposures = self.header['NEXP']
         self.exposures = Exposures(self.header)
+        self.num_exposures = len(self.exposures.sequence)
         # Calculate the common wavelength grid from header keywords.
         num_pixels = self.header['NAXIS1']
         loglam_min = self.header['COEFF0']
@@ -311,6 +327,8 @@ class PlateFile(object):
         self.flux = None
         self.wdisp = None
         self.sky = None
+        # Read our plug map into an astropy table.
+        self.plug_map = astropy.table.Table(self.hdulist[5].read())
 
     def get_fiber_offsets(self, fiber):
         """Convert fiber numbers to array offsets.
@@ -461,14 +479,21 @@ class PlateFile(object):
 class FrameFile(object):
     """A BOSS frame file containing a single exposure of one spectrograph (half plate).
 
-    This class supports both types of frame data files: the uncalibrated spFrame and
-    the calibrated spCFrame. The corresponding data models are documented at:
-
-    http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spFrame.html
-    http://dr12.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/PLATE4/spCFrame.html
+    This class supports both types of frame data files: the uncalibrated
+    :datamodel:`spFrame <PLATE4/spFrame>` and the calibrated :datamodel:`spCFrame
+    <PLATE4/spCFrame>`. Use :meth:`get_valid_data` to access this plate's data and
+    the ``plug_map`` attribute to access this plate's `plug map
+    <http://data.sdss3.org/datamodel/files/PLATELIST_DIR/runs/PLATERUN/plPlugMap.html>`__.
 
     BOSS spectrographs read out 500 fibers each. SDSS-I/II spectrographs (plate < 3510)
-    read out 320 fibers each.
+    read out 320 fibers each.  The ``plate``, ``camera`` and ``exposure_id`` attributes
+    provide the basic metadata for this exposure.  The complete HDU0 header is available
+    as the ``header`` attribute.
+
+    This class is only intended for reading the BOSS frame file format, so generic
+    operations on spectroscopic data (redshifting, resampling, etc) are intentionally not
+    included here, but are instead provided in the `speclite
+    <http://speclite.readthedocs.org>`__ package.
 
     Args:
         path(str): Local path of the frame FITS file to use.  This should normally be obtained
@@ -478,14 +503,14 @@ class FrameFile(object):
         index(int): Identifies if this is the first (1) or second (2) spectrograph, which
             determines whether it has spectra for fibers 1-500 (1-320) or 501-1000 (321-640).
             You should normally obtain this value using :meth:`Plan.get_spectrograph_index`.
+            As of v0.2.7, this argument is optional and will be inferred from the file header
+            when not provided, or checked against the file header when provided.
         calibrated(bool): Identifies whether this is a calibrated (spCFrame) or
-            un-calibrated (spFrame) frame file.
+            un-calibrated (spFrame) frame file. As of v0.2.7, this argument is optional and
+            will be inferred from the file header when not provided, or checked against the
+            file header when provided.
     """
-    def __init__(self, path, index, calibrated):
-        if index not in (1, 2):
-            raise ValueError('Invalid index ({}) should be 1 or 2.'.format(index))
-        self.index = index
-        self.calibrated = calibrated
+    def __init__(self, path, index=None, calibrated=None):
         self.hdulist = fitsio.FITS(path, mode=fitsio.READONLY)
         self.header = self.hdulist[0].read_header()
         # Look up the number of fibers.
@@ -497,6 +522,32 @@ class FrameFile(object):
         self.flux = None
         self.wdisp = None
         self.sky = None
+        # Read our plug map into an astropy table.
+        self.plug_map = astropy.table.Table(self.hdulist[5].read())
+        # Extract some metadata from the HDU0 header.
+        self.plate = self.header['PLATEID']
+        self.exposure_id = self.header['EXPOSURE']
+        self.camera = self.header['CAMERAS'].rstrip()
+        if self.camera not in ('b1', 'b2', 'r1', 'r2'):
+            raise RuntimeError('Found unexpected camera name: {}.'.format(self.camera))
+        self.index = int(self.camera[1])
+        # Use the HDU3 (wavelength solution) dimensions to detect if this file contains
+        # flux-calibrated spectra.
+        hdr3 = self.hdulist[3].read_header()
+        naxis2 = hdr3['NAXIS2']
+        if naxis2 == self.num_fibers:
+            self.calibrated = True
+        elif naxis2 == 1:
+            self.calibrated = False
+        else:
+            raise RuntimeError('Found unexpected HDU3 NAXIS2 = {}.'.format(naxis2))
+        # Check the values of the optional index & calibrated args if they are provided.
+        if index is not None and index != self.index:
+            raise ValueError('Specified index ({}) does not match the file value ({}).'
+                             .format(index, self.index))
+        if calibrated is not None and calibrated != self.calibrated:
+            raise ValueError('Specified calibrated ({}) does not match the file value ({}).'
+                             .format(calibrated, self.calibrated))
 
     def get_fiber_offsets(self, fiber):
         """Convert fiber numbers to array offsets.
