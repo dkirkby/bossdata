@@ -148,7 +148,7 @@ Version Update Checklist
 
 #. Update master so that new topic branches will include these changes, e.g::
 
-    git add setup.py speclite/__init__.py HISTORY.rst DESCRIPTION.rst
+    git add setup.py bossdata/__init__.py HISTORY.rst DESCRIPTION.rst
     git commit -m 'Start development on version 0.2.2'
     git push
 
