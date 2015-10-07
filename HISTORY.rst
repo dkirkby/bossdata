@@ -6,7 +6,9 @@ History
 0.2.8 (unreleased)
 ------------------
 
-* No changes yet.
+* Fix issues #26 #103
+* Add support for reading raw image data.
+* Add support for reading plug map files from the speclog svn product.
 
 0.2.7 (2015-09-28)
 ------------------
