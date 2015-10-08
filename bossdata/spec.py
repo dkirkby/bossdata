@@ -185,6 +185,54 @@ class Exposures(object):
                 'Found multiple {} exposures[{}].'.format(camera, exposure_index))
         return self.table[row][0]
 
+    def get_exposure_name(self, exposure_index, camera, ftype='spCFrame'):
+        """Get the file name of a single science exposure data product.
+
+        Use the exposure name to locate FITS data files associated with
+        individual exposures.  The supported file types are:
+        :datamodel:`spCFrame <PLATE4/spCFrame>`,
+        :datamodel:`spFrame <PLATE4/spFrame>`,
+        :datamodel:`spFluxcalib <PLATE4/spFluxcalib>` and
+        :datamodel:`spFluxcorr <PLATE4/spFluxcorr>`.  This method is analogous to
+        :meth:`bossdata.plate.Plan.get_exposure_name`, but operates for a single
+        target and only knows about exposures actually used in the final co-add.
+
+        Args:
+            exposure_index(int): The sequence number for the requested camera
+                exposure, in the range 0 - `(num_exposures[camera]-1)`.
+            camera(str): One of b1,b2,r1,r2.
+            ftype(str): Type of exposure file whose name to return.  Must be one of
+                spCFrame, spFrame, spFluxcalib, spFluxcorr.  An spCFrame is assumed
+                to be uncompressed, and all other files are assumed to be compressed.
+
+        Returns:
+            str: Exposure name of the form [ftype]-[cc]-[eeeeeeee].[ext] where [cc]
+                identifies the camera (one of b1,r1,b2,r2) and [eeeeeeee] is the
+                zero-padded exposure number. The extension [ext] is "fits" for
+                spCFrame files and "fits.gz" for all other file types.
+
+        Raises:
+            ValueError: one of the inputs is invalid.
+        """
+        if camera not in ('b1', 'b2', 'r1', 'r2'):
+            raise ValueError(
+                'Invalid camera "{}", expected b1, b2, r1, or r2.'.format(camera))
+        if exposure_index < 0 or exposure_index >= self.num_by_camera[camera]:
+            raise ValueError('Invalid exposure_index {}, expected 0-{}.'.format(
+                exposure_index, self.num_by_camera[camera] - 1))
+        if ftype not in ('spCFrame', 'spFrame', 'spFluxcalib', 'spFluxcorr'):
+            raise ValueError('Invalid file type ({}) must be one of: '.format(ftype) +
+                             'spCFrame, spFrame, spFluxcalib, spFluxcorr.')
+
+        # Get the science exposure ID number for the requested seqence number 0,1,...
+        exposure_info = self.get_info(exposure_index, camera)
+        exposure_id = exposure_info['science']
+
+        name = '{0}-{1}-{2:08d}.fits'.format(ftype, camera, exposure_id)
+        if ftype != 'spCFrame':
+            name += '.gz'
+        return name
+
 
 class SpecFile(object):
     """ A BOSS spec file containing summary data for a single target.
@@ -258,22 +306,13 @@ class SpecFile(object):
 
         Returns:
             str: Exposure name of the form [ftype]-[cc]-[eeeeeeee].[ext] where [cc]
-                identifies the spectrograph (one of b1,r1,b2,r2) and [eeeeeeee] is the
+                identifies the camera (one of b1,r1,b2,r2) and [eeeeeeee] is the
                 zero-padded exposure number. The extension [ext] is "fits" for
                 spCFrame files and "fits.gz" for all other file types.
 
         Raises:
             ValueError: one of the inputs is invalid.
         """
-        if sequence_number < 0 or sequence_number >= self.num_exposures:
-            raise ValueError('Invalid sequence number ({0}) must be 0-{1}.'.format(
-                sequence_number, self.num_exposures) - 1)
-        if band not in ('blue', 'red'):
-            raise ValueError('Invalid band ({}) must be blue or red.'.format(band))
-        if ftype not in ('spCFrame', 'spFrame', 'spFluxcalib', 'spFluxcorr'):
-            raise ValueError('Invalid file type ({}) must be one of: '.format(ftype) +
-                             'spCFrame, spFrame, spFluxcalib, spFluxcorr.')
-
         # We don't use bossdata.plate.get_num_fibers here to avoid a circular import.
         num_fibers = 640 if self.plate < 3510 else 1000
 
@@ -281,14 +320,7 @@ class SpecFile(object):
         spec_id = 1 if self.fiber <= num_fibers // 2 else 2
         camera = band[0] + str(spec_id)
 
-        # Get the science exposure ID number for the requested seqence number 0,1,...
-        exposure_info = self.exposures.get_info(sequence_number, camera)
-        exposure_id = exposure_info['science']
-
-        name = '{0}-{1}-{2:08d}.fits'.format(ftype, camera, exposure_id)
-        if ftype != 'spCFrame':
-            name += '.gz'
-        return name
+        return self.exposures.get_exposure_name(sequence_number, camera, ftype)
 
     def get_exposure_hdu(self, exposure_index, camera):
         """Lookup the HDU for one exposure.
