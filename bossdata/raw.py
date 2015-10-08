@@ -4,6 +4,10 @@
 """Work with raw spectroscopic science and calibration images.
 """
 
+import os.path
+
+import fitsio
+
 import pydl.pydlutils.yanny
 
 
@@ -14,6 +18,9 @@ class RawImageFile(object):
     ID. See the `raw image datamodel
     <http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_DATA/MJD/sdR.html>`__
     for details.  The FITS file is opened, read, and closed by the constructor.
+
+    The raw files used in a co-add can be located and opened using
+    :meth:`bossdata.spec.SpecFile.get_raw_image`.
 
     Args:
         path(str): Local path of the FITS image file to use.

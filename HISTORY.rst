@@ -7,8 +7,7 @@ History
 ------------------
 
 * Fix issues #26 #103
-* Add support for reading raw image data.
-* Add support for reading plug map files from the speclog svn product.
+* Add support for reading raw image data and plug map files.
 
 0.2.7 (2015-09-28)
 ------------------
