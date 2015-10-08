@@ -10,5 +10,6 @@ import bossdata.meta
 import bossdata.path
 import bossdata.plate
 import bossdata.plot
+import bossdata.raw
 import bossdata.remote
 import bossdata.spec
