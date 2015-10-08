@@ -32,6 +32,7 @@ requirements = [
     'astropy>=1.0.1',
     'fitsio>=0.9.7',
     'numpy>=1.9.2',
+    'pydl>=0.4.1'
 ]
 
 test_requirements = [

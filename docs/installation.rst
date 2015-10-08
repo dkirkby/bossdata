@@ -20,6 +20,7 @@ The following additional pacakges are used by bossdata and will be installed aut
  * astropy
  * fitsio
  * numpy
+ * pydl
 
 Optional Dependencies
 ---------------------
