@@ -12,10 +12,10 @@ import pydl.pydlutils.yanny
 
 
 class RawImageFile(object):
-    """Wrapper for a raw science or calibration image.
+    """Wrapper for a raw science or calibration sdR image format.
 
     Each camera (b1,b2,r1,r2) has its own raw image file for a given exposure
-    ID. See the `raw image datamodel
+    ID. See the `sdR datamodel
     <http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_DATA/MJD/sdR.html>`__
     for details.  The FITS file is opened, read, and closed by the constructor.
 
@@ -42,6 +42,50 @@ class RawImageFile(object):
         self.flavor = self.header['FLAVOR'].rstrip()
         self.data = hdulist[0].read()
         hdulist.close()
+
+    def get_amplifier_region(self, amplifier_index, region_type):
+        """Get overscan and data regions for one amplifier.
+
+        Region definitions are taken from the `sdR datamodel
+        <http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_DATA/MJD/sdR.html>`__.
+        Each amplifier reads out one quadrant of the sensor.  Amplfiers 0-3 have
+        outside corner pixel indices [0, 0], [0, -1], [-1, 0], [-1, -1],
+        respectively. Results are only valid for MJD >= 55113 (9-Oct-2009).
+
+        Args:
+            amplifier_index(int): Amplifier's are indexed 0-3.
+            region_type(str): One of data, overscan.
+
+        Returns:
+            tuple: Tuple (rows, cols) of pixel slices that define the requested
+                region.  The return value can be used to create a view of our
+                raw data as ``self.data[rows, cols]``.
+        """
+        if self.header['MJD'] < 55113:
+            raise ValueError('Amplifier regions not available for MJD < 55113.')
+        if amplifier_index < 0 or amplifier_index > 3:
+            raise ValueError('Invalid amplifier_index {}. Should be 0-3.'.format(
+                amplifier_index))
+        if region_type not in ('data', 'overscan'):
+            raise ValueError('Invalid region type "{}".  Should be data or overscan.')
+
+        amp_row, amp_col = (amplifier_index // 2), (amplifier_index % 2)
+        # Add one to end index relative to the slices in the data model since
+        # those use IDL notation, where the end index is included in the result.
+        if self.camera[0] == 'b':
+            rows = slice(56, 2112) if amp_row == 0 else slice(2112, 4168)
+            if region_type == 'overscan':
+                cols = slice(10, 68) if amp_col == 0 else slice(4284, 4341)
+            else:
+                cols = slice(128, 2176) if amp_col == 0 else slice(2176, 4224)
+        else:
+            rows = slice(48, 2112) if amp_row == 0 else slice(2112, 4176)
+            if region_type == 'overscan':
+                cols = slice(10, 101) if amp_col == 0 else slice(4250, 4341)
+            else:
+                cols = slice(119, 2176) if amp_col == 0 else slice(2176, 4233)
+
+        return rows, cols
 
     def read_plug_map(self, speclog_path):
         """Read the plug map associated with this plate and exposure.
