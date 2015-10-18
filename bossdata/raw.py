@@ -159,7 +159,7 @@ class RawImageFile(object):
         return np.hstack(
             (np.vstack((regions[0], regions[2])), np.vstack((regions[1], regions[3]))))
 
-    def read_plug_map(self, speclog_path):
+    def read_plug_map(self, speclog_path=None):
         """Read the plug map associated with this plate and exposure.
 
         Plug maps are not stored under the same SAS tree as other data products
@@ -168,7 +168,7 @@ class RawImageFile(object):
         plug map files used by the pipeline, use the SDSS public SVN repository to
         make a local checkout of the ``speclog`` product::
 
-            svn co ​https://svn.sdss.org/public/data/sdss/speclog/trunk speclog
+            svn co https://svn.sdss.org/public/data/sdss/speclog/trunk speclog
 
         This will take a while to run (about 15 minutes) and will copy about 25 Gb
         of data into the newly created ``speclog`` sub-directory.  Pass the full name
@@ -194,12 +194,18 @@ class RawImageFile(object):
         Args:
             speclog_path(str): The local path to a directory containing
                 plPlugMapM files organized in subdirectories by observation
-                MJD.
+                MJD.  If None is specified, the value of the BOSS_SPECLOG environment
+                variable will be used, if available.
 
         Returns:
             numpy.ndarray: Structured array containing the contents of the PLUGMAPOBJ
                 table read from the yanny parameter file.
         """
+        if speclog_path is None:
+            speclog_path = os.getenv('BOSS_SPECLOG')
+        if speclog_path is None:
+            raise RuntimeError('No speclog_path specified and BOSS_SPECLOG is not set.')
+
         obs_mjd = '{:d}'.format(self.header['MJD'])
         plug_map_name = 'plPlugMapM-{}.par'.format(self.header['NAME'])
         plug_map_path = os.path.join(speclog_path, obs_mjd, plug_map_name)
