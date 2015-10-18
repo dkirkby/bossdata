@@ -22,6 +22,13 @@ The following additional pacakges are used by bossdata and will be installed aut
  * numpy
  * pydl
 
+Note that some operations run much slower (but still correctly) with numpy versions 10.0.0 and 10.0.1
+so these should be avoided if possible. See `here <https://github.com/numpy/numpy/issues/6467>`__
+for details.  To determine which version of numpy you are using::
+
+    import numpy
+    print numpy.version.version
+
 Optional Dependencies
 ---------------------
 

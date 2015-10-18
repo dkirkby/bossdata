@@ -184,6 +184,12 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
         db_path(str): Local path where the corresponding sqlite3 database will be written.
     """
 
+    # Warn against using numpy 1.10.0,1 since these are extremely slow for structured arrays
+    # with large dtypes.  See https://github.com/numpy/numpy/issues/6467 for details.
+    if np.version.version in ('1.10.0', '1.10.1'):
+        print('WARNING: you are using numpy {} so this could take a while.'
+            .format(np.version.version))
+
     if verbose:
         print('Initializing the full database...')
 
@@ -197,6 +203,12 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
 
         # table = hdulist[1].read(rows=[position,position+chunk_size])
         table = hdulist[1][position:(position + chunk_size)]
+
+        # Delete any existing partially built sqlite3 file.
+        try:
+            os.remove(db_path + '.building')
+        except OSError:
+            pass
 
         # Create a new database file.
         sql, num_cols = sql_create_table(
