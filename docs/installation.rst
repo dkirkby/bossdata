@@ -22,12 +22,20 @@ The following additional pacakges are used by bossdata and will be installed aut
  * numpy
  * pydl
 
-Note that some operations run much slower (but still correctly) with numpy versions 10.0.0 and 10.0.1
+Numpy Performance Issue
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Note that some operations run much slower (but still correctly) with numpy versions 1.10.0 and 1.10.1
 so these should be avoided if possible. See `here <https://github.com/numpy/numpy/issues/6467>`__
 for details.  To determine which version of numpy you are using::
 
     import numpy
     print numpy.version.version
+
+The best solution is to use version 10.0.2 or later.  If this is not possible, revert to numpy 1.9.3 and astropy 1.0.4.  For example, with conda::
+
+    conda install numpy=1.9.3
+    conda install astropy=1.0.4
 
 Optional Dependencies
 ---------------------
