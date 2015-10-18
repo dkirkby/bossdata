@@ -20,6 +20,12 @@ However these variables are set, the following unix shell command should always 
 
     echo $BOSS_DATA_URL/$BOSS_SAS_PATH/boss/spectro/redux/$BOSS_REDUX_VERSION/
 
+You can optionally define one more environment variable ``BOSS_SPECLOG`` to locate a local checkout
+of the ``speclog`` svn product.  This is only required if you need to access the full plug maps
+(including non-science fibers) using and prefer to use an environment variable instead of passing a
+path argument.  See the :meth:`read_plug_map() <bossdata.raw.RawImageFile.read_plug_map>` documentation
+for details.
+
 The sections below describe how to access sources of data other than the default public DR12 release.
 
 SEQUELS Data
