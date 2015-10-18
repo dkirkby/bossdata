@@ -141,3 +141,5 @@ The MJD argument is optional in the common case that there is only one possible 
 The saved raw data is bias subtracted by default (or use ``--no-bias-subtraction``) and consists of only the :meth:`data regions <bossdata.raw.RawImageFile.get_amplifier_region>` of each CCD quadrant. See :meth:`bossdata.raw.RawImageFile.get_data` for details on the remaining optional arguments.
 
 See the `sdR datamodel <http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_DATA/MJD/sdR.html>`__ for more information about raw data.
+
+To view the images stored in the output file, open it in `DS9 <http://ds9.si.edu/site/Home.html>`__ using the `File / Open As / Multiple Extension Frames...` menu item.
