@@ -22,7 +22,7 @@ However these variables are set, the following unix shell command should always 
 
 You can optionally define one more environment variable ``BOSS_SPECLOG`` to locate a local checkout
 of the ``speclog`` svn product.  This is only required if you need to access the full plug maps
-(including non-science fibers) using and prefer to use an environment variable instead of passing a
+(including non-science fibers) and prefer to use an environment variable instead of passing a
 path argument.  See the :meth:`read_plug_map() <bossdata.raw.RawImageFile.read_plug_map>` documentation
 for details.
 
