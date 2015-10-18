@@ -56,6 +56,7 @@ setup(
         'bin/bossfetch',
         'bin/bossquery',
         'bin/bossplot',
+        'bin/bossraw',
     ],
     #include_package_data=True,
     #zip_safe=False,

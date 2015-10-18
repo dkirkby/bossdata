@@ -1,0 +1,107 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Licensed under a MIT style license - see LICENSE.rst
+
+"""Assemble raw CDD exposures used from one camera in a coadd into a FITS file.
+"""
+
+from __future__ import division, print_function
+
+from astropy.utils.compat import argparse
+
+import fitsio
+
+import bossdata
+
+
+def main():
+    # Initialize and parse command-line arguments.
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--verbose', action='store_true', help='Provide verbose output.')
+    parser.add_argument(
+        '--plate', type=int, default=6641, metavar='PLATE',
+        help='Plate number of coadd to fetch raw data for.')
+    parser.add_argument(
+        '--mjd', type=int, default=None, metavar='MJD',
+        help='MJD of plate observation to use (can be omitted if only one value is possible)')
+    parser.add_argument(
+        '--camera', type=str, choices=['b1', 'b2', 'r1', 'r2'],
+        default=None, help='Which spectrograph camera to use.')
+    parser.add_argument(
+        '--save', type=str, default=None, metavar='FILE',
+        help='Output FITS file name to write '
+             '(uses {plate}-{mjd}-{camera}.fits if omitted).')
+    parser.add_argument('--bias-point', type=int, default=100,
+        help='Fixed value to shift the mean bias in each quadrant to.')
+    parser.add_argument('--percentile-cut', type=float, default=1.,
+        help='Percentage of tails to ignore on each side for bias estimation.')
+    parser.add_argument('--no-bias-subtraction', action='store_true',
+        help='Do not estimate and subtract amplifier bias in each quadrant.')
+    args = parser.parse_args()
+
+    bias_subtracted = not args.no_bias_subtraction
+
+    try:
+        finder = bossdata.path.Finder(verbose=args.verbose)
+        mirror = bossdata.remote.Manager(verbose=args.verbose)
+    except ValueError as e:
+        print(e)
+        return -1
+
+    if args.mjd is None:
+        mjd_list = bossdata.meta.get_plate_mjd_list(
+            args.plate, finder=finder, mirror=mirror)
+        if len(mjd_list) == 0:
+            print('Plate {0:d} has not been observed with good data quality.'.format(
+                args.plate))
+            return -1
+        elif len(mjd_list) > 1:
+            print('Plate {0:d} has been observed on MJDs {1:s}.'.format(
+                args.plate, ','.join(map(str, mjd_list))))
+            print('Select one of these using the --mjd command-line argument.')
+            return -1
+        else:
+            args.mjd = mjd_list[0]
+            if args.verbose:
+                print('Plate {0:d} was observed on MJD {1:d}.'
+                    .format(args.plate, args.mjd))
+
+    # Read a single spec-lite file to get the list of exposures actually used in this
+    # observation's coadd.
+    band = 'blue' if args.camera[0] == 'b' else 'red'
+    fiber = 1 if args.camera[1] == '1' else 1 + bossdata.plate.get_num_fibers(args.plate) // 2
+    spec_path = finder.get_spec_path(args.plate, args.mjd, fiber, lite=True)
+    spec = bossdata.spec.SpecFile(mirror.get(spec_path))
+
+    if args.save is None:
+        args.save = ('{plate}-{mjd}-{camera}.fits'
+            .format(plate=args.plate, mjd=args.mjd, camera=args.camera))
+    if args.verbose:
+        print('Writing {} raw exposures to {}.'.format(spec.num_exposures, args.save))
+    output = fitsio.FITS(args.save, 'rw', clobber=True)
+
+    exposure_list = { }
+    for exposure_index in range(spec.num_exposures):
+        info = spec.exposures.get_info(exposure_index, args.camera)
+        if info['flat'] not in exposure_list:
+            exposure_list[info['flat']] = True
+            if args.verbose:
+                print('Exposure {0:08d} flat'.format(info['flat']))
+            raw = spec.get_raw_image(exposure_index, band, 'flat', finder, mirror)
+            output.write(raw.get_data(bias_subtracted, args.percentile_cut, args.bias_point))
+        if info['arc'] not in exposure_list:
+            exposure_list[info['arc']] = True
+            if args.verbose:
+                print('Exposure {0:08d} arc'.format(info['arc']))
+            raw = spec.get_raw_image(exposure_index, band, 'arc', finder, mirror)
+            output.write(raw.get_data(bias_subtracted, args.percentile_cut, args.bias_point))
+        if info['science'] not in exposure_list:
+            exposure_list[info['science']] = True
+            if args.verbose:
+                print('Exposure {0:08d} science'.format(info['science']))
+            raw = spec.get_raw_image(exposure_index, band, 'science', finder, mirror)
+            output.write(raw.get_data(bias_subtracted, args.percentile_cut, args.bias_point))
+    output.close()
+
+if __name__ == '__main__':
+    main()

@@ -126,3 +126,18 @@ Spectra can be plotted from different data files. By default the spec-lite data 
 To plot a single exposure, use the ``--exposure`` option to specify the sequence number (0,1,...) of the desired exposure. You can also set the ``--band`` option either ``blue`` or ``red`` to plot a single camera's data, or ``both`` to superimpose the overlapping data from both cameras.  Note that when displaying data from a co-added data product (spec, speclite, spPlate), the exposure sequence number only indexes exposures that were actually used in the final co-added spectrum.  However, the spFrame and spCFrame data products include all exposures used as input to the co-add (based on a :class:`bossdata.plate.Plan`) so, in cases where not all exposures are used, the ``--exposure`` option indexes a larger list of science exposures. Use the ``--verbose`` option to display information about the available exposures in either case.
 
 This script uses the `matplotlib <http://matplotlib.org>`_ python library, which is not required for the ``bossdata`` package and therefore not automatically installed, but is included in scientific python distributions like `anaconda <https://store.continuum.io/cshop/anaconda/>`__.
+
+.. _bossraw:
+
+bossraw
+-------
+
+Assemble the raw CDD exposures used from one camera for a coadd into a single multi-extension FITS file.  For example::
+
+    bossraw --plate 6641 --mjd 56383 --camera b1 --verbose
+
+The MJD argument is optional in the common case that there is only one possible value.  The output will be saved to a file ``{plate}-{mjd}-{camera}.fits`` by default, or you can specify a file name with the ``--save`` argument.
+
+The saved raw data is bias subtracted by default (or use ``--no-bias-subtraction``) and consists of only the :meth:`data regions <bossdata.raw.RawImageFile.get_amplifier_region>` of each CCD quadrant. See :meth:`bossdata.raw.RawImageFile.get_data` for details on the remaining optional arguments.
+
+See the `sdR datamodel <http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_DATA/MJD/sdR.html>`__ for more information about raw data.
