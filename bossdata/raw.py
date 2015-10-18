@@ -6,6 +6,8 @@
 
 import os.path
 
+import numpy as np
+
 import fitsio
 
 import pydl.pydlutils.yanny
@@ -86,6 +88,76 @@ class RawImageFile(object):
                 cols = slice(119, 2176) if amp_col == 0 else slice(2176, 4233)
 
         return rows, cols
+
+    def get_amplifier_bias(self, amplifier_index, percentile_cut=1):
+        """Estimate the amplifier bias.
+
+        Estimate the bias in one amplifier (quadrant) using the truncated mean
+        of pixel values in its :meth:`overscan region <get_amplifier_region>`.
+
+        Args:
+            amplifier_index(int): Amplifier's are indexed 0-3.
+            percentile_cut(float): Percentage of outliers to ignore on both
+                sides of the distribution.
+
+        Returns:
+            float: Estimated bias.
+        """
+        if percentile_cut < 0 or percentile_cut >= 50:
+            raise ValueError(
+                'Invalid percentile cut {}. Expected 0-50.'.format(percentile_cut))
+        overscan_data = self.data[
+            self.get_amplifier_region(amplifier_index, 'overscan')].flatten()
+        lo, hi = np.percentile(overscan_data, (percentile_cut, 100 - percentile_cut))
+        in_range = (overscan_data > lo) & (overscan_data < hi)
+        return np.mean(overscan_data[in_range])
+
+    def get_data(self, bias_subtracted=True, percentile_cut=1, bias_point=100):
+        """Get the data region of this raw image.
+
+        The data region is the union of the four :meth:`amplifier data regions
+        <get_amplifier_region>`.
+
+        Args:
+            bias_subtracted(bool): Subtract bias from each amplifier quadrant,
+                estimated using :meth:`get_amplifier_bias` (rounded to the nearest
+                integer value).
+            percentile_cut(float): Percentage of outliers to ignore on both
+                sides of the distribution for estimating bias (when bias_subtracted
+                is True).
+            bias_point(int): When bias_subtracted is True, raw pixel values will
+                be offset so that the bias value is shifted to the specified
+                value.  Must be between 0 - 0xffff and smaller than the estimated
+                bias value.
+
+        Returns:
+            numpy.ndarray: 2D array of pixel values as unsigned 16-bit integers.
+                The return value is a copy (rather than a view) of the raw data
+                array in the file.  When bias_subtracted is True, saturated values
+                (0xffff) will remain saturated, and values that underflow (<0) after
+                bias subtraction will be set to zero.
+        """
+        bias_point = int(round(bias_point))
+        if bias_point < 0 or bias_point > 0xffff:
+            raise ValueError('Invalid 16-bit unsigned bias value: {}.'.format(bias_point))
+        regions = []
+        for amplifier in range(4):
+            data = self.data[self.get_amplifier_region(amplifier,'data')].copy()
+            if bias_subtracted:
+                overflow = (data == np.uint16(0xffff))
+                overscan = self.data[self.get_amplifier_region(amplifier,'overscan')]
+                bias_value = self.get_amplifier_bias(amplifier, percentile_cut)
+                bias_value = int(round(np.median(overscan)))
+                if bias_value < bias_point:
+                    raise ValueError('Invalid bias_point ({}) < estimated bias ({}).'
+                        .format(bias_point, bias_value))
+                offset = np.uint16(bias_value - bias_point)
+                underflow = (data < offset)
+                data[~overflow & ~underflow] -= offset
+                data[underflow] = 0
+            regions.append(data)
+        return np.hstack(
+            (np.vstack((regions[0], regions[2])), np.vstack((regions[1], regions[3]))))
 
     def read_plug_map(self, speclog_path):
         """Read the plug map associated with this plate and exposure.
