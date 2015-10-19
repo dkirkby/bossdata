@@ -6,7 +6,9 @@ History
 0.2.8 (unreleased)
 ------------------
 
-* No changes yet.
+* Fix issues #26 #103 #106
+* Add support for reading raw image data and plug map files.
+* Add warnings about not using numpy 1.10.0 or 1.10.1.
 
 0.2.7 (2015-09-28)
 ------------------

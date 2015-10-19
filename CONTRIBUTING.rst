@@ -29,7 +29,7 @@ You can also open a new issue to propose a new feature:
 * Remember that this is a volunteer-driven project, and that contributions
   are welcome :)
 
-Work on Iusses
+Work on Issues
 ~~~~~~~~~~~~~~
 
 Look through the `open issues <https://github.com/dkirkby/bossdata/issues>`_ for areas where we currently need help from developers like you. If you find an issue that you are willing to contribute to, start by joining its conversation and tell us about your ideas.

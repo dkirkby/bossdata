@@ -210,6 +210,29 @@ class Finder(object):
         filename = '{}.fits'.format(catalog_name)
         return posixpath.join(self.sas_path, 'qso', catalog_name, filename)
 
+    def get_raw_path(self, mjd, camera, exposure):
+        """Get the location of the raw data for the specified camera and exposure.
+
+        The DR12 data model for BOSS raw data in the sdR format is at
+        http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_DATA/MJD/sdR.html
+
+        Args:
+            mjd(int): Modified Julian date of the observation, which must be > 45000.
+            camara(str): One of b1, b2, r1, r2.
+            exposure(int): Exposure number to return.
+
+        Raises:
+            ValueError: Invalid camera or exposure number.
+        """
+        if mjd <= 45000:
+            raise ValueError('Invalid mjd ({}) must be >= 45000.'.format(mjd))
+        if camera not in ('b1', 'b2', 'r1', 'r2'):
+            raise ValueError(
+                'Unexpected camera ({}) should be one of b1, b2, r1, r2.'.format(camera))
+        filename = 'sdR-{camera}-{frame:08d}.fit.gz'.format(camera=camera, frame=exposure)
+        return posixpath.join(self.sas_path, 'spectro', 'data',
+                              '{0:5d}'.format(mjd), filename)
+
     def get_spec_path(self, plate, mjd, fiber, lite=True):
         """Get the location of the spectrum file for the specified observation.
 

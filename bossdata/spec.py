@@ -15,6 +15,8 @@ import fitsio
 
 import astropy.table
 
+import bossdata.raw
+
 
 def get_fiducial_pixel_index(wavelength):
         """
@@ -185,6 +187,108 @@ class Exposures(object):
                 'Found multiple {} exposures[{}].'.format(camera, exposure_index))
         return self.table[row][0]
 
+    def get_exposure_name(self, exposure_index, camera, ftype='spCFrame'):
+        """Get the file name of a single science exposure data product.
+
+        Use the exposure name to locate FITS data files associated with
+        individual exposures.  The supported file types are:
+        :datamodel:`spCFrame <PLATE4/spCFrame>`,
+        :datamodel:`spFrame <PLATE4/spFrame>`,
+        :datamodel:`spFluxcalib <PLATE4/spFluxcalib>` and
+        :datamodel:`spFluxcorr <PLATE4/spFluxcorr>`.  This method is analogous to
+        :meth:`bossdata.plate.Plan.get_exposure_name`, but operates for a single
+        target and only knows about exposures actually used in the final co-add.
+
+        Args:
+            exposure_index(int): The sequence number for the requested camera
+                exposure, in the range 0 - `(num_exposures[camera]-1)`.
+            camera(str): One of b1,b2,r1,r2.
+            ftype(str): Type of exposure file whose name to return.  Must be one of
+                spCFrame, spFrame, spFluxcalib, spFluxcorr.  An spCFrame is assumed
+                to be uncompressed, and all other files are assumed to be compressed.
+
+        Returns:
+            str: Exposure name of the form [ftype]-[cc]-[eeeeeeee].[ext] where [cc]
+                identifies the camera (one of b1,r1,b2,r2) and [eeeeeeee] is the
+                zero-padded exposure number. The extension [ext] is "fits" for
+                spCFrame files and "fits.gz" for all other file types.
+
+        Raises:
+            ValueError: one of the inputs is invalid.
+        """
+        if camera not in ('b1', 'b2', 'r1', 'r2'):
+            raise ValueError(
+                'Invalid camera "{}", expected b1, b2, r1, or r2.'.format(camera))
+        if exposure_index < 0 or exposure_index >= self.num_by_camera[camera]:
+            raise ValueError('Invalid exposure_index {}, expected 0-{}.'.format(
+                exposure_index, self.num_by_camera[camera] - 1))
+        if ftype not in ('spCFrame', 'spFrame', 'spFluxcalib', 'spFluxcorr'):
+            raise ValueError('Invalid file type ({}) must be one of: '.format(ftype) +
+                             'spCFrame, spFrame, spFluxcalib, spFluxcorr.')
+
+        # Get the science exposure ID number for the requested seqence number 0,1,...
+        exposure_info = self.get_info(exposure_index, camera)
+        exposure_id = exposure_info['science']
+
+        name = '{0}-{1}-{2:08d}.fits'.format(ftype, camera, exposure_id)
+        if ftype != 'spCFrame':
+            name += '.gz'
+        return name
+
+    def get_raw_image(self, plate, mjd, exposure_index, camera, flavor='science',
+                      finder=None, mirror=None):
+        """Get the raw image file associated with an exposure.
+
+        Args:
+            plate(int): Plate number, which must be positive.
+            mjd(int): Modified Julian date of the observation, which must be > 45000.
+            exposure_index(int): The sequence number for the requested camera
+                exposure, in the range 0 - `(num_exposures[camera]-1)`.
+            camera(str): One of b1,b2,r1,r2.
+            flavor(str): One of science, arc, flat.
+            finder(bossdata.path.Finder): Object used to find the names of BOSS data files.
+                If not specified, the default Finder constructor is used.
+            mirror(bossdata.remote.Manager): Object used to interact with the local mirror
+                of BOSS data. If not specified, the default Manager constructor is used.
+
+        Returns:
+            bossdata.raw.RawImageFile: requested raw image file.
+
+        Raises:
+            ValueError: one of the inputs is invalid.
+        """
+        if plate < 0:
+            raise ValueError('Invalid plate number ({}) must be > 0.'.format(plate))
+        if mjd <= 45000:
+            raise ValueError('Invalid mjd ({}) must be >= 45000.'.format(mjd))
+        if camera not in ('b1', 'b2', 'r1', 'r2'):
+            raise ValueError(
+                'Invalid camera "{}". Expected one of b1, b2, r1, r2.'.format(camera))
+        if exposure_index < 0 or exposure_index >= self.num_by_camera[camera]:
+            raise ValueError('Invalid exposure_index {}, expected 0-{}.'.format(
+                exposure_index, self.num_by_camera[camera] - 1))
+        if flavor not in ('science', 'arc', 'flat'):
+            raise ValueError(
+                'Invalid flavor "{}". Expected one of science, arc, flat.')
+        exposure_info = self.get_info(exposure_index, camera)
+        exposure_id = exposure_info[flavor]
+        # Load the co-add plan to determine the observation MJD for this exposure,
+        # which is generally different (earlier) than the MJD assigned to the coadd.
+        # There are other ways to do this, but this requires the smallest download.
+        if finder is None:
+            finder = bossdata.path.Finder()
+        plan_path = finder.get_plate_plan_path(plate, mjd, combined=True)
+        if mirror is None:
+            mirror = bossdata.remote.Manager()
+        plan = bossdata.plate.Plan(mirror.get(plan_path))
+        # Find the observation MJD of the requested science exposure.
+        found = plan.exposure_table['exp'] == exposure_info['science']
+        if np.count_nonzero(found) != 1:
+            raise RuntimeError('Cannot locate science exposure in plan.')
+        obs_mjd = plan.exposure_table[found][0]['mjd']
+        path = mirror.get(finder.get_raw_path(obs_mjd, camera, exposure_id))
+        return bossdata.raw.RawImageFile(path)
+
 
 class SpecFile(object):
     """ A BOSS spec file containing summary data for a single target.
@@ -230,11 +334,15 @@ class SpecFile(object):
         self.exposures = Exposures(self.header)
         self.num_exposures = len(self.exposures.sequence)
         # Look up our row from spAll
-        self.info = self.hdulist[2].read()
+        self.info = self.hdulist[2].read()[0]
         # Extract our plate-mjd-fiber values.
-        self.plate = self.info['PLATE']
-        self.mjd = self.info['MJD']
-        self.fiber = self.info['FIBERID']
+        self.plate = int(self.info['PLATE'])
+        self.mjd = int(self.info['MJD'])
+        self.fiber = int(self.info['FIBERID'])
+        # We don't use bossdata.plate.get_num_fibers here to avoid a circular import.
+        num_fibers = 640 if self.plate < 3510 else 1000
+        # Calculate the camera (b1/b2/r1/r2) for this target's fiber.
+        self.spec_id = '1' if self.fiber <= num_fibers // 2 else '2'
 
     def get_exposure_name(self, sequence_number, band, ftype='spCFrame'):
         """Get the file name of a single science exposure data product.
@@ -258,37 +366,43 @@ class SpecFile(object):
 
         Returns:
             str: Exposure name of the form [ftype]-[cc]-[eeeeeeee].[ext] where [cc]
-                identifies the spectrograph (one of b1,r1,b2,r2) and [eeeeeeee] is the
+                identifies the camera (one of b1,r1,b2,r2) and [eeeeeeee] is the
                 zero-padded exposure number. The extension [ext] is "fits" for
                 spCFrame files and "fits.gz" for all other file types.
 
         Raises:
             ValueError: one of the inputs is invalid.
         """
-        if sequence_number < 0 or sequence_number >= self.num_exposures:
-            raise ValueError('Invalid sequence number ({0}) must be 0-{1}.'.format(
-                sequence_number, self.num_exposures) - 1)
         if band not in ('blue', 'red'):
-            raise ValueError('Invalid band ({}) must be blue or red.'.format(band))
-        if ftype not in ('spCFrame', 'spFrame', 'spFluxcalib', 'spFluxcorr'):
-            raise ValueError('Invalid file type ({}) must be one of: '.format(ftype) +
-                             'spCFrame, spFrame, spFluxcalib, spFluxcorr.')
+            raise ValueError('Invalid band "{}". Expected blue or red.'.format(band))
+        camera = band[0] + self.spec_id
+        return self.exposures.get_exposure_name(sequence_number, camera, ftype)
 
-        # We don't use bossdata.plate.get_num_fibers here to avoid a circular import.
-        num_fibers = 640 if self.plate < 3510 else 1000
+    def get_raw_image(self, sequence_number, band, flavor='science',
+                      finder=None, mirror=None):
+        """Get a raw image file associated with one of this coadd's exposures.
 
-        # Calculate the camera (b1/b2/r1/r2) for the requested and this target's fiber.
-        spec_id = 1 if self.fiber <= num_fibers // 2 else 2
-        camera = band[0] + str(spec_id)
+        Args:
+            sequence_number(int): The sequence number for the requested camera
+                exposure, in the range 0 - `(num_exposures[camera]-1)`.
+            band(str): Must be 'blue' or 'red'.
+            flavor(str): One of science, arc, flat.
+            finder(bossdata.path.Finder): Object used to find the names of BOSS data files.
+                If not specified, the default Finder constructor is used.
+            mirror(bossdata.remote.Manager): Object used to interact with the local mirror
+                of BOSS data. If not specified, the default Manager constructor is used.
 
-        # Get the science exposure ID number for the requested seqence number 0,1,...
-        exposure_info = self.exposures.get_info(sequence_number, camera)
-        exposure_id = exposure_info['science']
+        Returns:
+            bossdata.raw.RawImageFile: requested raw image file.
 
-        name = '{0}-{1}-{2:08d}.fits'.format(ftype, camera, exposure_id)
-        if ftype != 'spCFrame':
-            name += '.gz'
-        return name
+        Raises:
+            ValueError: one of the inputs is invalid.
+        """
+        if band not in ('blue', 'red'):
+            raise ValueError('Invalid band "{}". Expected blue or red.'.format(band))
+        camera = band[0] + self.spec_id
+        return self.exposures.get_raw_image(self.plate, self.mjd, sequence_number, camera,
+                                            flavor, finder, mirror)
 
     def get_exposure_hdu(self, exposure_index, camera):
         """Lookup the HDU for one exposure.
