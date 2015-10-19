@@ -3,7 +3,12 @@
 History
 =======
 
-0.2.8 (unreleased)
+0.2.9 (unreleased)
+------------------
+
+* No changes yet.
+
+0.2.8 (2015-10-19)
 ------------------
 
 * Fix issues #29 #103 and addresses #106

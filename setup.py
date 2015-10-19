@@ -41,7 +41,7 @@ test_requirements = [
 
 setup(
     name='bossdata',
-    version='0.2.8',
+    version='0.2.9dev',
     description='Tools to access SDSS spectroscopic data.',
     long_description=long_description,
     author='bossdata developers',
