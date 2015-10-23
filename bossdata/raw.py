@@ -198,8 +198,8 @@ class RawImageFile(object):
                 variable will be used, if available.
 
         Returns:
-            numpy.ndarray: Structured array containing the contents of the PLUGMAPOBJ
-                table read from the yanny parameter file.
+            pydl.pydlutils.yanny.yanny: Object wrapper around the plug map yanny file.
+                The PLUGMAPOBJ attribute contains the table of plugging info.
         """
         if speclog_path is None:
             speclog_path = os.getenv('BOSS_SPECLOG')
@@ -209,5 +209,4 @@ class RawImageFile(object):
         obs_mjd = '{:d}'.format(self.header['MJD'])
         plug_map_name = 'plPlugMapM-{}.par'.format(self.header['NAME'])
         plug_map_path = os.path.join(speclog_path, obs_mjd, plug_map_name)
-        plug_map = pydl.pydlutils.yanny.yanny(plug_map_path, np=True)
-        return plug_map['PLUGMAPOBJ']
+        return pydl.pydlutils.yanny.yanny(plug_map_path, np=True)
