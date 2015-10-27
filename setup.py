@@ -29,9 +29,9 @@ with open('DESCRIPTION.rst') as f:
 requirements = [
     'requests>=2.7.0',
     'progressbar>=2.3',
+    'numpy>=1.9.2',
     'astropy>=1.0.1',
     'fitsio>=0.9.7',
-    'numpy>=1.9.2',
     'pydl>=0.4.1'
 ]
 
