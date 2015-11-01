@@ -4,8 +4,7 @@ API Usage
 
 To use the ``bossdata`` package in your own python projects, you will normally start with::
 
-    import bossdata.path
-    import bossdata.remote
+    import bossdata
 
     try:
         finder = bossdata.path.Finder()
@@ -28,8 +27,6 @@ Certain data files have a helper class for accessing their contents:
  * frame,cframe: :class:`bossdata.plate.FrameFile`
 
 For example, to open the spec-lite file used in the example above, use::
-
-    import bossdata.spec
 
     spec = bossdata.spec.SpecFile(local_path)
 
