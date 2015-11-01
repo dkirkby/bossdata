@@ -138,6 +138,7 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
         rules['MODELFLUX{}'.format(i)] = 'MODELFLUX_{}'.format(i)
     sql, num_cols = sql_create_table(
         'meta', table.dtype, renaming_rules=rules, primary_key='(PLATE,MJD,FIBER)')
+    bossdata.remote._prepare_local_path(db_path)
     connection = sqlite3.connect(db_path + '.building')
     cursor = connection.cursor()
     cursor.execute(sql)
@@ -214,6 +215,7 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
         sql, num_cols = sql_create_table(
             'meta', table.dtype, renaming_rules={'FIBERID': 'FIBER'},
             primary_key=primary_key)
+        bossdata.remote._prepare_local_path(db_path)
         connection = sqlite3.connect(db_path + '.building')
         cursor = connection.cursor()
         cursor.execute(sql)

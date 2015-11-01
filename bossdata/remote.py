@@ -311,15 +311,25 @@ class Manager(object):
 
         # If we get here, none of the requested files is locally available so next we try
         # to download the first requested file. Start by creating local directories as needed.
-        local_parent_path = os.path.dirname(local_paths[0])
-        if not os.path.exists(local_parent_path):
-            # There is a potential race condition if other processes are running.
-            # In python >= 3.2 we would use the new exist_ok=True option, but here we instead
-            # silently ignore a "FileExists" OSError (errno 17).
-            try:
-                os.makedirs(local_parent_path)
-            except OSError as e:
-                if e.errno != 17:
-                    raise e
+        _prepare_local_path(local_paths[0])
         return self.download(
             remote_paths[0], local_paths[0], progress_min_size=progress_min_size)
+
+
+def _prepare_local_path(local_path):
+    """Create directories leading to the local path if necessary.
+
+    Args:
+        local_path(str): Path whose parent directories will be created.
+    """
+    local_parent_path = os.path.dirname(local_path)
+    if not os.path.exists(local_parent_path):
+        # There is a potential race condition if other processes are running and
+        # trying to create some of the same directories. In python >= 3.2 we
+        # would use the new exist_ok=True option, but here we instead
+        # silently ignore a "FileExists" OSError (errno 17).
+        try:
+            os.makedirs(local_parent_path)
+        except OSError as e:
+            if e.errno != 17:
+                raise e
