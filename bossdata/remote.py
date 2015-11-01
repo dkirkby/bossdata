@@ -93,11 +93,13 @@ class Manager(object):
             raise ValueError('Cannot use non-existent path "{}" as local root.'.format(
                 self.local_root))
 
+
     default_data_url = 'http://dr12.sdss3.org'
     """Default to use when $BOSS_DATA_URL is not set.
 
     See :doc:`/scripts` and :doc:`/usage` for details.
     """
+
 
     def download(self, remote_path, local_path, chunk_size=4096, progress_min_size=10):
         """Download a single BOSS data file.
@@ -194,7 +196,8 @@ class Manager(object):
             progress_bar.finish()
         return local_path
 
-    def local_path(self, remote_path):
+
+    def local_path(self, remote_path, suffix=None, new_suffix=None):
         """Get the local path corresponding to a remote path.
 
         Does not check that the file or its parent directory exists. Use :meth:`get` to
@@ -204,11 +207,39 @@ class Manager(object):
             remote_path(str): The full path to the remote file relative to the remote
                 server root, which should normally be obtained using :class:`bossdata.path`
                 methods.
+            suffix(str): The expected suffix of the returned local path. A
+                RuntimeError is raised when the local path does not have this
+                suffix according to :meth:`str.endswith`, unless this parameter is None.
+            new_suffix(str): Replace suffix with this value.
+                No change is performed when this parameter is None, and ``suffix`` must
+                also be set with this parameter is not None.
 
         Returns:
-            str: Absolute local path of the local file that mirrors the remote file.
+            str: Absolute local path of the local file that mirrors the remote file,
+                with a possible suffix replacement.
+
+        Raises:
+            ValueError: The ``new_suffix`` parameter is set but ``suffix`` is None.
+            RuntimeError: The local path does not have the expected suffix.
         """
+        if new_suffix is not None and suffix is None:
+            raise ValueError('Must specify a suffix when specifying new_suffix.')
+
+        # Check for the expected suffix if one is provided.
+        if suffix is not None and not remote_path.endswith(suffix):
+            raise RuntimeError(
+                'Path {} does not end with "{}".'.format(remote_path, suffix))
+
+        # Replace the suffix if requested.
+        if new_suffix is not None:
+            # We cannot use str.replace() here in case suffix appears more than once.
+            remote_path = remote_path[:-len(suffix)] + new_suffix
+            print('Replacement is', remote_path)
+
+        # Relocate the remote path under our local root, and replace the posix
+        # file separator "/" with the local filesystem file seperator.
         return os.path.abspath(os.path.join(self.local_root, *remote_path.split('/')))
+
 
     def get(self, remote_path, progress_min_size=10, auto_download=True, local_paths=None):
         """Get a local file that mirrors a remote file, downloading the file if necessary.
@@ -285,20 +316,3 @@ class Manager(object):
                     raise e
         return self.download(
             remote_paths[0], local_paths[0], progress_min_size=progress_min_size)
-
-    def local_path_replace(self, local_path, old, new):
-        """Replace part of a local path.
-
-        The local path should be something returned by :meth:`local_path`. The
-        result of the substitution will be a path under ``$BOSS_LOCAL_ROOT``
-        that may not exist yet.
-
-        The string substitution of ``old`` with ``new`` is performed by the
-        built-in :meth:`str.replace`.
-
-        Args:
-            local_path(str): A path returned by :meth:`local_path`.
-            old(str): The substring to replace.
-            new(str): The replacement text to use.
-        """
-        return local_path.replace(old, new)
