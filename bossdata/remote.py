@@ -241,9 +241,8 @@ class Manager(object):
             return os.path.abspath(
                 os.path.join(self.local_root, *remote_path.split('/')))
         else:
-            print('Serving from', self.data_url)
             # This remote file should already be visible in the local filesystem.
-            return os.path.abspath(os.path.join(self.data_url, remote_path))
+            return os.path.abspath(os.path.join(self.data_url, *remote_path.split('/')))
 
 
     def get(self, remote_path, progress_min_size=10, auto_download=True, local_paths=None):
@@ -296,12 +295,10 @@ class Manager(object):
         else:
             del local_paths[:]
         for remote_path in remote_paths:
-            print('{} -> {}'.format(remote_path, self.local_path(remote_path)))
             local_paths.append(self.local_path(remote_path))
 
         # Return the first locally available file, if any.
         for local_path in local_paths:
-            print('Looking for', local_path)
             if os.path.isfile(local_path):
                 return local_path
 
