@@ -66,12 +66,22 @@ class Manager(object):
             if verbose:
                 print('Using the default "{}" since $BOSS_DATA_URL is not set.'.format(
                     self.data_url))
-        # Do we have a plain URL or a URL:username:password triplet?
-        try:
-            self.data_url, username, password = self.data_url.split('%')
-            self.authorization = username, password
-        except ValueError:
-            self.authorization = None
+        # Look for a local filesystem URL.  The triple slash here is because the
+        # hostname component is omitted so it defaults to localhost.
+        # See https://en.wikipedia.org/wiki/File_URI_scheme
+        if self.data_url.startswith('file:///'):
+            self.data_is_remote = False
+            # Truncate the leading 'file://' to start with a single leading '/'.
+            self.data_url = self.data_url[7:]
+            print(self.data_url)
+        else:
+            self.data_is_remote = True
+            # Do we have a plain URL or a URL:username:password triplet?
+            try:
+                self.data_url, username, password = self.data_url.split('%')
+                self.authorization = username, password
+            except ValueError:
+                self.authorization = None
         self.data_url = self.data_url.rstrip('/')
 
         self.local_root = os.getenv('BOSS_LOCAL_ROOT') if local_root is None else local_root
@@ -297,5 +307,4 @@ class Manager(object):
             old(str): The substring to replace.
             new(str): The replacement text to use.
         """
-        print('Replacing {} with {} in {}.'.format(old, new, local_path))
         return local_path.replace(old, new)
