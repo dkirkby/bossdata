@@ -234,11 +234,15 @@ class Manager(object):
         if new_suffix is not None:
             # We cannot use str.replace() here in case suffix appears more than once.
             remote_path = remote_path[:-len(suffix)] + new_suffix
-            print('Replacement is', remote_path)
 
-        # Relocate the remote path under our local root, and replace the posix
-        # file separator "/" with the local filesystem file seperator.
-        return os.path.abspath(os.path.join(self.local_root, *remote_path.split('/')))
+        if self.data_is_remote or new_suffix is not None:
+            # Relocate the remote path under our local root, and replace the posix
+            # file separator "/" with the local filesystem file seperator.
+            return os.path.abspath(
+                os.path.join(self.local_root, *remote_path.split('/')))
+        else:
+            # This remote file should already be visible in the local filesystem.
+            return os.path.abspath(os.path.join(self.data_url, remote_path))
 
 
     def get(self, remote_path, progress_min_size=10, auto_download=True, local_paths=None):
@@ -295,8 +299,12 @@ class Manager(object):
 
         # Return the first locally available file, if any.
         for local_path in local_paths:
+            print('Looking for', local_path)
             if os.path.isfile(local_path):
                 return local_path
+
+        if not self.data_is_remote:
+            raise RuntimeError('File not found: {}.'.format(local_paths[0]))
 
         if not auto_download:
             raise RuntimeError('File not in mirror and auto_download is False: {}'.format(
