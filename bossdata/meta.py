@@ -301,7 +301,7 @@ class Database(object):
             local_path = mirror.local_path(remote_path)
             assert local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
                 local_path)
-            db_path = local_path.replace('.fits', '.db')
+            db_path = mirror.local_path_replace(local_path, '.fits', '.db')
             lite_db_used = False
             # Create the database if necessary.
             if not os.path.isfile(db_path):
@@ -312,7 +312,7 @@ class Database(object):
             local_path = mirror.local_path(remote_path)
             assert local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
                 local_path)
-            db_path = local_path.replace('.fits', '.db')
+            db_path = mirror.local_path_replace(local_path, '.fits', '.db')
             lite_db_used = False
             # Create the database if necessary.
             if not os.path.isfile(db_path):
@@ -323,8 +323,8 @@ class Database(object):
             remote_paths = [finder.get_sp_all_path(lite=True),
                             finder.get_sp_all_path(lite=False)]
             local_paths = [mirror.local_path(path) for path in remote_paths]
-            db_paths = [Database._db_path_helper(local_paths[0], lite=True),
-                        Database._db_path_helper(local_paths[1], lite=False)]
+            db_paths = [Database._db_path_helper(mirror, local_paths[0], lite=True),
+                        Database._db_path_helper(mirror, local_paths[1], lite=False)]
             db_paths_exist = [os.path.isfile(path) for path in db_paths]
 
             db_path = None
@@ -489,15 +489,15 @@ class Database(object):
         return astropy.table.Table(rows=rows, names=names)
 
     @staticmethod
-    def _db_path_helper(path=None, lite=True):
+    def _db_path_helper(mirror, path, lite):
         if lite:
             assert path.endswith('.dat.gz'), 'Expected .dat.gz extension for {}.'.format(
                 path)
-            return path.replace('.dat.gz', '-lite.db')
+            return mirror.local_path_replace(path, '.dat.gz', '-lite.db')
         else:
             assert path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
                 path)
-            return path.replace('.fits', '.db')
+            return mirror.local_path_replace(path, '.fits', '.db')
 
 
 def get_plate_mjd_list(plate, finder=None, mirror=None):

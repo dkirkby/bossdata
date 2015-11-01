@@ -281,3 +281,21 @@ class Manager(object):
                     raise e
         return self.download(
             remote_paths[0], local_paths[0], progress_min_size=progress_min_size)
+
+    def local_path_replace(self, local_path, old, new):
+        """Replace part of a local path.
+
+        The local path should be something returned by :meth:`local_path`. The
+        result of the substitution will be a path under ``$BOSS_LOCAL_ROOT``
+        that may not exist yet.
+
+        The string substitution of ``old`` with ``new`` is performed by the
+        built-in :meth:`str.replace`.
+
+        Args:
+            local_path(str): A path returned by :meth:`local_path`.
+            old(str): The substring to replace.
+            new(str): The replacement text to use.
+        """
+        print('Replacing {} with {} in {}.'.format(old, new, local_path))
+        return local_path.replace(old, new)
