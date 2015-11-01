@@ -241,6 +241,7 @@ class Manager(object):
             return os.path.abspath(
                 os.path.join(self.local_root, *remote_path.split('/')))
         else:
+            print('Serving from', self.data_url)
             # This remote file should already be visible in the local filesystem.
             return os.path.abspath(os.path.join(self.data_url, remote_path))
 
@@ -295,6 +296,7 @@ class Manager(object):
         else:
             del local_paths[:]
         for remote_path in remote_paths:
+            print('{} -> {}'.format(remote_path, self.local_path(remote_path)))
             local_paths.append(self.local_path(remote_path))
 
         # Return the first locally available file, if any.
