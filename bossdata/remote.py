@@ -8,7 +8,7 @@ using a directory layout that mirrors the remote data source.  Most scripts will
 create a single :class:`Manager` object using the default constructor for this
 purpose::
 
-    import bossdata.remote
+    import bossdata
     mirror = bossdata.remote.Manager()
 
 This mirror object is normally configured by the `$BOSS_DATA_URL` and `$BOSS_LOCAL_ROOT`
@@ -73,7 +73,6 @@ class Manager(object):
             self.data_is_remote = False
             # Truncate the leading 'file://' to start with a single leading '/'.
             self.data_url = self.data_url[7:]
-            print(self.data_url)
         else:
             self.data_is_remote = True
             # Do we have a plain URL or a URL:username:password triplet?
@@ -208,12 +207,7 @@ class Manager(object):
 
         Returns:
             str: Absolute local path of the local file that mirrors the remote file.
-
-        Raises:
-            RuntimeError: No local_root specified when this manager was created.
         """
-        if self.local_root is None:
-            raise RuntimeError('No local root specified (try setting BOSS_LOCAL_ROOT).')
         return os.path.abspath(os.path.join(self.local_root, *remote_path.split('/')))
 
     def get(self, remote_path, progress_min_size=10, auto_download=True, local_paths=None):

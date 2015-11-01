@@ -7,7 +7,7 @@ The path module provides convenience methods for building the paths of frequentl
 data files.  Most scripts will create a single :class:`Finder` object using the default
 constructor for this purpose::
 
-    import bossdata.path
+    import bossdata
     finder = bossdata.path.Finder()
 
 This finder object is normally configured by the `$BOSS_SAS_PATH` and `$BOSS_REDUX_VERSION`
