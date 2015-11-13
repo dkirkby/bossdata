@@ -33,7 +33,7 @@ requirements = [
     'astropy>=1.0.1',
     'fitsio>=0.9.7',
     'pydl>=0.4.1',
-    'speclite'
+    'speclite>=0.1'
 ]
 
 test_requirements = [
