@@ -8,3 +8,4 @@ numpy==1.9.2
 astropy==1.0.1
 fitsio==0.9.7
 pydl==0.4.1
+speclite==0.1
