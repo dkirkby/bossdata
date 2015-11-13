@@ -6,6 +6,7 @@
 
 from __future__ import division, print_function
 
+import os.path
 import re
 
 import numpy as np
@@ -16,7 +17,7 @@ import fitsio
 import astropy.table
 
 import bossdata.raw
-
+import speclite
 
 def get_fiducial_pixel_index(wavelength):
         """
@@ -567,3 +568,74 @@ class SpecFile(object):
         result['loglam' if use_loglam else 'wavelength'].mask = False
 
         return result
+
+
+def make_model(plate, mjd, fiber, model, wlen, finder, mirror):
+    """
+    Return numpy structured array of flux for model
+    
+    Requires environment variable 'BOSS_TEMPLATES' to be set to the directory
+        where template fits files from the SDSS IDLSPEC2D program are
+    
+    Args:
+        plate(int): plate number of spectrum to model
+        mjd(int): mjd of plate to use
+        fiber(int): fiber number identifying object to model
+        model(int): Model number to plot over fiber data (between 1 and 134)
+        wlen(np.array): wavelength array for given fiber
+        finder(bossdata.path.Finder): Finder class to use
+        mirror(bossdata.remote.Manager): Manager class to use
+    
+    Raises:
+        IndexError: model number outside of range
+        OSError: Environment variable 'BOSS_TEMPLATES' not set
+        ValueError: If no data is included for model
+    """
+    if model<1 or model>134:
+        raise IndexError('Model number out of range')
+    if os.getenv('BOSS_TEMPLATES') == None:
+        raise OSError('No BOSS_TEMPLATES environment variable set')
+    
+    LENGTH = 10000
+
+    Zall_path = os.path.join(finder.get_plate_path(plate),
+                             finder.redux_version,
+                             'spZall-{}-{}.fits'.format(plate, mjd))
+    Zall_local = mirror.get(Zall_path)
+    Z_all = fitsio.FITS(Zall_local)
+    Z_info = Z_all[1]['Z','TFILE','TCOLUMN','NPOLY','THETA'][(fiber-1)*134+model-1]
+    Z_all.close()
+
+    template_file = Z_info['TFILE'][0].strip()
+    if template_file == '':
+        raise ValueError('No template file given')
+    num_col = np.argmin(Z_info['TCOLUMN'])
+
+    template_fits = fitsio.FITS(os.path.join(os.getenv('BOSS_TEMPLATES'),template_file))
+    header = template_fits[0].read_header()
+    eigen_spectra = template_fits[0][:,:]
+    template_fits.close()
+    
+    flux = np.zeros(len(eigen_spectra[0]), dtype =[('flux','float32')])
+    for i in range(num_col):
+        flux['flux'][:] = (flux['flux'] + Z_info['THETA'][0][i]
+                           * eigen_spectra[Z_info['TCOLUMN'][0][i]])
+    index = np.arange(len(flux['flux']), dtype= 'float32')
+    index = index * header['COEFF1']
+    index2 = np.arange(LENGTH, dtype= 'float32')
+    index2 = index2 * header['COEFF1']
+    poly = np.zeros(LENGTH, dtype = [('poly','float32')])
+    for j in range(Z_info[0]['NPOLY']):
+        poly['poly'] = poly['poly'] + np.power(index2,j) * Z_info[0]['THETA'][num_col + j]
+    poly2 = speclite.resample(poly,
+                              np.linspace(0,len(flux['flux']),num=LENGTH)*header['COEFF1'],
+                              index, ('poly'))
+    index = index + header['COEFF0']
+    flux['flux'][:] = flux['flux'] + poly2['poly']
+    
+    rs_wlen = speclite.redshift(0, Z_info[0]['Z'],
+                                rules=[dict(name='wlen',exponent=+1,array_in=10**index)])
+    model = speclite.resample(flux , rs_wlen['wlen'].astype('float32'),
+                              wlen, ('flux'))
+    
+    return model['flux']
