@@ -19,6 +19,7 @@ import astropy.table
 import bossdata.raw
 import speclite
 
+
 def get_fiducial_pixel_index(wavelength):
         """
         Convert a wavelength to a fiducial pixel index.
