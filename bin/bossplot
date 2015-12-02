@@ -190,6 +190,11 @@ def main():
         '--figsize', type=str, default='12,8', metavar='WIDTH,HEIGHT',
         help='Figure dimensions in inches.')
     args = parser.parse_args()
+    
+    if args.model_only and args.show_sky:
+        print('show-sky and model-only commands are mutually exclusive')
+        print('Use "bossplot --help" command for details')
+        return -1
 
     if args.exposure is None:
         if args.frame or args.cframe:
@@ -428,9 +433,11 @@ def main():
         wlen, dflux = data['wavelength'][:], data['dflux'][:]
         if args.show_model or args.model_only:
             try:
-                model = bossdata.spec.make_model(args.plate,args.mjd,args.fiber,
-                                                 args.model,wlen,finder,mirror)
-            except (ValueError, IndexError):
+                model = bossdata.spec.make_model(args.plate,args.mjd,
+                                                 args.fiber,args.model,
+                                                 wlen,finder,mirror,
+                                                 verbose=args.verbose)
+            except (ValueError,IndexError):
                 print('No model data of given number for this fiber')
                 if args.model_only:
                     return -1

@@ -571,7 +571,7 @@ class SpecFile(object):
         return result
 
 
-def make_model(plate, mjd, fiber, model, wlen, finder, mirror):
+def make_model(plate, mjd, fiber, model, wlen, finder, mirror, verbose=True):
     """
     Return numpy structured array of flux for model
     
@@ -586,6 +586,7 @@ def make_model(plate, mjd, fiber, model, wlen, finder, mirror):
         wlen(np.array): wavelength array for given fiber
         finder(bossdata.path.Finder): Finder class to use
         mirror(bossdata.remote.Manager): Manager class to use
+        verbose(Bool): Print information if True
     
     Raises:
         IndexError: model number outside of range
@@ -604,7 +605,10 @@ def make_model(plate, mjd, fiber, model, wlen, finder, mirror):
                              'spZall-{}-{}.fits'.format(plate, mjd))
     Zall_local = mirror.get(Zall_path)
     Z_all = fitsio.FITS(Zall_local)
-    Z_info = Z_all[1]['Z','TFILE','TCOLUMN','NPOLY','THETA'][(fiber-1)*134+model-1]
+    Z_info = Z_all[1]['Z','TFILE','TCOLUMN',
+                      'NPOLY','THETA'][(fiber-1)*134+model-1]
+    Z_verbose = Z_all[1]['CLASS','SUBCLASS','Z','Z_ERR','RCHI2DIFF',
+                         'ZWARNING'][(fiber-1)*134+model-1]
     Z_all.close()
 
     template_file = Z_info['TFILE'][0].strip()
@@ -612,7 +616,8 @@ def make_model(plate, mjd, fiber, model, wlen, finder, mirror):
         raise ValueError('No template file given')
     num_col = np.argmin(Z_info['TCOLUMN'])
 
-    template_fits = fitsio.FITS(os.path.join(os.getenv('BOSS_TEMPLATES'),template_file))
+    template_fits = fitsio.FITS(os.path.join(os.getenv('BOSS_TEMPLATES'),
+                                             template_file))
     header = template_fits[0].read_header()
     eigen_spectra = template_fits[0][:,:]
     template_fits.close()
@@ -627,7 +632,8 @@ def make_model(plate, mjd, fiber, model, wlen, finder, mirror):
     index2 = index2 * header['COEFF1']
     poly = np.zeros(LENGTH, dtype = [('poly','float32')])
     for j in range(Z_info[0]['NPOLY']):
-        poly['poly'] = poly['poly'] + np.power(index2,j) * Z_info[0]['THETA'][num_col + j]
+        poly['poly'] = (poly['poly'] + 
+                        np.power(index2,j) * Z_info[0]['THETA'][num_col + j])
     poly2 = speclite.resample(poly,
                               np.linspace(0,len(flux['flux']),num=LENGTH)*header['COEFF1'],
                               index, ('poly'))
@@ -636,7 +642,11 @@ def make_model(plate, mjd, fiber, model, wlen, finder, mirror):
     
     rs_wlen = speclite.redshift(0, Z_info[0]['Z'],
                                 rules=[dict(name='wlen',exponent=+1,array_in=10**index)])
-    model = speclite.resample(flux , rs_wlen['wlen'].astype('float32'),
+    Model = speclite.resample(flux , rs_wlen['wlen'].astype('float32'),
                               wlen, ('flux'))
     
-    return model['flux']
+    if verbose:
+        print('Data for model {}:'.format(model))
+        for n in range(len(Z_verbose[0])):
+            print('\t{:<12}{}'.format(Z_verbose[0].dtype.names[n],Z_verbose[0][n]))
+    return Model['flux']
