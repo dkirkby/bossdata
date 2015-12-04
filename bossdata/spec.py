@@ -607,7 +607,7 @@ def make_model(plate, mjd, fiber, model, wlen, finder, mirror, verbose=True):
     Z_all = fitsio.FITS(Zall_local)
     Z_info = Z_all[1]['Z','TFILE','TCOLUMN',
                       'NPOLY','THETA'][(fiber-1)*134+model-1]
-    Z_verbose = Z_all[1]['CLASS','SUBCLASS','Z','Z_ERR','RCHI2DIFF',
+    Z_verbose = Z_all[1]['CLASS','SUBCLASS','Z','Z_ERR','RCHI2','RCHI2DIFF',
                          'ZWARNING'][(fiber-1)*134+model-1]
     Z_all.close()
 
