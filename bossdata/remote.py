@@ -58,7 +58,7 @@ class Manager(object):
     Raises:
         ValueError: No such directory local_root or missing data_url.
     """
-    def __init__(self, data_url=None, local_root=None, verbose=True):
+    def __init__(self, data_url=None, local_root=None, meta_dir=None, verbose=True):
         # Constructor args take precendence over constructor args.
         self.data_url = os.getenv('BOSS_DATA_URL') if data_url is None else data_url
         if self.data_url is None:
@@ -83,6 +83,12 @@ class Manager(object):
         if not os.path.isdir(self.local_root):
             raise ValueError('Cannot use non-existent path "{}" as local root.'.format(
                 self.local_root))
+
+        self.meta_dir = os.getenv('BOSS_META_DIR') if meta_dir is None else meta_dir
+        if not os.path.isdir(os.path.join(self.local_root, self.meta_dir)):
+            raise ValueError('Connut use non-existent directory "{}" for boss meta data.'.format(
+                self.meta_dir))
+
 
     default_data_url = 'http://dr12.sdss3.org'
     """Default to use when $BOSS_DATA_URL is not set.
@@ -205,6 +211,29 @@ class Manager(object):
         if self.local_root is None:
             raise RuntimeError('No local root specified (try setting BOSS_LOCAL_ROOT).')
         return os.path.abspath(os.path.join(self.local_root, *remote_path.split('/')))
+
+    def meta_path(self, remote_path):
+        """Get the local path corresponding to a remote path.
+
+        Does not check that the file or its parent directory exists. Use :meth:`get` to
+        ensure that the file exists, downloading it if necessary.
+
+        Args:
+            remote_path(str): The full path to the remote file relative to the remote
+                server root, which should normally be obtained using :class:`bossdata.path`
+                methods.
+
+        Returns:
+            str: Absolute local path of the local file that mirrors the remote file.
+
+        Raises:
+            RuntimeError: No local_root specified when this manager was created.
+        """
+        if self.local_root is None:
+            raise RuntimeError('No local root specified (try setting BOSS_LOCAL_ROOT).')
+        if self.meta_dir is None:
+            raise RuntimeError('No meta dir specified (try setting BOSS_META_DIR).')
+        return os.path.abspath(os.path.join(self.local_root, self.meta_dir, *remote_path.split('/')))
 
     def get(self, remote_path, progress_min_size=10, auto_download=True, local_paths=None):
         """Get a local file that mirrors a remote file, downloading the file if necessary.

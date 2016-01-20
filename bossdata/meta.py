@@ -298,10 +298,10 @@ class Database(object):
         # database name.
         if quasar_catalog:
             remote_path = finder.get_quasar_catalog_path(quasar_catalog_name)
-            local_path = mirror.local_path(remote_path)
-            assert local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
-                local_path)
-            db_path = local_path.replace('.fits', '.db')
+            meta_path = mirror.meta_path(remote_path)
+            assert meta_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
+                meta_path)
+            db_path = meta_path.replace('.fits', '.db')
             lite_db_used = False
             # Create the database if necessary.
             if not os.path.isfile(db_path):
@@ -309,10 +309,10 @@ class Database(object):
                 create_meta_full(local_path, db_path)
         elif platelist:
             remote_path = finder.get_platelist_path()
-            local_path = mirror.local_path(remote_path)
-            assert local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
-                local_path)
-            db_path = local_path.replace('.fits', '.db')
+            meta_path = mirror.meta_path(remote_path)
+            assert meta_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
+                meta_path)
+            db_path = os.path.join(meta_path.replace('.fits', '.db'))
             lite_db_used = False
             # Create the database if necessary.
             if not os.path.isfile(db_path):
@@ -323,8 +323,9 @@ class Database(object):
             remote_paths = [finder.get_sp_all_path(lite=True),
                             finder.get_sp_all_path(lite=False)]
             local_paths = [mirror.local_path(path) for path in remote_paths]
-            db_paths = [Database._db_path_helper(local_paths[0], lite=True),
-                        Database._db_path_helper(local_paths[1], lite=False)]
+            meta_paths = [mirror.meta_path(path) for path in remote_paths]
+            db_paths = [Database._db_path_helper(meta_paths[0], lite=True),
+                        Database._db_path_helper(meta_paths[1], lite=False)]
             db_paths_exist = [os.path.isfile(path) for path in db_paths]
 
             db_path = None
