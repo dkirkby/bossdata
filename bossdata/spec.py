@@ -518,6 +518,7 @@ class SpecFile(object):
             first_index = float(get_fiducial_pixel_index(10.0**hdu['loglam'][0]))
             if abs(first_index - round(first_index)) > 0.01:
                 raise RuntimeError('Wavelength grid not aligned with fiducial grid.')
+            first_index = int(round(first_index))
             trimmed = slice(first_index, first_index + len(pixel_bits))
         else:
             loglam = hdu['loglam'][:]
