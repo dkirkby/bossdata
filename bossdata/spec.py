@@ -194,8 +194,9 @@ class Exposures(object):
         individual exposures.  The supported file types are:
         :datamodel:`spCFrame <PLATE4/spCFrame>`,
         :datamodel:`spFrame <PLATE4/spFrame>`,
-        :datamodel:`spFluxcalib <PLATE4/spFluxcalib>` and
-        :datamodel:`spFluxcorr <PLATE4/spFluxcorr>`.  This method is analogous to
+        :datamodel:`spFluxcalib <PLATE4/spFluxcalib>`
+        :datamodel:`spFluxcorr <PLATE4/spFluxcorr>` and
+        :datamodel:`spFlat <PLATE4/spFlat>`. This method is analogous to
         :meth:`bossdata.plate.Plan.get_exposure_name`, but operates for a single
         target and only knows about exposures actually used in the final co-add.
 
@@ -204,7 +205,7 @@ class Exposures(object):
                 exposure, in the range 0 - `(num_exposures[camera]-1)`.
             camera(str): One of b1,b2,r1,r2.
             ftype(str): Type of exposure file whose name to return.  Must be one of
-                spCFrame, spFrame, spFluxcalib, spFluxcorr.  An spCFrame is assumed
+                spCFrame, spFrame, spFluxcalib, spFluxcorr, spFlat.  An spCFrame is assumed
                 to be uncompressed, and all other files are assumed to be compressed.
 
         Returns:
@@ -222,13 +223,16 @@ class Exposures(object):
         if exposure_index < 0 or exposure_index >= self.num_by_camera[camera]:
             raise ValueError('Invalid exposure_index {}, expected 0-{}.'.format(
                 exposure_index, self.num_by_camera[camera] - 1))
-        if ftype not in ('spCFrame', 'spFrame', 'spFluxcalib', 'spFluxcorr'):
+        if ftype not in ('spCFrame', 'spFrame', 'spFluxcalib', 'spFluxcorr', 'spFlat'):
             raise ValueError('Invalid file type ({}) must be one of: '.format(ftype) +
-                             'spCFrame, spFrame, spFluxcalib, spFluxcorr.')
+                             'spCFrame, spFrame, spFluxcalib, spFluxcorr, spFlat.')
 
         # Get the science exposure ID number for the requested seqence number 0,1,...
         exposure_info = self.get_info(exposure_index, camera)
-        exposure_id = exposure_info['science']
+        if ftype == 'spFlat':
+            exposure_id = exposure_info['flat']
+        else:
+            exposure_id = exposure_info['science']
 
         name = '{0}-{1}-{2:08d}.fits'.format(ftype, camera, exposure_id)
         if ftype != 'spCFrame':
@@ -518,7 +522,6 @@ class SpecFile(object):
             first_index = float(get_fiducial_pixel_index(10.0**hdu['loglam'][0]))
             if abs(first_index - round(first_index)) > 0.01:
                 raise RuntimeError('Wavelength grid not aligned with fiducial grid.')
-            first_index = int(round(first_index))
             trimmed = slice(first_index, first_index + len(pixel_bits))
         else:
             loglam = hdu['loglam'][:]
