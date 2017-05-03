@@ -16,6 +16,7 @@ import astropy.table
 
 import fitsio
 
+import bossdata.remote
 from bossdata.spec import Exposures, fiducial_loglam, get_fiducial_pixel_index
 
 
@@ -50,7 +51,8 @@ class Plan(object):
     def __init__(self, path):
         self.plate = None
         self.exposures = {}
-        with open(path, 'r') as f:
+        self.path = path
+        with open(self.path, 'r') as f:
             for line in f:
                 if not line.startswith('SPEXP'):
                     continue
@@ -160,6 +162,7 @@ class Plan(object):
         Raises:
             ValueError: one of the inputs is invalid.
         """
+
         if sequence_number < 0 or sequence_number >= self.num_science_exposures:
             raise ValueError('Invalid sequence number ({0}) must be 0-{1}.'.format(
                 sequence_number, self.num_science_exposures - 1))
@@ -180,7 +183,8 @@ class Plan(object):
         name = '{0}-{1}-{2:08d}.fits'.format(ftype, camera, exposure_id)
         if ftype != 'spCFrame':
             name += '.gz'
-        return name
+        path_prefix = self.path[self.path.find('/sas'):]
+        return os.path.join(path_prefix.strip(os.path.basename(path_prefix)), name)
 
 
 class TraceSet(object):
