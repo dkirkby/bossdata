@@ -233,7 +233,7 @@ class Finder(object):
         return posixpath.join(self.sas_path, 'spectro', 'data',
                               '{0:5d}'.format(mjd), filename)
 
-    def get_spec_path(self, plate, mjd, fiber, lite=True):
+    def get_spec_path(self, plate, mjd, fiber, lite=True, mock=False, compressed=False):
         """Get the location of the spectrum file for the specified observation.
 
         The DR12 data model for the returned files is at
@@ -269,9 +269,11 @@ class Finder(object):
                 fiber, get_num_fibers(plate), plate))
 
         path = 'spectra'
-        plate_label = '{:04d}'.format(plate)
+        plate_label = '{:04d}'.format(int(plate))
+        file_ext = 'fits.gz' if compressed else 'fits'
+        file_prefix = 'mock' if mock else 'spec'
         if lite:
             path = posixpath.join(path, 'lite')
-        name = 'spec-{plate}-{mjd:5d}-{fiber:04d}.fits'.format(
-            plate=plate_label, mjd=mjd, fiber=fiber)
+        name = '{prefix}-{plate}-{mjd:5d}-{fiber:04d}.{ext}'.format(
+            prefix=file_prefix, plate=plate_label, mjd=int(mjd), fiber=int(fiber), ext=file_ext)
         return posixpath.join(self.redux_base, path, plate_label, name)
