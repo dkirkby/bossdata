@@ -9,8 +9,9 @@ bossdata
         :target: https://pypi.python.org/pypi/bossdata
 
 .. image:: https://readthedocs.org/projects/bossdata/badge/?version=latest
-        :target: https://readthedocs.org/projects/bossdata/?badge=latest
+        :target: http://bossdata.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
+
 
 A python package for working with `spectroscopic data
 <http://www.sdss.org/dr12/spectro/spectro_basics/>`_ from the `Sloan Digital

@@ -7,12 +7,12 @@ with open('DESCRIPTION.rst') as f:
     long_description = f.read()
 
 requirements = [
-    'requests>=2.7.0',
+    'requests>=2.14',
     'progressbar2>=3.34',
     'numpy>=1.9.2',
     'astropy>=2.0.1',
-    'fitsio>=0.9.7',
-    'pydl>=0.4.1',
+    'fitsio>=0.9.11',
+    'pydl>=0.6.0',
     'six>=1.10'
 ]
 
