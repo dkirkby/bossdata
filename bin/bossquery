@@ -9,7 +9,7 @@ from __future__ import division, print_function
 
 import os.path
 
-from astropy.utils.compat import argparse
+import argparse
 
 import bossdata.meta
 

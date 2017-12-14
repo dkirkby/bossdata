@@ -7,7 +7,7 @@
 
 from __future__ import division, print_function
 
-from astropy.utils.compat import argparse
+import argparse
 
 import os.path
 import math
@@ -19,6 +19,8 @@ import matplotlib.pyplot as plt
 import astropy.table
 
 import bossdata
+
+import six # for iteritems
 
 
 def auto_range(range_str, abs_lo, abs_hi, default_limits, data_lo=None, data_hi=None):
