@@ -19,7 +19,7 @@ This code will use the environment variables ``$BOSS_SAS_PATH``, ``$BOSS_REDUX_V
     remote_path = finder.get_spec_path(plate=4567, mdj=55589, fiber=88, lite=True)
     local_path = mirror.get(remote_path)
 
-Refer to the :doc:`API documentation </src/bossdata>` for details on using the :mod:`bossdata.path` and :mod:`bossdata.remote` modules.
+Refer to the :doc:`API documentation </api>` for details on using the :mod:`bossdata.path` and :mod:`bossdata.remote` modules.
 
 Certain data files have a helper class for accessing their contents:
  * spec,spec-lite: :class:`bossdata.spec.SpecFile`
