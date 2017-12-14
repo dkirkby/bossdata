@@ -3,10 +3,10 @@
 History
 =======
 
-0.2.9 (unreleased)
+0.3.0 (unreleased)
 ------------------
 
-* No changes yet.
+* Update for python 3.x
 
 0.2.8 (2015-10-19)
 ------------------

@@ -1,27 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
-try:
-    from setuptools import setup, Command
-except ImportError:
-    from distutils.core import setup, Command
-
-# Run pre-built py.tests as described at
-# https://pytest.org/latest/goodpractises.html#integrating-with-distutils-python-setup-py-test
-class PyTest(Command):
-    user_options = []
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        import subprocess
-        import sys
-        errno = subprocess.call([sys.executable, 'runtests.py'])
-        raise SystemExit(errno)
+from setuptools import setup
 
 with open('DESCRIPTION.rst') as f:
     long_description = f.read()
@@ -30,7 +10,7 @@ requirements = [
     'requests>=2.7.0',
     'progressbar2>=3.34',
     'numpy>=1.9.2',
-    'astropy>=1.0.1',
+    'astropy>=2.0.1',
     'fitsio>=0.9.7',
     'pydl>=0.4.1',
     'six>=1.10'
@@ -74,7 +54,6 @@ setup(
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
     ],
-    cmdclass = {'test': PyTest},
-    #test_suite='tests',
-    #tests_require=test_requirements
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest']
 )
