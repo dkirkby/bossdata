@@ -129,7 +129,7 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
     lines = ''
     with gzip.open(sp_all_path) as f:
         for i in range(100):
-            lines += f.readline()
+            lines += f.readline().decode()
     table = astropy.table.Table.read(lines, format='ascii.fixed_width_two_line', guess=False)
 
     # Create a new database file.
