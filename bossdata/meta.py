@@ -58,7 +58,7 @@ def sql_create_table(table_name, recarray_dtype, renaming_rules={}, primary_key=
             sql_type = 'INTEGER'
         elif np.issubdtype(dtype, np.float):
             sql_type = 'REAL'
-        elif np.issubdtype(dtype, np.str):
+        elif np.issubdtype(dtype, np.str) or np.issubdtype(dtype, np.bytes_):
             sql_type = 'TEXT'
         else:
             raise ValueError('Cannot map data type {} of {} to SQL.'.format(dtype, name))
