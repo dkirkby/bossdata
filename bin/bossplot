@@ -20,7 +20,7 @@ import astropy.table
 
 import bossdata
 
-import six # for iteritems
+from six import iteritems
 
 
 def auto_range(range_str, abs_lo, abs_hi, default_limits, data_lo=None, data_hi=None):
@@ -94,7 +94,7 @@ def print_mask_summary(label, mask_values):
         print('{0} pixel mask summary:'.format(label))
         bit_summary = bossdata.bits.summarize_bitmask_values(
             bossdata.bits.SPPIXMASK, mask_values)
-        for bit_name, bit_count in bit_summary.iteritems():
+        for bit_name, bit_count in iteritems(bit_summary):
             print('{0:5d} {1}'.format(bit_count, bit_name))
     else:
         print('No pixels masked.')

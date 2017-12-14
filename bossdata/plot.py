@@ -20,6 +20,8 @@ from __future__ import division, print_function
 
 import numpy as np
 
+from six import iteritems
+
 
 def by_fiber(data, mask=None, subsets=dict(), percentile_cut=0.0,
              plot_label=None, data_label=None,
@@ -79,7 +81,7 @@ def by_fiber(data, mask=None, subsets=dict(), percentile_cut=0.0,
 
     # Draw each fiber using the specified marker.
     remaining = valid
-    for subset_name, subset_config in subsets.iteritems():
+    for subset_name, subset_config in iteritems(subsets):
         try:
             subset = remaining & subset_config['fibers']
         except Exception as e:
@@ -212,7 +214,7 @@ def focal_plane(xfocal, yfocal, data, mask=None, subsets=dict(),
 
     # Draw each fiber using the specified marker.
     remaining = valid
-    for subset_name, subset_config in subsets.iteritems():
+    for subset_name, subset_config in iteritems(subsets):
         try:
             subset = remaining & subset_config['fibers']
         except Exception as e:
