@@ -3,7 +3,7 @@
 wheel==0.23.0
 pytest==2.6.3
 requests==2.7.0
-progressbar==2.3
+progressbar2==3.34.3
 numpy==1.9.2
 astropy==1.0.1
 fitsio==0.9.7
