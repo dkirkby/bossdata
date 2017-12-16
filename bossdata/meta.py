@@ -294,6 +294,11 @@ class Database(object):
         if mirror is None:
             mirror = bossdata.remote.Manager(verbose=verbose)
 
+        # Numpy int64 must be explicity converted to int in python3.
+        # https://stackoverflow.com/questions/38753737/
+        # inserting-numpy-integer-types-into-sqlite-with-python3
+        sqlite3.register_adapter(np.int64, lambda val: int(val))
+
         # Get the local name of the metadata source file and the corresponding SQL
         # database name.
         if quasar_catalog:
