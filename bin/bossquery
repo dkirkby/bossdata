@@ -90,7 +90,7 @@ def main():
     if args.save:
         root, ext = os.path.splitext(args.save)
         if ext in ('.dat', '.txt'):
-            table.write(args.save, format='ascii')
+            table.write(args.save, format='ascii', overwrite=(not args.no_clobber))
         else:
             try:
                 table.write(args.save, overwrite=(not args.no_clobber))

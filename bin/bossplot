@@ -404,7 +404,7 @@ def main():
         valid = ~(spectra[0]['flux'].mask)
         table = astropy.table.Table(spectra[0][valid])
         try:
-            table.write(save_name, format='ascii.basic')
+            table.write(save_name, format='ascii.basic', overwrite=True)
         except IOError as e:
             print('Unable to save data: {}.'.format(str(e)))
             return -1
