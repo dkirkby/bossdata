@@ -6,7 +6,8 @@ History
 0.3.1 (unreleased)
 ------------------
 
-* No changes yet.
+* Fix issue #108
+* Remove requirements.txt, add docs/rtd-pip-requirements, update .travis.yaml
 
 0.3.0 (2017-12-17)
 ------------------
