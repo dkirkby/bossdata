@@ -10,7 +10,7 @@ from __future__ import division, print_function
 import os.path
 import multiprocessing
 
-from astropy.utils.compat import argparse
+import argparse
 
 from progressbar import ProgressBar, Percentage, Bar
 

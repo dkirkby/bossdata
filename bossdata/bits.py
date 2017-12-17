@@ -13,6 +13,8 @@ automatically generate the bitmask definitions in this file with the
 
 from __future__ import division, print_function
 
+from six import iteritems
+
 
 def define_bitmask(mask_name, mask_description, **bits):
     """Define a new type for a bitmask with specified symbolic bit names.
@@ -55,7 +57,7 @@ def define_bitmask(mask_name, mask_description, **bits):
     bit_names = []
     bit_offsets = []
     bit_descriptions = []
-    for name, bit_definition in bits.iteritems():
+    for name, bit_definition in iteritems(bits):
         bit_names.append(name)
         if isinstance(bit_definition, tuple):
             bit_offset, bit_description = bit_definition

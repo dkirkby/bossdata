@@ -22,6 +22,8 @@ from progressbar import ProgressBar, Percentage, Bar
 import bossdata.path
 import bossdata.remote
 
+from six import text_type
+
 
 def sql_create_table(table_name, recarray_dtype, renaming_rules={}, primary_key=None):
     """Prepare an SQL statement to create a database for a numpy structured array.
@@ -58,7 +60,7 @@ def sql_create_table(table_name, recarray_dtype, renaming_rules={}, primary_key=
             sql_type = 'INTEGER'
         elif np.issubdtype(dtype, np.float):
             sql_type = 'REAL'
-        elif np.issubdtype(dtype, np.str):
+        elif np.issubdtype(dtype, np.str) or np.issubdtype(dtype, np.bytes_):
             sql_type = 'TEXT'
         else:
             raise ValueError('Cannot map data type {} of {} to SQL.'.format(dtype, name))
@@ -129,7 +131,7 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
     lines = ''
     with gzip.open(sp_all_path) as f:
         for i in range(100):
-            lines += f.readline()
+            lines += f.readline().decode()
     table = astropy.table.Table.read(lines, format='ascii.fixed_width_two_line', guess=False)
 
     # Create a new database file.
@@ -190,9 +192,6 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
         print('WARNING: you are using numpy {} so this could take a while.'
             .format(np.version.version))
 
-    if verbose:
-        print('Initializing the full database...')
-
     chunk_size = 100000
     position = 0
 
@@ -200,6 +199,8 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
     with fitsio.FITS(catalog_path) as hdulist:
         # This just reads the headers but still takes 15-20 seconds.
         # The equivalent operation with astropy.io.fits takes 15-20 minutes!
+
+        maxcount = hdulist[1].get_nrows()
 
         # table = hdulist[1].read(rows=[position,position+chunk_size])
         table = hdulist[1][position:(position + chunk_size)]
@@ -220,7 +221,6 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
 
         sql = 'INSERT INTO meta VALUES ({})'.format(','.join('?' * num_cols))
         if verbose:
-            maxcount = hdulist[1].get_nrows()
             progress_bar = ProgressBar(
                 widgets=['Writing', ' ', Percentage(), Bar()], maxval=maxcount).start()
             update_var = 1
@@ -233,7 +233,10 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
                 values = []
                 for j, column_data in enumerate(row):
                     if column_data.dtype.kind == 'S':
-                        values.append(column_data.rstrip())
+                        value = column_data.rstrip()
+                        if not isinstance(value, text_type):
+                            value = value.decode()
+                        values.append(value)
                     elif isinstance(column_data, np.ndarray):
                         values.extend(column_data.flatten().tolist())
                     else:
@@ -293,6 +296,11 @@ class Database(object):
             finder = bossdata.path.Finder(verbose=verbose)
         if mirror is None:
             mirror = bossdata.remote.Manager(verbose=verbose)
+
+        # Numpy int64 must be explicity converted to int in python3.
+        # https://stackoverflow.com/questions/38753737/
+        # inserting-numpy-integer-types-into-sqlite-with-python3
+        sqlite3.register_adapter(np.int64, lambda val: int(val))
 
         # Get the local name of the metadata source file and the corresponding SQL
         # database name.

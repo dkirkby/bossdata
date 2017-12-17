@@ -210,8 +210,8 @@ class Manager(object):
         """Get a local file that mirrors a remote file, downloading the file if necessary.
 
         Args:
-            remote_path(str,iterable): This arg will normally be a single string but can
-                optionally be an iterable over strings for some advanced functionality.
+            remote_path(str,list): This arg will normally be a single string but can
+                optionally be a list of strings for some advanced functionality.
                 Strings give the full path to a remote file and should normally be obtained
                 using :class:`bossdata.path` methods.  When passing an iterable, the first
                 item specifies the desired file and subsequent items specify acceptable
@@ -245,7 +245,7 @@ class Manager(object):
             RuntimeError: File is not already mirrored and auto_download is False.
         """
         # If the argument is not iterable we assume it is a single path.
-        if not hasattr(remote_path, '__iter__'):
+        if not isinstance(remote_path, list):
             remote_paths = [remote_path]
         else:
             remote_paths = remote_path

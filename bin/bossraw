@@ -7,7 +7,7 @@
 
 from __future__ import division, print_function
 
-from astropy.utils.compat import argparse
+import argparse
 
 import fitsio
 
@@ -38,6 +38,10 @@ def main():
     parser.add_argument('--no-bias-subtraction', action='store_true',
         help='Do not estimate and subtract amplifier bias in each quadrant.')
     args = parser.parse_args()
+
+    if args.camera == None:
+        print('Missing required camera arg.')
+        return -1
 
     bias_subtracted = not args.no_bias_subtraction
 
