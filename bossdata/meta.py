@@ -201,6 +201,8 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
         # This just reads the headers but still takes 15-20 seconds.
         # The equivalent operation with astropy.io.fits takes 15-20 minutes!
 
+        maxcount = hdulist[1].get_nrows()
+
         # table = hdulist[1].read(rows=[position,position+chunk_size])
         table = hdulist[1][position:(position + chunk_size)]
 
@@ -220,7 +222,6 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
 
         sql = 'INSERT INTO meta VALUES ({})'.format(','.join('?' * num_cols))
         if verbose:
-            maxcount = hdulist[1].get_nrows()
             progress_bar = ProgressBar(
                 widgets=['Writing', ' ', Percentage(), Bar()], maxval=maxcount).start()
             update_var = 1
