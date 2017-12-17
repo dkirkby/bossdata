@@ -1,0 +1,7 @@
+requests
+progressbar2
+numpy
+astropy
+git+https://github.com/dkirkby/fitsio
+pydl
+six
