@@ -140,6 +140,7 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
         rules['MODELFLUX{}'.format(i)] = 'MODELFLUX_{}'.format(i)
     sql, num_cols = sql_create_table(
         'meta', table.dtype, renaming_rules=rules, primary_key='(PLATE,MJD,FIBER)')
+    bossdata.remote._prepare_local_path(db_path)
     connection = sqlite3.connect(db_path + '.building')
     cursor = connection.cursor()
     cursor.execute(sql)
@@ -215,6 +216,7 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
         sql, num_cols = sql_create_table(
             'meta', table.dtype, renaming_rules={'FIBERID': 'FIBER'},
             primary_key=primary_key)
+        bossdata.remote._prepare_local_path(db_path)
         connection = sqlite3.connect(db_path + '.building')
         cursor = connection.cursor()
         cursor.execute(sql)
@@ -306,10 +308,7 @@ class Database(object):
         # database name.
         if quasar_catalog:
             remote_path = finder.get_quasar_catalog_path(quasar_catalog_name)
-            local_path = mirror.local_path(remote_path)
-            assert local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
-                local_path)
-            db_path = local_path.replace('.fits', '.db')
+            db_path = mirror.local_path(remote_path, '.fits', '.db')
             lite_db_used = False
             # Create the database if necessary.
             if not os.path.isfile(db_path):
@@ -317,10 +316,7 @@ class Database(object):
                 create_meta_full(local_path, db_path)
         elif platelist:
             remote_path = finder.get_platelist_path()
-            local_path = mirror.local_path(remote_path)
-            assert local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
-                local_path)
-            db_path = local_path.replace('.fits', '.db')
+            db_path = mirror.local_path(remote_path, '.fits', '.db')
             lite_db_used = False
             # Create the database if necessary.
             if not os.path.isfile(db_path):
@@ -330,9 +326,8 @@ class Database(object):
             # Pre-build all our paths, test for (and store) the existence of the DB files
             remote_paths = [finder.get_sp_all_path(lite=True),
                             finder.get_sp_all_path(lite=False)]
-            local_paths = [mirror.local_path(path) for path in remote_paths]
-            db_paths = [Database._db_path_helper(local_paths[0], lite=True),
-                        Database._db_path_helper(local_paths[1], lite=False)]
+            db_paths = [mirror.local_path(remote_paths[0], '.dat.gz', '-lite.db'),
+                        mirror.local_path(remote_paths[1], '.fits', '.db')]
             db_paths_exist = [os.path.isfile(path) for path in db_paths]
 
             db_path = None
@@ -353,7 +348,7 @@ class Database(object):
                     lite_db_used = False
                 else:                             # Neither DB's exist, so get files, create DB
                     local_path = mirror.get(remote_paths)
-                    if local_path == local_paths[0]:    # lite
+                    if local_path.endswith('.dat.gz'):    # lite
                         db_path = db_paths[0]
                         create_meta_lite(local_path, db_path)
                     else:                               # full
@@ -495,17 +490,6 @@ class Database(object):
         # Return a table of the results, letting astropy.table.Table infer the columns types
         # from the data itself.
         return astropy.table.Table(rows=rows, names=names)
-
-    @staticmethod
-    def _db_path_helper(path=None, lite=True):
-        if lite:
-            assert path.endswith('.dat.gz'), 'Expected .dat.gz extension for {}.'.format(
-                path)
-            return path.replace('.dat.gz', '-lite.db')
-        else:
-            assert path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
-                path)
-            return path.replace('.fits', '.db')
 
 
 def get_plate_mjd_list(plate, finder=None, mirror=None):
