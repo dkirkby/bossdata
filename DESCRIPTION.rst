@@ -5,6 +5,6 @@ A python package for working with `spectroscopic data <http://www.sdss.org/dr12/
 * Releases: https://pypi.python.org/pypi/bossdata
 * Code: https://github.com/dkirkby/bossdata
 
-What's new in version 0.2.9:
+What's new in version 0.3.0:
 
-* Fix `issues <https://github.com/dkirkby/bossdata/issues>`__ ...
+* Add support for python3.
