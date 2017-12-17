@@ -190,9 +190,6 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
         print('WARNING: you are using numpy {} so this could take a while.'
             .format(np.version.version))
 
-    if verbose:
-        print('Initializing the full database...')
-
     chunk_size = 100000
     position = 0
 

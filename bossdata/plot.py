@@ -126,7 +126,8 @@ def focal_plane(xfocal, yfocal, data, mask=None, subsets=dict(),
                 background=None, numbered=None, percentile_cut=0.0,
                 mesh_refinement=0, plot_label=None, data_label=None,
                 show_background_mesh=False, number_color='red',
-                default_options=dict(marker='o', lw=0.5, s=60), rmax=350.0):
+                default_options=dict(marker='o', lw=0.5, edgecolors='k', s=60),
+                rmax=350.0):
     """Plot per-fiber data values using focal-plane positions.
 
     This is a useful plot to show any dependence of the data value on a

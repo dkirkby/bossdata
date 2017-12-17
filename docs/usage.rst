@@ -4,15 +4,9 @@ API Usage
 
 To use the ``bossdata`` package in your own python projects, you will normally start with::
 
-    import bossdata.path
-    import bossdata.remote
-
-    try:
-        finder = bossdata.path.Finder()
-        mirror = bossdata.remote.Manager()
-    except ValueError as e:
-        print(e)
-        return -1
+    import bossdata
+    finder = bossdata.path.Finder()
+    mirror = bossdata.remote.Manager()
 
 This code will use the environment variables ``$BOSS_SAS_PATH``, ``$BOSS_REDUX_VERSION``, ``$BOSS_DATA_URL`` and ``$BOSS_LOCAL_ROOT`` to configure your access to SDSS data files (see :doc:`/envvar` for details.) The ``finder`` and ``mirror`` objects can be used together to access locally mirrored copies of BOSS data files. For example::
 
