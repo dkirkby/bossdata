@@ -3,7 +3,12 @@
 History
 =======
 
-0.3.0 (unreleased)
+0.3.1 (unreleased)
+------------------
+
+* No changes yet.
+
+0.3.0 (2017-12-17)
 ------------------
 
 * Update for python 3.x
