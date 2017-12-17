@@ -39,6 +39,10 @@ def main():
         help='Do not estimate and subtract amplifier bias in each quadrant.')
     args = parser.parse_args()
 
+    if args.camera == None:
+        print('Missing required camera arg.')
+        return -1
+
     bias_subtracted = not args.no_bias_subtraction
 
     try:
