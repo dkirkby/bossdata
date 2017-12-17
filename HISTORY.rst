@@ -6,8 +6,9 @@ History
 0.3.1 (unreleased)
 ------------------
 
-* Fix issue #108
+* Fix issues #108 #109
 * Remove requirements.txt, add docs/rtd-pip-requirements, update .travis.yaml
+* Add support for running at sites where data is locally visible (e.g., nersc)
 
 0.3.0 (2017-12-17)
 ------------------
