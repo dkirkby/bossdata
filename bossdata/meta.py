@@ -22,6 +22,8 @@ from progressbar import ProgressBar, Percentage, Bar
 import bossdata.path
 import bossdata.remote
 
+from six import text_type
+
 
 def sql_create_table(table_name, recarray_dtype, renaming_rules={}, primary_key=None):
     """Prepare an SQL statement to create a database for a numpy structured array.
@@ -231,7 +233,10 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
                 values = []
                 for j, column_data in enumerate(row):
                     if column_data.dtype.kind == 'S':
-                        values.append(column_data.rstrip())
+                        value = column_data.rstrip()
+                        if not isinstance(value, text_type):
+                            value = value.decode()
+                        values.append(value)
                     elif isinstance(column_data, np.ndarray):
                         values.extend(column_data.flatten().tolist())
                     else:
