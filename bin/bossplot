@@ -20,7 +20,7 @@ import astropy.table
 
 import bossdata
 
-from six import iteritems
+from six import iteritems, string_types
 
 
 def auto_range(range_str, abs_lo, abs_hi, default_limits, data_lo=None, data_hi=None):
@@ -66,7 +66,7 @@ def auto_range(range_str, abs_lo, abs_hi, default_limits, data_lo=None, data_hi=
 
     range_pattern = re.compile('\s*\[\s*(.*?)\s*:\s*(.*?)\s*\]\s*')
 
-    if isinstance(default_limits, basestring):
+    if isinstance(default_limits, string_types):
         parsed = re.match(range_pattern, default_limits)
         if not parsed:
             raise ValueError('Default range {} does not have the format [<lo>:<hi>].'.format(
