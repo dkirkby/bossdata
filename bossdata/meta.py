@@ -154,7 +154,10 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
         progress_bar = ProgressBar(
             widgets=['Writing', ' ', Percentage(), Bar()], maxval=len(data)).start()
     for i, row in enumerate(data):
-        cursor.execute(sql, row)
+        values = []
+        for column_data in row:
+            values.append(column_data.item())
+        cursor.execute(sql, values)
         if verbose:
             progress_bar.update(i + 1)
     connection.commit()
@@ -234,7 +237,7 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
                 # and convert numpy types to the native python types required by sqlite3.
                 # Conversions of bytes (python3) and np.int64 are handled by sqlite adapters.
                 values = []
-                for j, column_data in enumerate(row):
+                for column_data in row:
                     if isinstance(column_data, np.ndarray):
                         values.extend(column_data.flatten().tolist())
                     else:
