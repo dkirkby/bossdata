@@ -2,6 +2,6 @@ requests
 progressbar2
 numpy
 astropy
-git+https://github.com/dkirkby/fitsio
+git+https://github.com/esheldon/fitsio
 pydl
 six
