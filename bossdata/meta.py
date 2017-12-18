@@ -22,7 +22,7 @@ from progressbar import ProgressBar, Percentage, Bar
 import bossdata.path
 import bossdata.remote
 
-from six import text_type
+from six import binary_type, text_type
 
 
 def sql_create_table(table_name, recarray_dtype, renaming_rules={}, primary_key=None):
@@ -232,14 +232,10 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
             for row in table:
                 # Unroll columns with sub-arrays into a flat list to match the flat SQL schema,
                 # and convert numpy types to the native python types required by sqlite3.
+                # Conversions of bytes (python3) and np.int64 are handled by sqlite adapters.
                 values = []
                 for j, column_data in enumerate(row):
-                    if column_data.dtype.kind == 'S':
-                        value = column_data.rstrip()
-                        if not isinstance(value, text_type):
-                            value = value.decode()
-                        values.append(value)
-                    elif isinstance(column_data, np.ndarray):
+                    if isinstance(column_data, np.ndarray):
                         values.extend(column_data.flatten().tolist())
                     else:
                         values.append(column_data.item())
@@ -303,6 +299,12 @@ class Database(object):
         # https://stackoverflow.com/questions/38753737/
         # inserting-numpy-integer-types-into-sqlite-with-python3
         sqlite3.register_adapter(np.int64, lambda val: int(val))
+
+        # Decode binary data into a string if necessary and always strip trailing whitespace.
+        if binary_type is not str:
+            sqlite3.register_adapter(binary_type, lambda val: val.rstrip().decode())
+        else:
+            sqlite3.register_adapter(text_type, lambda val: val.rstrip())
 
         # Get the local name of the metadata source file and the corresponding SQL
         # database name.
