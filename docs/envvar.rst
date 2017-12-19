@@ -23,8 +23,11 @@ However these variables are set, the following unix shell command should always 
 You can optionally define one more environment variable ``BOSS_SPECLOG`` to locate a local checkout
 of the ``speclog`` svn product.  This is only required if you need to access the full plug maps
 (including non-science fibers) and prefer to use an environment variable instead of passing a
-path argument.  See the :meth:`read_plug_map() <bossdata.raw.RawImageFile.read_plug_map>` documentation
-for details.
+path argument.  See the :meth:`read_plug_map() <bossdata.raw.RawImageFile.read_plug_map>`
+documentation for details.
+
+If you are running on a system where the full dataset is available directly via the file system (e.g., at NERSC), use a ``$BOSS_DATA_URL`` that starts with the ``file://`` URI to indicate that data does not need to be transferred via network to your ``$BOSS_LOCAL_ROOT``.  In this case,
+the local root will still be used for the sqlite files created by the :mod:`meta module <bossdata.meta>`. For details on using bossdata at NERSC, see :doc:`this guide </nersc>`.
 
 The sections below describe how to access sources of data other than the default public DR12 release.
 
