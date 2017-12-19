@@ -19,6 +19,8 @@ import fitsio
 import bossdata.remote
 from bossdata.spec import Exposures, fiducial_loglam, get_fiducial_pixel_index
 
+from six import text_type
+
 
 def get_num_fibers(plate):
     """Return the number of fiber holes for a given plate number.
@@ -220,7 +222,10 @@ class TraceSet(object):
         if data.shape != (1,):
             raise ValueError('TraceSet HDU has unexpected shape {}.'.format(data.shape))
         data = data[0]
-        if data['FUNC'] != 'legendre':
+        func = data['FUNC']
+        if type(func) is not text_type:
+            func = func.decode()
+        if func != 'legendre':
             raise ValueError('TraceSet uses unsupported FUNC "{}"'.format(data['FUNC']))
 
         # Are we including a jump for the 2-phase readout?
@@ -630,6 +635,7 @@ class FrameFile(object):
                 all other fields are masked when ivar is zero or a pipeline flag is set (and
                 not allowed by ``pixel_quality_mask``).
         """
+        fibers = np.asarray(fibers)
         offsets = self.get_fiber_offsets(fibers)
         num_fibers = len(offsets)
 
