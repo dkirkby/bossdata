@@ -6,9 +6,10 @@ History
 0.3.1 (unreleased)
 ------------------
 
-* Fix issues #108 #109
+* Fix issues #108 #109 and merges #110 #120
 * Remove requirements.txt, add docs/rtd-pip-requirements, update .travis.yaml
 * Add support for running at sites where data is locally visible (e.g., nersc)
+* Add support for reading spFlat files
 
 0.3.0 (2017-12-17)
 ------------------

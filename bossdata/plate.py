@@ -137,8 +137,9 @@ class Plan(object):
         individual exposures.  The supported file types are:
         :datamodel:`spCFrame <PLATE4/spCFrame>`,
         :datamodel:`spFrame <PLATE4/spFrame>`,
-        :datamodel:`spFluxcalib <PLATE4/spFluxcalib>` and
-        :datamodel:`spFluxcorr <PLATE4/spFluxcorr>`.
+        :datamodel:`spFluxcalib <PLATE4/spFluxcalib>`,
+        :datamodel:`spFluxcorr <PLATE4/spFluxcorr>` and
+        :datamodel:`spFlat <PLATE4/spFlat>`.
         Note that this method returns None when the requested exposure is not present
         in the plan, so the return value should always be checked.
 
@@ -149,7 +150,7 @@ class Plan(object):
                 be in the range 1-1000 (or 1-640 for plate < 3510).
             band(str): Must be 'blue' or 'red'.
             ftype(str): Type of exposure file whose name to return.  Must be one of
-                spCFrame, spFrame, spFluxcalib, spFluxcorr.  An spCFrame is assumed
+                spCFrame, spFrame, spFluxcalib, spFluxcorr, spFlat.  An spCFrame is assumed
                 to be uncompressed, and all other files are assumed to be compressed.
 
         Returns:
@@ -171,9 +172,9 @@ class Plan(object):
                 fiber, self.num_fibers, self.plate))
         if band not in ('blue', 'red'):
             raise ValueError('Invalid band ({}) must be blue or red.'.format(band))
-        if ftype not in ('spCFrame', 'spFrame', 'spFluxcalib', 'spFluxcorr'):
+        if ftype not in ('spCFrame', 'spFrame', 'spFluxcalib', 'spFluxcorr', 'spFlat'):
             raise ValueError('Invalid file type ({}) must be one of: '.format(ftype) +
-                             'spCFrame, spFrame, spFluxcalib, spFluxcorr.')
+                             'spCFrame, spFrame, spFluxcalib, spFluxcorr ,spFlat.')
 
         camera = band[0] + str(self.get_spectrograph_index(fiber))
         exposure_info = self.exposures['science'][sequence_number]
