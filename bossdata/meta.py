@@ -124,15 +124,12 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
 
     # Read the database into memory.
     if verbose:
-        print('Initializing the lite database...')
+        print('Initializing the lite database (takes several minutes)...')
 
-    # Pass-1 uses only the first 100 lines to automatically determine the column names and
-    # types.
-    lines = ''
-    with gzip.open(sp_all_path) as f:
-        for i in range(100):
-            lines += f.readline().decode()
-    table = astropy.table.Table.read(lines, format='ascii.fixed_width_two_line', guess=False)
+    # Use astropy.table to also infer the datatype to use for each column.
+    # This takes ~90s for the DR12 lite file.
+    table = astropy.table.Table.read(
+        sp_all_path, format='ascii.fixed_width_two_line', guess=False)
 
     # Create a new database file.
     rules = {}
@@ -146,18 +143,13 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
     cursor.execute(sql)
     connection.commit()
 
-    data = np.loadtxt(sp_all_path, skiprows=2, dtype=table.dtype)
-
     # Insert rows into the database.
     sql = 'INSERT INTO meta VALUES ({values})'.format(values=','.join('?' * num_cols))
     if verbose:
         progress_bar = ProgressBar(
-            widgets=['Writing', ' ', Percentage(), Bar()], maxval=len(data)).start()
-    for i, row in enumerate(data):
-        values = []
-        for column_data in row:
-            values.append(column_data.item())
-        cursor.execute(sql, values)
+            widgets=['Writing', ' ', Percentage(), Bar()], maxval=len(table)).start()
+    for i, row in enumerate(table):
+        cursor.execute(sql, row)
         if verbose:
             progress_bar.update(i + 1)
     connection.commit()
