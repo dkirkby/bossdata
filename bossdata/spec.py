@@ -188,31 +188,36 @@ class Exposures(object):
         return self.table[row][0]
 
     def get_exposure_name(self, exposure_index, camera, ftype='spCFrame'):
-        """Get the file name of a single science exposure data product.
+        """Get the file name of a single science or calibration exposure data product.
 
         Use the exposure name to locate FITS data files associated with
         individual exposures.  The supported file types are:
         :datamodel:`spCFrame <PLATE4/spCFrame>`,
         :datamodel:`spFrame <PLATE4/spFrame>`,
         :datamodel:`spFluxcalib <PLATE4/spFluxcalib>`
-        :datamodel:`spFluxcorr <PLATE4/spFluxcorr>` and
+        :datamodel:`spFluxcorr <PLATE4/spFluxcorr>`,
+        :datamodel:`spArc <PLATE4/spArc>`,
         :datamodel:`spFlat <PLATE4/spFlat>`. This method is analogous to
         :meth:`bossdata.plate.Plan.get_exposure_name`, but operates for a single
-        target and only knows about exposures actually used in the final co-add.
+        target and only knows about exposures actually used in the final co-add
+        (including the associated arc and flat exposures).
 
         Args:
             exposure_index(int): The sequence number for the requested camera
                 exposure, in the range 0 - `(num_exposures[camera]-1)`.
             camera(str): One of b1,b2,r1,r2.
             ftype(str): Type of exposure file whose name to return.  Must be one of
-                spCFrame, spFrame, spFluxcalib, spFluxcorr, spFlat.  An spCFrame is assumed
-                to be uncompressed, and all other files are assumed to be compressed.
+                spCFrame, spFrame, spFluxcalib, spFluxcorr, spArc, spFlat.  An spCFrame
+                is assumed to be uncompressed, and all other files are assumed to be
+                compressed. When a calibration is requested (spArc, spFlat) results from
+                the calibration exposure used to analyze the specified science exposure
+                is returned.
 
         Returns:
             str: Exposure name of the form [ftype]-[cc]-[eeeeeeee].[ext] where [cc]
                 identifies the camera (one of b1,r1,b2,r2) and [eeeeeeee] is the
-                zero-padded exposure number. The extension [ext] is "fits" for
-                spCFrame files and "fits.gz" for all other file types.
+                zero-padded arc/flat/science exposure number. The extension [ext]
+                is "fits" for spCFrame files and "fits.gz" for all other file types.
 
         Raises:
             ValueError: one of the inputs is invalid.
@@ -223,13 +228,16 @@ class Exposures(object):
         if exposure_index < 0 or exposure_index >= self.num_by_camera[camera]:
             raise ValueError('Invalid exposure_index {}, expected 0-{}.'.format(
                 exposure_index, self.num_by_camera[camera] - 1))
-        if ftype not in ('spCFrame', 'spFrame', 'spFluxcalib', 'spFluxcorr', 'spFlat'):
-            raise ValueError('Invalid file type ({}) must be one of: '.format(ftype) +
-                             'spCFrame, spFrame, spFluxcalib, spFluxcorr, spFlat.')
+        ftypes = ('spCFrame', 'spFrame', 'spFluxcalib', 'spFluxcorr', 'spArc', 'spFlat')
+        if ftype not in ftypes:
+            raise ValueError('Invalid file type ({}) must be one of: {}.'
+                             .format(ftype, ', '.join(ftypes)))
 
         # Get the science exposure ID number for the requested seqence number 0,1,...
         exposure_info = self.get_info(exposure_index, camera)
-        if ftype == 'spFlat':
+        if ftype == 'spArc':
+            exposure_id = exposure_info['arc']
+        elif ftype == 'spFlat':
             exposure_id = exposure_info['flat']
         else:
             exposure_id = exposure_info['science']
