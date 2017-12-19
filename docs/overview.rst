@@ -14,7 +14,7 @@ Type   Size   #Tgts #Exp Coadd? Calib? Datamodel                                
 lite   0.2Mb      1    0      Y      Y :datamodel:`lite <spectra/lite/PLATE4/spec>` :class:`bossdata.spec.SpecFile`
 spec   1.7Mb      1  ALL      Y      Y :datamodel:`spec <spectra/PLATE4/spec>`      :class:`bossdata.spec.SpecFile`
 plate  110Mb   1000    0      Y      Y :datamodel:`plate <PLATE4/spPlate>`          :class:`bossdata.plate.PlateFile`
-cframe 75Mb     500    1      N      Y :datamodel:`cframe <PLATE4/spCFrame>`        :class:`bossdata.plate.FrameFile`
+cframe 70Mb     500    1      N      Y :datamodel:`cframe <PLATE4/spCFrame>`        :class:`bossdata.plate.FrameFile`
 frame  30Mb     500    1      N      N :datamodel:`frame <PLATE4/spFrame>`          :class:`bossdata.plate.FrameFile`
 ====== ====== ===== ==== ====== ====== ============================================ =================================
 
@@ -35,13 +35,13 @@ The following per-exposure calibration data products can also be accessed using 
 :meth:`bossdata.plate.Plan.get_exposure_name` and :meth:`bossdata.spec.Exposures.get_exposure_name`.
 These files are in 1-1 correspondence with the sp(C)Frame files.
 
-====== ======== ============================================= =====================================================
-Size   Type     Datamodel                                     Description
-====== ======== ============================================= =====================================================
-30Mb   science  :datamodel:`spFluxcalib <PLATE4/spFluxcalib>` Flux calibration vectors derived from standard stars
-30Mb   science  :datamodel:`spFluxcorr <PLATE4/spFluxcorr>`   Flux correction vectors for a science exposure
-??Mb   arc      :datamodel:`spFlat <PLATE4/spArc>`            Results derived from an arc calibration exposure
-30Mb   flat     :datamodel:`spFlat <PLATE4/spFlat>`           Results derived from an flat calibration exposure
-====== ======== ============================================= =====================================================
+===== ======== ============================================= =====================================================
+Size  Type     Datamodel                                     Description
+===== ======== ============================================= =====================================================
+5Mb   science  :datamodel:`spFluxcalib <PLATE4/spFluxcalib>` Flux calibration vectors derived from standard stars
+1Mb   science  :datamodel:`spFluxcorr <PLATE4/spFluxcorr>`   Flux correction vectors for a science exposure
+6Mb   arc      :datamodel:`spFlat <PLATE4/spArc>`            Results derived from an arc calibration exposure
+4Mb   flat     :datamodel:`spFlat <PLATE4/spFlat>`           Results derived from an flat calibration exposure
+===== ======== ============================================= =====================================================
 
 The definitive reference for how these calibration data are created and used is the `IDL pipeline code <http://www.sdss3.org/svn///repo/idlspec2d/trunk/pro/>`_.
