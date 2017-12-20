@@ -134,7 +134,7 @@ class Finder(object):
         return posixpath.join(self.get_plate_path(plate), filename)
 
     def get_plate_spec_path(self, plate, mjd):
-        """Get the path to the file containing combined spectra for a whole plate.
+        """Get the path to the file containing coadded spectra for a whole plate.
 
         Combined spectra for all exposures of a plate are packaged in
         :datamodel:`spPlate files <spPlate>`. As of DR12, these files are about 110Mb
@@ -154,6 +154,29 @@ class Finder(object):
             raise ValueError('Invalid mjd ({}) must be >= 45000.'.format(mjd))
 
         filename = 'spPlate-{plate:04d}-{mjd:5d}.fits'.format(plate=plate, mjd=mjd)
+        return posixpath.join(self.get_plate_path(plate), filename)
+
+    def get_fluxdistort_path(self, plate, mjd):
+        """Get the path to the file containing the coadded flux distortion map.
+
+        Combined flux distortion for all exposures of a plate are packaged in
+        :datamodel:`spFluxdistort files <spFluxdistort>`. As of DR12, these files
+        are about 18Mb for 1000 spectra.
+
+        Args:
+            plate(int): Plate number, which must be positive.
+            mjd(int): Modified Julian date of the observation, which must be > 45000.
+
+        Returns:
+            str: Full path to the requested plan file.
+
+        Raises:
+            ValueError: Invalid plate or mjd inputs.
+        """
+        if mjd <= 45000:
+            raise ValueError('Invalid mjd ({}) must be >= 45000.'.format(mjd))
+
+        filename = 'spFluxdistort-{plate:04d}-{mjd:5d}.fits'.format(plate=plate, mjd=mjd)
         return posixpath.join(self.get_plate_path(plate), filename)
 
     def get_sp_all_path(self, lite=True):
