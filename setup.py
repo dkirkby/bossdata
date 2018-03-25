@@ -38,6 +38,7 @@ setup(
         'bin/bossquery',
         'bin/bossplot',
         'bin/bossraw',
+        'bin/bosssky',
     ],
     #include_package_data=True,
     #zip_safe=False,

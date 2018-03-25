@@ -1,0 +1,209 @@
+"""Get boss sky data for all exposures used in a single PLATE-MJD coadd.
+"""
+
+from __future__ import division, print_function
+
+import os.path
+
+import argparse
+
+import numpy as np
+
+import astropy.table
+import astropy.io.fits as fits
+
+import bossdata
+
+
+def get_sky(plate, mjd, output_path, verbose=False):
+    """Extract individual sky exposures used for a single coadd.
+
+    The results are saved to a single FITS file named sky-<plate>-<mjd>.fits
+    with the following HDUs:
+
+     - 0: header with cards PLATE, MJD, NFIBERS, NEXP
+     - 1: table with per-exposure metadata.
+     - 2: table with per-sky-fiber plugmap metadata.
+     - remaining ImageHDUs named xWLEN, xWDISP, xRDNOISE, xFLAT, xFLUX
+       where x=B,R identifies the band. Each HDU contains a 2D array
+       with shape (NFIBERS * NEXP, NWLEN), with NWLEN=4112(B) or 4128(R).
+
+    xFLAT=0 signals a pixel without valid data. xFLUX is in flat-field
+    corrected electrons, and xFLUX * xFLAT gives detected electrons.
+    xRDNOISE is in units of detected electrons.  xWLEN and xWDISP are
+    in angstroms.
+
+    Parameters
+    ----------
+    plate : int
+        Plate number identifying the coadd.
+    mjd : int
+        MJD number identifying the coadd.
+    output_path : str
+        Path where output FITS file should be written.
+    verbose : bool
+        Print progress updates when True.
+
+    Returns
+    -------
+    astropy.table.Table
+        Table of metadata for the extracted exposures.
+    """
+    # Initialize output data.
+    last_nexp = None
+    plugmaps = []
+    wlens = {'b': [], 'r': []}
+    wdisps = {'b': [], 'r': []}
+    fluxes = {'b': [], 'r': []}
+    flats = {'b': [], 'r': []}
+    rdnoises = {'b': [], 'r': []}
+    obskeys = ('EXPOSURE', 'TAI-BEG', 'EXPTIME', 'AZ', 'ALT', 'AIRMASS',
+              'PRESSURE', 'AIRTEMP',
+              'RDNOISE0', 'RDNOISE1', 'RDNOISE2', 'RDNOISE3')
+    obsvals = {key: [] for key in obskeys}
+    # Size of each amplifier in raw image pixels along (wlen, tracex) axes.
+    ampsizes = {'b': (2056, 2048), 'r': (2064, 2057)}
+    rdnoise_scale = (4 * np.pi) ** 0.25
+    wdisp_const = 1e-4 * np.log(10)
+    # Initialize data access.
+    finder = bossdata.path.Finder()
+    mirror = bossdata.remote.Manager()
+    # Loop over spectrographs.
+    for specidx in 1, 2:
+        # Load the list of science exposures used for this spectrograph's coadd.
+        fiber = 500 * (specidx - 1) + 1
+        spec_name = finder.get_spec_path(plate, mjd, fiber=fiber, lite=True)
+        exposures = bossdata.spec.SpecFile(mirror.get(spec_name)).exposures
+        for band in 'b', 'r':
+            camera = '{}{}'.format(band, specidx)
+            ampsize = ampsizes[band]
+            ampx = 1 * (np.arange(2 * ampsize[0]) < ampsize[0])
+            # Loop over science exposures for this camera.
+            nexp = exposures.num_by_camera[camera]
+            assert last_nexp is None or nexp == last_nexp, \
+                'Cameras do not have matching exposures.'
+            last_nexp = nexp
+            for expidx in range(nexp):
+                # Load this camera's spFrame file.
+                name = exposures.get_exposure_name(expidx, camera, 'spFrame')
+                path = mirror.get(finder.get_plate_path(plate, name))
+                spFrame = bossdata.plate.FrameFile(path, calibrated=False)
+                # Lookup this spectrograph's sky fibers.
+                fiberidx = np.where(
+                    spFrame.plug_map['OBJTYPE'] == 'SKY             ')[0]
+                if expidx == 0 and band == 'b':
+                    # Save plugmap metadata.
+                    plugmaps.append(spFrame.plug_map[
+                        ['FIBERID','RA','DEC','XFOCAL','YFOCAL']][fiberidx])
+                    if specidx == 2:
+                        plugmap = astropy.table.vstack(plugmaps)
+                if specidx == 1 and band == 'b':
+                    # Record observation metadata.
+                    for key in obskeys:
+                        obsvals[key].append(spFrame.header[key])
+                # Load the sky fiber data.
+                fibers = spFrame.plug_map['FIBERID'][fiberidx]
+                assert np.all(fiberidx == spFrame.get_fiber_offsets([fibers]))
+                data = spFrame.get_valid_data(
+                    fibers, include_sky=True, include_wdisp=True, use_ivar=True)
+                if verbose:
+                    print('Reading {} for exposure {} / {}...'
+                          .format(camera, expidx + 1, nexp))
+                # Identify pixels with valid data.
+                valid = ~data['ivar'].mask
+                assert np.all(data['ivar'].data[valid] > 0)
+                # Load the superflat and trace vectors for sky fibers.
+                superflat = spFrame.get_superflat(fibers)
+                tracex = spFrame.hdulist[7].read()[fiberidx]
+                # Load fiberflat and neff vectors from this camera's spFlat.
+                name = exposures.get_exposure_name(expidx, camera, 'spFlat')
+                path = mirror.get(finder.get_plate_path(plate, name))
+                with fits.open(path) as spFlat:
+                    fiberflat = spFlat[0].data[fiberidx]
+                    neff = bossdata.plate.TraceSet(spFlat[3]).get_y()[fiberidx]
+                assert np.all(neff[valid] > 0)
+                # Lookup the per-amplifier readnoise values.
+                readnoises = np.array([
+                    spFrame.header['RDNOISE{}'.format(amp)]
+                    for amp in range(4)], dtype=np.float32)
+                # Determine which amplifier (0-3) each pixel along the trace is
+                # read out by.
+                amp = 2 * (tracex < ampsize[1]) + ampx
+                rdnoise = rdnoise_scale * readnoises[amp] * neff
+                rdnoises[band].append(rdnoise)
+                # Combine the superflat and fiberflat.
+                flat = superflat * fiberflat
+                assert np.all(flat[valid] > 0)
+                flat[~valid] = 0.
+                flats[band].append(flat)
+                # Save wavelength solutions in angstroms.
+                wlen = data['wavelength'].data
+                wlens[band].append(wlen)
+                # Save wavelength dispersions in angstroms.
+                wdisp = data['wdisp'].data
+                assert np.all(wdisp[valid] > 0)
+                wdisp = wlen * np.expm1(wdisp_const * wdisp)
+                wdisps[band].append(wdisp)
+                # Save the combined flat-fielded sky models + residuals,
+                # which might be negative due to readnoise.
+                flux = data['flux'].data + data['sky'].data
+                fluxes[band].append(flux)
+    # Build observation metadata table.
+    obslist = astropy.table.Table()
+    for key in obskeys:
+        obslist[key] = obsvals[key]
+    # Build the output HDU list.
+    hdus = fits.HDUList()
+    cards = dict(PLATE=plate, MJD=mjd, NFIBERS=len(fibers), NEXP=nexp)
+    hdus.append(fits.PrimaryHDU(header=fits.Header(cards)))
+    hdus.append(fits.table_to_hdu(obslist))
+    hdus[-1].name = 'OBSLIST'
+    hdus.append(fits.table_to_hdu(plugmap))
+    hdus[-1].name = 'PLUGMAP'
+    for band in 'b', 'r':
+        Band = band.upper()
+        # Combine arrays for each band and save an an image HDU.
+        hdus.append(fits.ImageHDU(np.vstack(wlens[band]),
+                                  name='{}WLEN'.format(Band)))
+        hdus.append(fits.ImageHDU(np.vstack(wdisps[band]),
+                                  name='{}WDISP'.format(Band)))
+        hdus.append(fits.ImageHDU(np.vstack(rdnoises[band]),
+                                  name='{}RDNOISE'.format(Band)))
+        hdus.append(fits.ImageHDU(np.vstack(flats[band]),
+                                  name='{}FLAT'.format(Band)))
+        hdus.append(fits.ImageHDU(np.vstack(fluxes[band]),
+                                  name='{}FLUX'.format(Band)))
+    name = os.path.join(output_path, 'sky-{}-{}.fits'.format(plate, mjd))
+    hdus.writeto(name, overwrite=True)
+    if verbose:
+        print('Wrote {}'.format(name))
+    return obslist
+
+
+def main():
+    # Initialize and parse command-line arguments.
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description='Extract sky data used for a single coadd.')
+    parser.add_argument(
+        '--verbose', action='store_true', help='Provide verbose output.')
+    parser.add_argument(
+        '--plate', type=int, default=None, help='Plate number')
+    parser.add_argument(
+        '--mjd', type=int, default=None, help='MJD number')
+    parser.add_argument(
+        '--path', type=str, default='', help='Output path')
+    args = parser.parse_args()
+    if args.plate is None:
+        print('Missing required plate argument.')
+        return -1
+    if args.mjd is None:
+        print('Missing required mjd argument.')
+        return -1
+    info = get_sky(args.plate, args.mjd, args.path, args.verbose)
+    if args.verbose:
+        print(info)
+
+
+if __name__ == '__main__':
+    main()
