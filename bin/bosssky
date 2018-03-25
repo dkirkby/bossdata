@@ -165,7 +165,7 @@ def get_sky(plate, mjd, output_path, verbose=False):
         obslist[key] = obsvals[key]
     # Build the output HDU list.
     hdus = fits.HDUList()
-    cards = dict(PLATE=plate, MJD=mjd, NFIBERS=len(fibers), NEXP=nexp)
+    cards = dict(PLATE=plate, MJD=mjd, NFIBERS=len(plugmap), NEXP=nexp)
     hdus.append(fits.PrimaryHDU(header=fits.Header(cards)))
     hdus.append(fits.table_to_hdu(obslist))
     hdus[-1].name = 'OBSLIST'
