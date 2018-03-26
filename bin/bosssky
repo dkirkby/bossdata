@@ -24,8 +24,8 @@ def get_sky(plate, mjd, output_path, verbose=False):
      - 0: header with cards PLATE, MJD, NFIBERS, NEXP
      - 1: table with per-exposure metadata.
      - 2: table with per-sky-fiber plugmap metadata.
-     - remaining ImageHDUs named xWLEN, xWDISP, xRDNOISE, xFLAT, xFLUX, xIVAR
-       where x=B,R identifies the band. Each HDU contains a 2D array
+     - remaining ImageHDUs named xWLEN, xWDISP, xRDNOISE, xFLAT, xFLUX, xIVAR,
+       xMASK, where x=B,R identifies the band. Each HDU contains a 2D array
        with shape (NFIBERS * NEXP, NWLEN), with NWLEN=4112(B) or 4128(R).
 
     xFLUX is  in flat-field corrected electrons, with corresponding pipeline
@@ -57,6 +57,7 @@ def get_sky(plate, mjd, output_path, verbose=False):
     ivars = {'b': [], 'r': []}
     flats = {'b': [], 'r': []}
     rdnoises = {'b': [], 'r': []}
+    masks = {'b': [], 'r': []}
     obskeys = ('EXPOSURE', 'TAI-BEG', 'EXPTIME', 'AZ', 'ALT', 'AIRMASS',
               'PRESSURE', 'AIRTEMP',
               'RDNOISE0', 'RDNOISE1', 'RDNOISE2', 'RDNOISE3')
@@ -76,6 +77,11 @@ def get_sky(plate, mjd, output_path, verbose=False):
     rdnoise_scale = (4 * np.pi) ** 0.25
     # Conversion from constant log-lambda pixels to wavelength ratio.
     wdisp_const = 1e-4 * np.log(10)
+    # Allowed pixel mask bits.
+    valid_mask = (1 << 32) - 1
+    # Slices of valid data to save. These trim pixels at each end where
+    # IVAR=0 or other serious pixel mask bits are often set.
+    valid_slices = {'b': slice(767, 3299), 'r': slice(483, 3668) }
     # Initialize data access.
     finder = bossdata.path.Finder()
     mirror = bossdata.remote.Manager()
@@ -87,6 +93,7 @@ def get_sky(plate, mjd, output_path, verbose=False):
         exposures = bossdata.spec.SpecFile(mirror.get(spec_name)).exposures
         for band in 'b', 'r':
             camera = '{}{}'.format(band, specidx)
+            use = valid_slices[band]
             # Loop over science exposures for this camera.
             nexp = exposures.num_by_camera[camera]
             assert last_nexp is None or nexp == last_nexp, \
@@ -111,19 +118,25 @@ def get_sky(plate, mjd, output_path, verbose=False):
                     for key in obskeys:
                         obsvals[key].append(spFrame.header[key])
                 # Load the sky fiber data.
-                fibers = spFrame.plug_map['FIBERID'][fiberidx]
+                fibers = spFrame.plug_map['FIBERID'][fiberidx].data
                 assert np.all(fiberidx == spFrame.get_fiber_offsets([fibers]))
                 data = spFrame.get_valid_data(
-                    fibers, include_sky=True, include_wdisp=True, use_ivar=True)
+                    fibers, include_sky=True, include_wdisp=True, use_ivar=True,
+                    pixel_quality_mask=valid_mask)
                 if verbose:
                     print('Reading {} for exposure {} / {}...'
                           .format(camera, expidx + 1, nexp))
                 assert data.shape == (len(fibers), 2 * ampsize[band][0])
+                mask = spFrame.get_pixel_masks(fibers)
+                masks[band].append(mask[:, use])
                 # Identify pixels with valid data.
                 valid = ~data['ivar'].mask
+                bad_fibers = ~np.any(valid, axis=1)
+                if verbose and np.any(bad_fibers):
+                    print('  bad fibers: {}'.format(fibers[bad_fibers]))
                 ivar = data['ivar'].data
                 assert np.all(ivar[valid] > 0)
-                ivars[band].append(ivar)
+                ivars[band].append(ivar[:, use])
                 # Load the superflat and trace vectors for sky fibers.
                 superflat = spFrame.get_superflat(fibers)
                 tracex = spFrame.hdulist[7].read()[fiberidx]
@@ -142,23 +155,23 @@ def get_sky(plate, mjd, output_path, verbose=False):
                 # read out by and scale to RMS readnoise per wavelength pixel.
                 amp = amplifier[band](tracex)
                 rdnoise = rdnoise_scale * readnoises[amp] * neff
-                rdnoises[band].append(rdnoise)
+                rdnoises[band].append(rdnoise[:, use])
                 # Combine the superflat and fiberflat.
                 flat = superflat * fiberflat
                 assert np.all(flat[valid] > 0)
-                flats[band].append(flat)
+                flats[band].append(flat[:, use])
                 # Save wavelength solutions in angstroms.
                 wlen = data['wavelength'].data
-                wlens[band].append(wlen)
+                wlens[band].append(wlen[:, use])
                 # Save wavelength dispersions in angstroms.
                 wdisp = data['wdisp'].data
                 assert np.all(wdisp[valid] > 0)
                 wdisp = wlen * np.expm1(wdisp_const * wdisp)
-                wdisps[band].append(wdisp)
+                wdisps[band].append(wdisp[:, use])
                 # Save the combined flat-fielded sky models + residuals,
                 # which might be negative due to readnoise.
                 flux = data['flux'].data + data['sky'].data
-                fluxes[band].append(flux)
+                fluxes[band].append(flux[:, use])
     # Build observation metadata table.
     obslist = astropy.table.Table()
     for key in obskeys:
@@ -186,6 +199,8 @@ def get_sky(plate, mjd, output_path, verbose=False):
                                   name='{}FLUX'.format(Band)))
         hdus.append(fits.ImageHDU(np.vstack(ivars[band]),
                                   name='{}IVAR'.format(Band)))
+        hdus.append(fits.ImageHDU(np.vstack(masks[band]),
+                                  name='{}MASK'.format(Band)))
     name = os.path.join(output_path, 'sky-{}-{}.fits'.format(plate, mjd))
     hdus.writeto(name, overwrite=True)
     if verbose:
