@@ -8,8 +8,8 @@ Use the following commands to install bossdata at NERSC, based on the DESI conda
 
     # Setup a scratch area where additional packages can be installed
     cd $SCRATCH
-    mkdir -p desi/lib/python3.5/site-packages desi/bin desi/code
-    export PYTHONPATH=$SCRATCH/desi/lib/python3.5/site-packages:$PYTHONPATH
+    mkdir -p desi/lib/python3.6/site-packages desi/bin desi/code
+    export PYTHONPATH=$SCRATCH/desi/lib/python3.6/site-packages:$PYTHONPATH
     export PATH=$SCRATCH/desi/bin:$PATH
 
     # Install bossdata into this scratch area
@@ -33,10 +33,10 @@ The commands are run once, for the initial bossdata installation. The following 
     # Configure bossdata
     export BOSS_LOCAL_ROOT=$SCRATCH/bossdata
     export BOSS_DATA_URL=file:///global/projecta/projectdirs/sdss/www
-    export BOSS_SAS_PATH=/sas/dr12/boss
-    export BOSS_REDUX_VERSION=v5_7_0
+    export BOSS_SAS_PATH=/sas/dr14/eboss
+    export BOSS_REDUX_VERSION=v5_10_0
 
-The environment variable settings above are for the public DR12 BOSS data release, but can be adjusted for other releases as described :doc:`here </envvar>`.  The key point is that your ``$BOSS_DATA_URL`` should start with ``file:///`` to indicate that all data files are available locally and so do not need to be downloaded via the network. In this case, ``$BOSS_LOCAL_ROOT`` is still used for the sqlite databases used by the :mod:`meta module <bossdata.meta>`.
+The environment variable settings above are for the public DR14 BOSS data release, but can be adjusted for other releases as described :doc:`here </envvar>`.  The key point is that your ``$BOSS_DATA_URL`` should start with ``file:///`` to indicate that all data files are available locally and so do not need to be downloaded via the network. In this case, ``$BOSS_LOCAL_ROOT`` is still used for the sqlite databases used by the :mod:`meta module <bossdata.meta>`.
 
 To test your setup, try some of the :doc:`command line tools </scripts>`.
 
