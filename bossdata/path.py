@@ -14,7 +14,7 @@ This finder object is normally configured by the `$BOSS_SAS_PATH` and `$BOSS_RED
 environment variables and no other modules uses these variables, except through a
 a :class:`Finder` object.  These parameters can also be set by :class:`Finder` constructor
 arguments. When neither the environment variables nor the constructor arguments are set,
-defaults appropriate for the most recent public data release (DR12) are used.
+defaults appropriate for the most recent public data release (DR14) are used.
 
 :class:`Finder` objects never interact with any local or
 remote filesystems: use the :mod:`bossdata.remote` module to download data files
@@ -37,7 +37,7 @@ class Finder(object):
     BOSS_SAS_PATH or BOSS_REDUX_VERSION is not set.
 
     Args:
-        sas_path(str): Location of the SAS root path to use, e.g., /sas/dr12. Will use the
+        sas_path(str): Location of the SAS root path to use, e.g., /sas/dr14/eboss. Will use the
             value of the BOSS_SAS_PATH environment variable if this is not set.
         redux_version(str): String tag specifying the BOSS spectro reduction version to use,
             e.g., v5_7_0. Will use the value of the BOSS_REDUX_VERSION environment variable
@@ -66,7 +66,7 @@ class Finder(object):
 
         self.redux_base = posixpath.join(self.sas_path, 'spectro', 'redux', self.redux_version)
 
-    default_sas_path = '/sas/dr12/boss'
+    default_sas_path = '/sas/dr14/eboss'
     """Default to use when $BOSS_SAS_PATH is not set.
 
     See :doc:`/scripts` and :doc:`/usage` for details.

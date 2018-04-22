@@ -15,7 +15,7 @@ This mirror object is normally configured by the `$BOSS_DATA_URL` and `$BOSS_LOC
 environment variables and no other modules uses these variables, except through a
 a :class:`Manager` object. These parameters can also be set by :class:`Manager` constructor
 arguments. When neither the environment variables nor the constructor arguments are set,
-a default data URL appropriate for the most recent public data release (DR12) is used, and
+a default data URL appropriate for the most recent public data release (DR14) is used, and
 a temporary directory is created and used for the local root.
 
 :class:`Manager` objects have no knowledge of how
@@ -94,7 +94,7 @@ class Manager(object):
                 self.local_root))
 
 
-    default_data_url = 'http://dr12.sdss3.org'
+    default_data_url = 'http://dr14.sdss.org'
     """Default to use when $BOSS_DATA_URL is not set.
 
     See :doc:`/scripts` and :doc:`/usage` for details.
