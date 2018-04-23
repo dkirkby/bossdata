@@ -181,7 +181,8 @@ class Exposures(object):
             raise ValueError('Invalid exposure_index {}, expected 0-{}.'.format(
                 exposure_index, self.num_by_camera[camera] - 1))
         science_num = self.sequence[exposure_index]
-        row = (self.table['science'] == science_num) & (self.table['camera'] == camera)
+        row = (self.table['science'] == science_num) & (
+            self.table['camera'] == binary_type(camera, 'ascii'))
         if not np.any(row):
             # This should never happen after our self-consistency checks in the ctor.
             raise RuntimeError('No exposure[{}] = {:08d} found for {}.'.format(
