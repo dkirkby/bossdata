@@ -150,7 +150,7 @@ class Exposures(object):
             # Conversion to binary_type is needed for backwards compatibility with
             # astropy < 2.0 and python 3.  For details, see:
             # http://docs.astropy.org/en/stable/table/access_table.html#bytestring-columns-python-3
-            camera_rows = self.table['camera'] == binary_type(camera)
+            camera_rows = self.table['camera'] == binary_type(camera, 'ascii')
             camera_exposures = set(self.table[camera_rows]['science'])
             if camera_exposures != exposure_set:
                 raise RuntimeError('Found inconsistent {} exposures: {}. Expected: {}.'.format(
