@@ -6,6 +6,8 @@
 
 from __future__ import division, print_function
 
+from six import binary_type
+
 import re
 
 import numpy as np
@@ -145,7 +147,10 @@ class Exposures(object):
             if self.num_by_camera[camera] != num_exposures:
                 raise RuntimeError('Found {} {} exposures but expected {}.'.format(
                     self.num_by_camera[camera], camera, num_exposures))
-            camera_rows = self.table['camera'] == camera
+            # Conversion to binary_type is needed for backwards compatibility with
+            # astropy < 2.0 and python 3.  For details, see:
+            # http://docs.astropy.org/en/stable/table/access_table.html#bytestring-columns-python-3
+            camera_rows = self.table['camera'] == binary_type(camera)
             camera_exposures = set(self.table[camera_rows]['science'])
             if camera_exposures != exposure_set:
                 raise RuntimeError('Found inconsistent {} exposures: {}. Expected: {}.'.format(
