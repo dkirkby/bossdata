@@ -350,12 +350,9 @@ class SpecFile(object):
         # Look up the available exposures.
         self.exposures = Exposures(self.header)
         self.num_exposures = len(self.exposures.sequence)
-        # Look up our row from spAll
-        self.info = self.hdulist[2].read()[0]
         # Extract our plate-mjd-fiber values.
-        self.plate = int(self.info['PLATE'])
-        self.mjd = int(self.info['MJD'])
-        self.fiber = int(self.info['FIBERID'])
+        self.plate, self.mjd, self.fiber = (
+            self.hdulist[2]['PLATE', 'MJD', 'FIBERID'][0][0])
         # We don't use bossdata.plate.get_num_fibers here to avoid a circular import.
         num_fibers = 640 if self.plate < 3510 else 1000
         # Calculate the camera (b1/b2/r1/r2) for this target's fiber.
