@@ -8,15 +8,16 @@ BOSS data consists of `spectroscopic observations <http://www.sdss.org/dr12/spec
 
 The table below summarizes the different files produced by the `spectroscopic pipeline <http://www.sdss.org/dr12/spectro/pipeline/>`_ containing the individual and combined exposures contributing to each observation. Files contain from 1 to 1000 spectra, with some duplication between files.  Each file provides wavelength, flux, inverse variance, `mask bits <https://www.sdss3.org/dr9/algorithms/bitmask_sppixmask.php>`_ and subtracted sky for each of its spectra.
 
-====== ====== ===== ==== ====== ====== ============================================ =================================
+====== ====== ===== ==== ====== ====== ============================================================================= ==================================
 Type   Size   #Tgts #Exp Coadd? Calib? Datamodel                                    Bossdata Class
-====== ====== ===== ==== ====== ====== ============================================ =================================
-lite   0.2Mb      1    0      Y      Y :datamodel:`lite <spectra/lite/PLATE4/spec>` :class:`bossdata.spec.SpecFile`
-spec   1.7Mb      1  ALL      Y      Y :datamodel:`spec <spectra/PLATE4/spec>`      :class:`bossdata.spec.SpecFile`
-plate  110Mb   1000    0      Y      Y :datamodel:`plate <PLATE4/spPlate>`          :class:`bossdata.plate.PlateFile`
-cframe 70Mb     500    1      N      Y :datamodel:`cframe <PLATE4/spCFrame>`        :class:`bossdata.plate.FrameFile`
-frame  30Mb     500    1      N      N :datamodel:`frame <PLATE4/spFrame>`          :class:`bossdata.plate.FrameFile`
-====== ====== ===== ==== ====== ====== ============================================ =================================
+====== ====== ===== ==== ====== ====== ============================================================================= ==================================
+lite   0.2Mb      1    0      Y      Y :datamodel:`lite <spectra/lite/PLATE4/spec>`                                  :class:`bossdata.spec.SpecFile`
+spec   1.7Mb      1  ALL      Y      Y :datamodel:`spec <spectra/PLATE4/spec>`                                       :class:`bossdata.spec.SpecFile`
+plate  110Mb   1000    0      Y      Y :datamodel:`plate <PLATE4/spPlate>`                                           :class:`bossdata.plate.PlateFile`
+cframe 70Mb     500    1      N      Y :datamodel:`cframe <PLATE4/spCFrame>`                                         :class:`bossdata.plate.FrameFile`
+frame  30Mb     500    1      N      N :datamodel:`frame <PLATE4/spFrame>`                                           :class:`bossdata.plate.FrameFile`
+raw    37Mb     500    1      N      N `sdR <https://data.sdss.org/datamodel/files/BOSS_SPECTRO_DATA/MJD/sdR.html>`_ :class:`bossdata.raw.RawImageFile`
+====== ====== ===== ==== ====== ====== ============================================================================= ==================================
 
 The following examples show how the same combined spectrum can be :ref:`plotted <bossplot>` from lite files and plate files::
 
