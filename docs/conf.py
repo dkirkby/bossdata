@@ -44,7 +44,7 @@ extensions = [
 # :datamodel:`spPlate <PLATE4/spPlate>`
 extlinks = {
     'datamodel':
-    ('http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/%s.html',
+    ('https://data.sdss.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/%s.html',
      None)}
 
 # Add any paths that contain templates here, relative to this directory.
