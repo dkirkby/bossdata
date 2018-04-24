@@ -116,7 +116,11 @@ def get_sky(plate, mjd, output_path, verbose=False):
                 if specidx == 1 and band == 'b':
                     # Record observation metadata.
                     for key in obskeys:
-                        obsvals[key].append(spFrame.header[key])
+                        try:
+                            value = spFrame.header[key]
+                        except KeyError:
+                            value = -999 # invalid value for int/float types
+                        obsvals[key].append(value)
                 # Load the sky fiber data.
                 fibers = spFrame.plug_map['FIBERID'][fiberidx].data
                 assert np.all(fiberidx == spFrame.get_fiber_offsets([fibers]))
