@@ -27,7 +27,7 @@ The commands are run once, for the initial bossdata installation. The following 
     source /project/projectdirs/desi/software/desi_environment.sh
 
     # Use additional packages from the scratch area
-    export PYTHONPATH=$SCRATCH/desi/lib/python3.5/site-packages:$PYTHONPATH
+    export PYTHONPATH=$SCRATCH/desi/lib/python3.6/site-packages:$PYTHONPATH
     export PATH=$SCRATCH/desi/bin:$PATH
 
     # Configure bossdata
