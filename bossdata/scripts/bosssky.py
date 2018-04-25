@@ -11,6 +11,8 @@ import astropy.io.fits as fits
 
 import bossdata
 
+from six import binary_type
+
 
 def get_sky(plate, mjd, output_path, verbose=False):
     """Extract individual sky exposures used for a single coadd.
@@ -83,6 +85,7 @@ def get_sky(plate, mjd, output_path, verbose=False):
     finder = bossdata.path.Finder()
     mirror = bossdata.remote.Manager()
     # Loop over spectrographs.
+    expected_fibers = []
     for specidx in 1, 2:
         # Load the list of science exposures used for this spectrograph's coadd.
         fiber = 500 * (specidx - 1) + 1
@@ -102,8 +105,9 @@ def get_sky(plate, mjd, output_path, verbose=False):
                 path = mirror.get(finder.get_plate_path(plate, name))
                 spFrame = bossdata.plate.FrameFile(path, calibrated=False)
                 # Lookup this spectrograph's sky fibers.
+                sky_name = binary_type('SKY             ', 'ascii')
                 fiberidx = np.where(
-                    spFrame.plug_map['OBJTYPE'] == 'SKY             ')[0]
+                    spFrame.plug_map['OBJTYPE'] == sky_name)[0]
                 if expidx == 0 and band == 'b':
                     # Save plugmap metadata.
                     plugmaps.append(spFrame.plug_map[
@@ -121,6 +125,16 @@ def get_sky(plate, mjd, output_path, verbose=False):
                 # Load the sky fiber data.
                 fibers = spFrame.plug_map['FIBERID'][fiberidx].data
                 assert np.all(fiberidx == spFrame.get_fiber_offsets([fibers]))
+                if expidx == 0 and band == 'b':
+                    expected_fibers.append(fibers)
+                    if verbose:
+                        print('Found {} sky fibers on spec{}: {}.'.format(
+                            len(fibers), specidx,
+                            ','.join([str(f) for f in fibers])))
+                else:
+                    if not np.all(fibers == expected_fibers[specidx - 1]):
+                        print('Did not get expected fibers for {} exp {}'
+                              .format(camera, expidx))
                 data = spFrame.get_valid_data(
                     fibers, include_sky=True, include_wdisp=True, use_ivar=True,
                     pixel_quality_mask=valid_mask)
