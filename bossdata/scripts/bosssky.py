@@ -101,7 +101,7 @@ def get_sky(plate, mjd, output_path, verbose=False):
             nexp = exposures.num_by_camera[camera]
             if not (last_nexp is None or nexp == last_nexp):
                 print(f'Different nexp for {camera} {tag}')
-                break
+                return None
             last_nexp = nexp
             for expidx in range(nexp):
                 # Load this camera's spFrame file.
