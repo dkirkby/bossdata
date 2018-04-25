@@ -10,6 +10,9 @@ History
 * Remove requirements.txt, add docs/rtd-pip-requirements, update .travis.yaml
 * Add support for running at sites where data is locally visible (e.g., nersc)
 * Add support for reading spArc and spFlat calibration files.
+* Add CalibrationTutorial notebook.
+* Add bosssky script.
+* Fix some issues with python3 and astropy < 2.
 
 0.3.0 (2017-12-17)
 ------------------
