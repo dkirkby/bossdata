@@ -170,7 +170,7 @@ def get_sky(plate, mjd, output_path, verbose=False):
                 # read out by and scale to RMS readnoise per wavelength pixel.
                 amp = amplifier[band](tracex)
                 rdnoise = rdnoise_scale * readnoises[amp] * neff
-                rdnoises[band].append(rdnoise[:, use])
+                rdnoises[band].append(rdnoise[:, use].astype(np.float32))
                 # Combine the superflat and fiberflat.
                 flat = superflat * fiberflat
                 assert np.all(flat[valid] > 0)
