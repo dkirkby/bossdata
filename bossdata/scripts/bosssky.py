@@ -47,6 +47,9 @@ def get_sky(plate, mjd, output_path, verbose=False):
     astropy.table.Table
         Table of metadata for the extracted exposures.
     """
+    tag = f'PLATE {plate:05d} MJD {mjd:05d} PATH {output_path}'
+    if verbose:
+        print('Starting {}'.format(tag))
     # Initialize output data.
     last_nexp = None
     plugmaps = []
@@ -96,8 +99,9 @@ def get_sky(plate, mjd, output_path, verbose=False):
             use = valid_slices[band]
             # Loop over science exposures for this camera.
             nexp = exposures.num_by_camera[camera]
-            assert last_nexp is None or nexp == last_nexp, \
-                'Cameras do not have matching exposures.'
+            if not (last_nexp is None or nexp == last_nexp):
+                print(f'Different nexp for {camera} {tag}')
+                break
             last_nexp = nexp
             for expidx in range(nexp):
                 # Load this camera's spFrame file.
@@ -161,7 +165,8 @@ def get_sky(plate, mjd, output_path, verbose=False):
                 with fits.open(path) as spFlat:
                     fiberflat = spFlat[0].data[fiberidx]
                     neff = bossdata.plate.TraceSet(spFlat[3]).get_y()[fiberidx]
-                assert np.all(neff[valid] > 0)
+                if np.any(neff[valid] <= 0):
+                    print(f'WARNING: neff <= 0 for {camera} {expidx} {tag}')
                 # Lookup the per-amplifier readnoise values.
                 readnoises = np.array([
                     spFrame.header['RDNOISE{}'.format(amp)]
@@ -218,6 +223,5 @@ def get_sky(plate, mjd, output_path, verbose=False):
                                   name='{}MASK'.format(Band)))
     name = os.path.join(output_path, 'sky-{}-{}.fits'.format(plate, mjd))
     hdus.writeto(name, overwrite=True)
-    if verbose:
-        print('Wrote {}'.format(name))
+    print('Completed {}'.format(tag))
     return obslist
