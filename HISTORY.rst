@@ -3,7 +3,12 @@
 History
 =======
 
-0.3.1 (unreleased)
+0.3.2 (unreleased)
+------------------
+
+* No changes yet.
+
+0.3.1 (2018-04-25)
 ------------------
 
 * Fix issues #108 #109 and merges #110 #120
