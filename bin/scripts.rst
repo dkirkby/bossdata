@@ -12,7 +12,7 @@ You will normally want to configure ``bossdata`` by setting some :doc:`environme
 bossquery
 ---------
 
-Query the meta data for BOSS observations. For example::
+Query the meta data for BOSS observations. For example (the initial setup might take a few minutes if you have never used this command before)::
 
     bossquery --what PLATE,MJD,FIBER,PLUG_RA,PLUG_DEC,Z --where 'OBJTYPE="QSO"' --sort Z --save qso.dat
 

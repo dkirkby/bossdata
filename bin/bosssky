@@ -1,0 +1,37 @@
+"""Get boss sky data for all exposures used in a single PLATE-MJD coadd.
+"""
+from __future__ import division, print_function
+
+import argparse
+
+import bossdata.scripts.bosssky
+
+
+def main():
+    # Initialize and parse command-line arguments.
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description='Extract sky data used for a single coadd.')
+    parser.add_argument(
+        '--verbose', action='store_true', help='Provide verbose output.')
+    parser.add_argument(
+        '--plate', type=int, default=None, help='Plate number')
+    parser.add_argument(
+        '--mjd', type=int, default=None, help='MJD number')
+    parser.add_argument(
+        '--path', type=str, default='', help='Output path')
+    args = parser.parse_args()
+    if args.plate is None:
+        print('Missing required plate argument.')
+        return -1
+    if args.mjd is None:
+        print('Missing required mjd argument.')
+        return -1
+    info = bossdata.scripts.bosssky.get_sky(
+        args.plate, args.mjd, args.path, args.verbose)
+    if args.verbose:
+        print(info)
+
+
+if __name__ == '__main__':
+    main()

@@ -44,7 +44,7 @@ extensions = [
 # :datamodel:`spPlate <PLATE4/spPlate>`
 extlinks = {
     'datamodel':
-    ('http://data.sdss3.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/%s.html',
+    ('https://data.sdss.org/datamodel/files/BOSS_SPECTRO_REDUX/RUN2D/%s.html',
      None)}
 
 # Add any paths that contain templates here, relative to this directory.
@@ -97,7 +97,7 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+#html_theme = 'alabaster'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

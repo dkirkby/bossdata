@@ -8,14 +8,14 @@ using a directory layout that mirrors the remote data source.  Most scripts will
 create a single :class:`Manager` object using the default constructor for this
 purpose::
 
-    import bossdata.remote
+    import bossdata
     mirror = bossdata.remote.Manager()
 
 This mirror object is normally configured by the `$BOSS_DATA_URL` and `$BOSS_LOCAL_ROOT`
 environment variables and no other modules uses these variables, except through a
 a :class:`Manager` object. These parameters can also be set by :class:`Manager` constructor
 arguments. When neither the environment variables nor the constructor arguments are set,
-a default data URL appropriate for the most recent public data release (DR12) is used, and
+a default data URL appropriate for the most recent public data release (DR14) is used, and
 a temporary directory is created and used for the local root.
 
 :class:`Manager` objects have no knowledge of how
@@ -66,12 +66,21 @@ class Manager(object):
             if verbose:
                 print('Using the default "{}" since $BOSS_DATA_URL is not set.'.format(
                     self.data_url))
-        # Do we have a plain URL or a URL:username:password triplet?
-        try:
-            self.data_url, username, password = self.data_url.split('%')
-            self.authorization = username, password
-        except ValueError:
-            self.authorization = None
+        # Look for a local filesystem URL.  The triple slash here is because the
+        # hostname component is omitted so it defaults to localhost.
+        # See https://en.wikipedia.org/wiki/File_URI_scheme
+        if self.data_url.startswith('file:///'):
+            self.data_is_remote = False
+            # Truncate the leading 'file://' to start with a single leading '/'.
+            self.data_url = self.data_url[7:]
+        else:
+            self.data_is_remote = True
+            # Do we have a plain URL or a URL:username:password triplet?
+            try:
+                self.data_url, username, password = self.data_url.split('%')
+                self.authorization = username, password
+            except ValueError:
+                self.authorization = None
         self.data_url = self.data_url.rstrip('/')
 
         self.local_root = os.getenv('BOSS_LOCAL_ROOT') if local_root is None else local_root
@@ -84,11 +93,13 @@ class Manager(object):
             raise ValueError('Cannot use non-existent path "{}" as local root.'.format(
                 self.local_root))
 
-    default_data_url = 'http://dr12.sdss3.org'
+
+    default_data_url = 'http://dr14.sdss.org'
     """Default to use when $BOSS_DATA_URL is not set.
 
     See :doc:`/scripts` and :doc:`/usage` for details.
     """
+
 
     def download(self, remote_path, local_path, chunk_size=4096, progress_min_size=10):
         """Download a single BOSS data file.
@@ -185,7 +196,8 @@ class Manager(object):
             progress_bar.finish()
         return local_path
 
-    def local_path(self, remote_path):
+
+    def local_path(self, remote_path, suffix=None, new_suffix=None):
         """Get the local path corresponding to a remote path.
 
         Does not check that the file or its parent directory exists. Use :meth:`get` to
@@ -195,16 +207,43 @@ class Manager(object):
             remote_path(str): The full path to the remote file relative to the remote
                 server root, which should normally be obtained using :class:`bossdata.path`
                 methods.
+            suffix(str): The expected suffix of the returned local path. A
+                RuntimeError is raised when the local path does not have this
+                suffix according to :meth:`str.endswith`, unless this parameter is None.
+            new_suffix(str): Replace suffix with this value.
+                No change is performed when this parameter is None, and ``suffix`` must
+                also be set with this parameter is not None.
 
         Returns:
-            str: Absolute local path of the local file that mirrors the remote file.
+            str: Absolute local path of the local file that mirrors the remote file,
+                with a possible suffix replacement.
 
         Raises:
-            RuntimeError: No local_root specified when this manager was created.
+            ValueError: The ``new_suffix`` parameter is set but ``suffix`` is None.
+            RuntimeError: The local path does not have the expected suffix.
         """
-        if self.local_root is None:
-            raise RuntimeError('No local root specified (try setting BOSS_LOCAL_ROOT).')
-        return os.path.abspath(os.path.join(self.local_root, *remote_path.split('/')))
+        if new_suffix is not None and suffix is None:
+            raise ValueError('Must specify a suffix when specifying new_suffix.')
+
+        # Check for the expected suffix if one is provided.
+        if suffix is not None and not remote_path.endswith(suffix):
+            raise RuntimeError(
+                'Path {} does not end with "{}".'.format(remote_path, suffix))
+
+        # Replace the suffix if requested.
+        if new_suffix is not None:
+            # We cannot use str.replace() here in case suffix appears more than once.
+            remote_path = remote_path[:-len(suffix)] + new_suffix
+
+        if self.data_is_remote or new_suffix is not None:
+            # Relocate the remote path under our local root, and replace the posix
+            # file separator "/" with the local filesystem file seperator.
+            return os.path.abspath(
+                os.path.join(self.local_root, *remote_path.split('/')))
+        else:
+            # This remote file should already be visible in the local filesystem.
+            return os.path.abspath(os.path.join(self.data_url, *remote_path.split('/')))
+
 
     def get(self, remote_path, progress_min_size=10, auto_download=True, local_paths=None):
         """Get a local file that mirrors a remote file, downloading the file if necessary.
@@ -263,21 +302,34 @@ class Manager(object):
             if os.path.isfile(local_path):
                 return local_path
 
+        if not self.data_is_remote:
+            raise RuntimeError('File not found: {}.'.format(local_paths[0]))
+
         if not auto_download:
             raise RuntimeError('File not in mirror and auto_download is False: {}'.format(
                 remote_path))
 
         # If we get here, none of the requested files is locally available so next we try
         # to download the first requested file. Start by creating local directories as needed.
-        local_parent_path = os.path.dirname(local_paths[0])
-        if not os.path.exists(local_parent_path):
-            # There is a potential race condition if other processes are running.
-            # In python >= 3.2 we would use the new exist_ok=True option, but here we instead
-            # silently ignore a "FileExists" OSError (errno 17).
-            try:
-                os.makedirs(local_parent_path)
-            except OSError as e:
-                if e.errno != 17:
-                    raise e
+        _prepare_local_path(local_paths[0])
         return self.download(
             remote_paths[0], local_paths[0], progress_min_size=progress_min_size)
+
+
+def _prepare_local_path(local_path):
+    """Create directories leading to the local path if necessary.
+
+    Args:
+        local_path(str): Path whose parent directories will be created.
+    """
+    local_parent_path = os.path.dirname(local_path)
+    if not os.path.exists(local_parent_path):
+        # There is a potential race condition if other processes are running and
+        # trying to create some of the same directories. In python >= 3.2 we
+        # would use the new exist_ok=True option, but here we instead
+        # silently ignore a "FileExists" OSError (errno 17).
+        try:
+            os.makedirs(local_parent_path)
+        except OSError as e:
+            if e.errno != 17:
+                raise e

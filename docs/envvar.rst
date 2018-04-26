@@ -8,13 +8,13 @@ You will normally want to establish your local configuration and specify which r
 * ``BOSS_SAS_PATH``: The top-level path of the data you want to work with, which will normally begin with "/sas".
 * ``BOSS_REDUX_VERSION``: The pipeline reconstruction version that you want to work with.
 
-If any of these variables is not specified, defaults appropriate for access the public `Data Release 12 <http://dr12.sdss3.org>`_ will be used and any downloaded data will be saved to a temporary local directory. At a minimum, you should normally specify a permanent location for storing local data by setting the ``BOSS_LOCAL_ROOT`` environment variable.
+If any of these variables is not specified, defaults appropriate for access the public `Data Release 14 <http://dr14.sdss.org>`_ will be used and any downloaded data will be saved to a temporary local directory. At a minimum, you should normally specify a permanent location for storing local data by setting the ``BOSS_LOCAL_ROOT`` environment variable.
 
 The default settings of the other environment variables are equivalent to (in bash)::
 
-    export BOSS_DATA_URL=http://dr12.sdss3.org
-    export BOSS_SAS_PATH=/sas/dr12/boss
-    export BOSS_REDUX_VERSION=v5_7_0
+    export BOSS_DATA_URL=http://dr14.sdss.org
+    export BOSS_SAS_PATH=/sas/dr14/eboss
+    export BOSS_REDUX_VERSION=v5_10_0
 
 However these variables are set, the following unix shell command should always print a valid URL that displays a directory listing in any browser::
 
@@ -23,10 +23,22 @@ However these variables are set, the following unix shell command should always 
 You can optionally define one more environment variable ``BOSS_SPECLOG`` to locate a local checkout
 of the ``speclog`` svn product.  This is only required if you need to access the full plug maps
 (including non-science fibers) and prefer to use an environment variable instead of passing a
-path argument.  See the :meth:`read_plug_map() <bossdata.raw.RawImageFile.read_plug_map>` documentation
-for details.
+path argument.  See the :meth:`read_plug_map() <bossdata.raw.RawImageFile.read_plug_map>`
+documentation for details.
+
+If you are running on a system where the full dataset is available directly via the file system (e.g., at NERSC), use a ``$BOSS_DATA_URL`` that starts with the ``file://`` URI to indicate that data does not need to be transferred via network to your ``$BOSS_LOCAL_ROOT``.  In this case,
+the local root will still be used for the sqlite files created by the :mod:`meta module <bossdata.meta>`. For details on using bossdata at NERSC, see :doc:`this guide </nersc>`.
 
 The sections below describe how to access sources of data other than the default public DR12 release.
+
+SDSS-III BOSS Data
+------------------
+
+To access the DR12 BOSS data release use::
+
+    export BOSS_DATA_URL=http://dr12.sdss3.org
+    export BOSS_SAS_PATH=/sas/dr12/boss
+    export BOSS_REDUX_VERSION=v5_7_0
 
 SEQUELS Data
 ------------

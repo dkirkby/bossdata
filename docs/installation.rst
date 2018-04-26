@@ -13,10 +13,10 @@ To upgrade to the latest version::
 Requirements
 ------------
 
-The following additional pacakges are used by bossdata and will be installed automatically by pip, if necessary:
+The following additional packages are used by bossdata and will be installed automatically by pip, if necessary:
 
  * requests
- * progressbar
+ * progressbar2
  * astropy
  * fitsio
  * numpy

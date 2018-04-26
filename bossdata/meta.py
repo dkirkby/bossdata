@@ -22,7 +22,7 @@ from progressbar import ProgressBar, Percentage, Bar
 import bossdata.path
 import bossdata.remote
 
-from six import text_type
+from six import binary_type, text_type
 
 
 def sql_create_table(table_name, recarray_dtype, renaming_rules={}, primary_key=None):
@@ -124,15 +124,12 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
 
     # Read the database into memory.
     if verbose:
-        print('Initializing the lite database...')
+        print('Initializing the lite database (takes several minutes)...')
 
-    # Pass-1 uses only the first 100 lines to automatically determine the column names and
-    # types.
-    lines = ''
-    with gzip.open(sp_all_path) as f:
-        for i in range(100):
-            lines += f.readline().decode()
-    table = astropy.table.Table.read(lines, format='ascii.fixed_width_two_line', guess=False)
+    # Use astropy.table to also infer the datatype to use for each column.
+    # This takes ~90s for the DR12 lite file.
+    table = astropy.table.Table.read(
+        sp_all_path, format='ascii.fixed_width_two_line', guess=False)
 
     # Create a new database file.
     rules = {}
@@ -140,19 +137,18 @@ def create_meta_lite(sp_all_path, db_path, verbose=True):
         rules['MODELFLUX{}'.format(i)] = 'MODELFLUX_{}'.format(i)
     sql, num_cols = sql_create_table(
         'meta', table.dtype, renaming_rules=rules, primary_key='(PLATE,MJD,FIBER)')
+    bossdata.remote._prepare_local_path(db_path)
     connection = sqlite3.connect(db_path + '.building')
     cursor = connection.cursor()
     cursor.execute(sql)
     connection.commit()
 
-    data = np.loadtxt(sp_all_path, skiprows=2, dtype=table.dtype)
-
     # Insert rows into the database.
     sql = 'INSERT INTO meta VALUES ({values})'.format(values=','.join('?' * num_cols))
     if verbose:
         progress_bar = ProgressBar(
-            widgets=['Writing', ' ', Percentage(), Bar()], maxval=len(data)).start()
-    for i, row in enumerate(data):
+            widgets=['Writing', ' ', Percentage(), Bar()], maxval=len(table)).start()
+    for i, row in enumerate(table):
         cursor.execute(sql, row)
         if verbose:
             progress_bar.update(i + 1)
@@ -215,6 +211,7 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
         sql, num_cols = sql_create_table(
             'meta', table.dtype, renaming_rules={'FIBERID': 'FIBER'},
             primary_key=primary_key)
+        bossdata.remote._prepare_local_path(db_path)
         connection = sqlite3.connect(db_path + '.building')
         cursor = connection.cursor()
         cursor.execute(sql)
@@ -230,14 +227,10 @@ def create_meta_full(catalog_path, db_path, verbose=True, primary_key='(PLATE,MJ
             for row in table:
                 # Unroll columns with sub-arrays into a flat list to match the flat SQL schema,
                 # and convert numpy types to the native python types required by sqlite3.
+                # Conversions of bytes (python3) and np.int64 are handled by sqlite adapters.
                 values = []
-                for j, column_data in enumerate(row):
-                    if column_data.dtype.kind == 'S':
-                        value = column_data.rstrip()
-                        if not isinstance(value, text_type):
-                            value = value.decode()
-                        values.append(value)
-                    elif isinstance(column_data, np.ndarray):
+                for column_data in row:
+                    if isinstance(column_data, np.ndarray):
                         values.extend(column_data.flatten().tolist())
                     else:
                         values.append(column_data.item())
@@ -302,14 +295,17 @@ class Database(object):
         # inserting-numpy-integer-types-into-sqlite-with-python3
         sqlite3.register_adapter(np.int64, lambda val: int(val))
 
+        # Decode binary data into a string if necessary and always strip trailing whitespace.
+        if binary_type is not str:
+            sqlite3.register_adapter(binary_type, lambda val: val.rstrip().decode())
+        else:
+            sqlite3.register_adapter(text_type, lambda val: val.rstrip())
+
         # Get the local name of the metadata source file and the corresponding SQL
         # database name.
         if quasar_catalog:
             remote_path = finder.get_quasar_catalog_path(quasar_catalog_name)
-            local_path = mirror.local_path(remote_path)
-            assert local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
-                local_path)
-            db_path = local_path.replace('.fits', '.db')
+            db_path = mirror.local_path(remote_path, '.fits', '.db')
             lite_db_used = False
             # Create the database if necessary.
             if not os.path.isfile(db_path):
@@ -317,10 +313,7 @@ class Database(object):
                 create_meta_full(local_path, db_path)
         elif platelist:
             remote_path = finder.get_platelist_path()
-            local_path = mirror.local_path(remote_path)
-            assert local_path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
-                local_path)
-            db_path = local_path.replace('.fits', '.db')
+            db_path = mirror.local_path(remote_path, '.fits', '.db')
             lite_db_used = False
             # Create the database if necessary.
             if not os.path.isfile(db_path):
@@ -330,9 +323,8 @@ class Database(object):
             # Pre-build all our paths, test for (and store) the existence of the DB files
             remote_paths = [finder.get_sp_all_path(lite=True),
                             finder.get_sp_all_path(lite=False)]
-            local_paths = [mirror.local_path(path) for path in remote_paths]
-            db_paths = [Database._db_path_helper(local_paths[0], lite=True),
-                        Database._db_path_helper(local_paths[1], lite=False)]
+            db_paths = [mirror.local_path(remote_paths[0], '.dat.gz', '-lite.db'),
+                        mirror.local_path(remote_paths[1], '.fits', '.db')]
             db_paths_exist = [os.path.isfile(path) for path in db_paths]
 
             db_path = None
@@ -353,7 +345,7 @@ class Database(object):
                     lite_db_used = False
                 else:                             # Neither DB's exist, so get files, create DB
                     local_path = mirror.get(remote_paths)
-                    if local_path == local_paths[0]:    # lite
+                    if local_path.endswith('.dat.gz'):    # lite
                         db_path = db_paths[0]
                         create_meta_lite(local_path, db_path)
                     else:                               # full
@@ -495,17 +487,6 @@ class Database(object):
         # Return a table of the results, letting astropy.table.Table infer the columns types
         # from the data itself.
         return astropy.table.Table(rows=rows, names=names)
-
-    @staticmethod
-    def _db_path_helper(path=None, lite=True):
-        if lite:
-            assert path.endswith('.dat.gz'), 'Expected .dat.gz extension for {}.'.format(
-                path)
-            return path.replace('.dat.gz', '-lite.db')
-        else:
-            assert path.endswith('.fits'), 'Expected .fits extention for {}.'.format(
-                path)
-            return path.replace('.fits', '.db')
 
 
 def get_plate_mjd_list(plate, finder=None, mirror=None):

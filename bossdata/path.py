@@ -7,14 +7,14 @@ The path module provides convenience methods for building the paths of frequentl
 data files.  Most scripts will create a single :class:`Finder` object using the default
 constructor for this purpose::
 
-    import bossdata.path
+    import bossdata
     finder = bossdata.path.Finder()
 
 This finder object is normally configured by the `$BOSS_SAS_PATH` and `$BOSS_REDUX_VERSION`
 environment variables and no other modules uses these variables, except through a
 a :class:`Finder` object.  These parameters can also be set by :class:`Finder` constructor
 arguments. When neither the environment variables nor the constructor arguments are set,
-defaults appropriate for the most recent public data release (DR12) are used.
+defaults appropriate for the most recent public data release (DR14) are used.
 
 :class:`Finder` objects never interact with any local or
 remote filesystems: use the :mod:`bossdata.remote` module to download data files
@@ -37,7 +37,7 @@ class Finder(object):
     BOSS_SAS_PATH or BOSS_REDUX_VERSION is not set.
 
     Args:
-        sas_path(str): Location of the SAS root path to use, e.g., /sas/dr12. Will use the
+        sas_path(str): Location of the SAS root path to use, e.g., /sas/dr14/eboss. Will use the
             value of the BOSS_SAS_PATH environment variable if this is not set.
         redux_version(str): String tag specifying the BOSS spectro reduction version to use,
             e.g., v5_7_0. Will use the value of the BOSS_REDUX_VERSION environment variable
@@ -66,7 +66,7 @@ class Finder(object):
 
         self.redux_base = posixpath.join(self.sas_path, 'spectro', 'redux', self.redux_version)
 
-    default_sas_path = '/sas/dr12/boss'
+    default_sas_path = '/sas/dr14/eboss'
     """Default to use when $BOSS_SAS_PATH is not set.
 
     See :doc:`/scripts` and :doc:`/usage` for details.
@@ -134,7 +134,7 @@ class Finder(object):
         return posixpath.join(self.get_plate_path(plate), filename)
 
     def get_plate_spec_path(self, plate, mjd):
-        """Get the path to the file containing combined spectra for a whole plate.
+        """Get the path to the file containing coadded spectra for a whole plate.
 
         Combined spectra for all exposures of a plate are packaged in
         :datamodel:`spPlate files <spPlate>`. As of DR12, these files are about 110Mb
@@ -154,6 +154,29 @@ class Finder(object):
             raise ValueError('Invalid mjd ({}) must be >= 45000.'.format(mjd))
 
         filename = 'spPlate-{plate:04d}-{mjd:5d}.fits'.format(plate=plate, mjd=mjd)
+        return posixpath.join(self.get_plate_path(plate), filename)
+
+    def get_fluxdistort_path(self, plate, mjd):
+        """Get the path to the file containing the coadded flux distortion map.
+
+        Combined flux distortion for all exposures of a plate are packaged in
+        :datamodel:`spFluxdistort files <spFluxdistort>`. As of DR12, these files
+        are about 18Mb for 1000 spectra.
+
+        Args:
+            plate(int): Plate number, which must be positive.
+            mjd(int): Modified Julian date of the observation, which must be > 45000.
+
+        Returns:
+            str: Full path to the requested plan file.
+
+        Raises:
+            ValueError: Invalid plate or mjd inputs.
+        """
+        if mjd <= 45000:
+            raise ValueError('Invalid mjd ({}) must be >= 45000.'.format(mjd))
+
+        filename = 'spFluxdistort-{plate:04d}-{mjd:5d}.fits'.format(plate=plate, mjd=mjd)
         return posixpath.join(self.get_plate_path(plate), filename)
 
     def get_sp_all_path(self, lite=True):

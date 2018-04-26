@@ -19,6 +19,8 @@ import fitsio
 import bossdata.remote
 from bossdata.spec import Exposures, fiducial_loglam, get_fiducial_pixel_index
 
+from six import text_type
+
 
 def get_num_fibers(plate):
     """Return the number of fiber holes for a given plate number.
@@ -171,9 +173,10 @@ class Plan(object):
                 fiber, self.num_fibers, self.plate))
         if band not in ('blue', 'red'):
             raise ValueError('Invalid band ({}) must be blue or red.'.format(band))
-        if ftype not in ('spCFrame', 'spFrame', 'spFluxcalib', 'spFluxcorr'):
-            raise ValueError('Invalid file type ({}) must be one of: '.format(ftype) +
-                             'spCFrame, spFrame, spFluxcalib, spFluxcorr.')
+        ftypes = ('spCFrame', 'spFrame', 'spFluxcalib', 'spFluxcorr')
+        if ftype not in ftypes:
+            raise ValueError('Invalid file type ({}) must be one of: .'
+                             .format(ftype, ', '.join(ftypes)))
 
         camera = band[0] + str(self.get_spectrograph_index(fiber))
         exposure_info = self.exposures['science'][sequence_number]
@@ -209,21 +212,32 @@ class TraceSet(object):
         and the resulting resolution function.
 
     Args:
-        hdu: fitsio HDU containing the trace set data as a binary table.
+        hdu: fitsio or astropy.io.fits HDU containing the trace set data
+            as a binary table.
 
     Raises:
         ValueError: Unable to initialize a trace set with this HDU.
     """
     def __init__(self, hdu):
-        data = hdu.read()
+        try:
+            data = hdu.read() # fitsio HDU0
+        except AttributeError:
+            data = hdu.data # astropy.io.fits HDU
         if data.shape != (1,):
             raise ValueError('TraceSet HDU has unexpected shape {}.'.format(data.shape))
         data = data[0]
-        if data['FUNC'] != 'legendre':
+        func = data['FUNC']
+        if type(func) is not text_type:
+            func = func.decode()
+        if func != 'legendre':
             raise ValueError('TraceSet uses unsupported FUNC "{}"'.format(data['FUNC']))
 
         # Are we including a jump for the 2-phase readout?
-        if 'XJUMPVAL' in hdu.get_colnames():
+        try:
+            colnames = hdu.get_colnames() # fitsio
+        except AttributeError:
+            colnames = hdu.columns.names # astropy.io.fits
+        if 'XJUMPVAL' in colnames:
             self.has_jump = True
             self.xjump_lo = data['XJUMPLO']
             self.xjump_hi = data['XJUMPHI']
@@ -522,6 +536,7 @@ class FrameFile(object):
         self.num_fibers = self.header['NAXIS2']
         # Do not read arrays until we have to.
         self.masks = None
+        self.superflat = None
         self.ivar = None
         self.loglam = None
         self.flux = None
@@ -554,7 +569,7 @@ class FrameFile(object):
             raise ValueError('Specified calibrated ({}) does not match the file value ({}).'
                              .format(calibrated, self.calibrated))
 
-    def get_fiber_offsets(self, fiber):
+    def get_fiber_offsets(self, fibers):
         """Convert fiber numbers to array offsets.
 
         Args:
@@ -569,10 +584,11 @@ class FrameFile(object):
         Raises:
             ValueError: Fiber number is out of the valid range for this spectrograph.
         """
-        offset = fiber - self.num_fibers * (self.index - 1) - 1
-        if np.any((offset < 0) | (offset >= self.num_fibers)):
+        fibers = np.asarray(fibers)
+        offsets = fibers - self.num_fibers * (self.index - 1) - 1
+        if np.any((offsets < 0) | (offsets >= self.num_fibers)):
             raise ValueError('Fiber number out of range for this spectrograph.')
-        return offset
+        return offsets
 
     def get_pixel_masks(self, fibers):
         """Get the pixel masks for specified fibers.
@@ -596,6 +612,24 @@ class FrameFile(object):
         if self.masks is None:
             self.masks = self.hdulist[2].read()
         return self.masks[offsets]
+
+    def get_superflat(self, fibers):
+        """Get the superflat for the specified fibers.
+
+        Args:
+            fibers(numpy.ndarray): Numpy array of fiber numbers 1-1000 (or 1-640 for
+                plate < 3510).  All fibers must be in the appropriate range 1-500 (1-320)
+                or 501-1000 (321-640) for this frame's spectograph. Fibers do not need
+                to be sorted and repetitions are ok.
+
+        Returns:
+            numpy.ndarray: Float numpy array of shape (nfibers,npixels) where (i,j)
+                encodes the superflat value for pixel-j of the fiber with index fibers[i].
+        """
+        offsets = self.get_fiber_offsets(fibers)
+        if self.superflat is None:
+            self.superflat = self.hdulist[8].read()
+        return self.superflat[offsets]
 
     def get_valid_data(self, fibers, pixel_quality_mask=None, include_wdisp=False,
         include_sky=False, use_ivar=False, use_loglam=False):

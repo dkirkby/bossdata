@@ -6,6 +6,8 @@
 
 from __future__ import division, print_function
 
+from six import binary_type
+
 import re
 
 import numpy as np
@@ -145,7 +147,10 @@ class Exposures(object):
             if self.num_by_camera[camera] != num_exposures:
                 raise RuntimeError('Found {} {} exposures but expected {}.'.format(
                     self.num_by_camera[camera], camera, num_exposures))
-            camera_rows = self.table['camera'] == camera
+            # Conversion to binary_type is needed for backwards compatibility with
+            # astropy < 2.0 and python 3.  For details, see:
+            # http://docs.astropy.org/en/stable/table/access_table.html#bytestring-columns-python-3
+            camera_rows = self.table['camera'] == binary_type(camera, 'ascii')
             camera_exposures = set(self.table[camera_rows]['science'])
             if camera_exposures != exposure_set:
                 raise RuntimeError('Found inconsistent {} exposures: {}. Expected: {}.'.format(
@@ -176,7 +181,8 @@ class Exposures(object):
             raise ValueError('Invalid exposure_index {}, expected 0-{}.'.format(
                 exposure_index, self.num_by_camera[camera] - 1))
         science_num = self.sequence[exposure_index]
-        row = (self.table['science'] == science_num) & (self.table['camera'] == camera)
+        row = (self.table['science'] == science_num) & (
+            self.table['camera'] == binary_type(camera, 'ascii'))
         if not np.any(row):
             # This should never happen after our self-consistency checks in the ctor.
             raise RuntimeError('No exposure[{}] = {:08d} found for {}.'.format(
@@ -188,30 +194,36 @@ class Exposures(object):
         return self.table[row][0]
 
     def get_exposure_name(self, exposure_index, camera, ftype='spCFrame'):
-        """Get the file name of a single science exposure data product.
+        """Get the file name of a single science or calibration exposure data product.
 
         Use the exposure name to locate FITS data files associated with
         individual exposures.  The supported file types are:
         :datamodel:`spCFrame <PLATE4/spCFrame>`,
         :datamodel:`spFrame <PLATE4/spFrame>`,
-        :datamodel:`spFluxcalib <PLATE4/spFluxcalib>` and
-        :datamodel:`spFluxcorr <PLATE4/spFluxcorr>`.  This method is analogous to
+        :datamodel:`spFluxcalib <PLATE4/spFluxcalib>`
+        :datamodel:`spFluxcorr <PLATE4/spFluxcorr>`,
+        :datamodel:`spArc <PLATE4/spArc>`,
+        :datamodel:`spFlat <PLATE4/spFlat>`. This method is analogous to
         :meth:`bossdata.plate.Plan.get_exposure_name`, but operates for a single
-        target and only knows about exposures actually used in the final co-add.
+        target and only knows about exposures actually used in the final co-add
+        (including the associated arc and flat exposures).
 
         Args:
             exposure_index(int): The sequence number for the requested camera
                 exposure, in the range 0 - `(num_exposures[camera]-1)`.
             camera(str): One of b1,b2,r1,r2.
             ftype(str): Type of exposure file whose name to return.  Must be one of
-                spCFrame, spFrame, spFluxcalib, spFluxcorr.  An spCFrame is assumed
-                to be uncompressed, and all other files are assumed to be compressed.
+                spCFrame, spFrame, spFluxcalib, spFluxcorr, spArc, spFlat.  An spCFrame
+                is assumed to be uncompressed, and all other files are assumed to be
+                compressed. When a calibration is requested (spArc, spFlat) results from
+                the calibration exposure used to analyze the specified science exposure
+                is returned.
 
         Returns:
             str: Exposure name of the form [ftype]-[cc]-[eeeeeeee].[ext] where [cc]
                 identifies the camera (one of b1,r1,b2,r2) and [eeeeeeee] is the
-                zero-padded exposure number. The extension [ext] is "fits" for
-                spCFrame files and "fits.gz" for all other file types.
+                zero-padded arc/flat/science exposure number. The extension [ext]
+                is "fits" for spCFrame files and "fits.gz" for all other file types.
 
         Raises:
             ValueError: one of the inputs is invalid.
@@ -222,13 +234,19 @@ class Exposures(object):
         if exposure_index < 0 or exposure_index >= self.num_by_camera[camera]:
             raise ValueError('Invalid exposure_index {}, expected 0-{}.'.format(
                 exposure_index, self.num_by_camera[camera] - 1))
-        if ftype not in ('spCFrame', 'spFrame', 'spFluxcalib', 'spFluxcorr'):
-            raise ValueError('Invalid file type ({}) must be one of: '.format(ftype) +
-                             'spCFrame, spFrame, spFluxcalib, spFluxcorr.')
+        ftypes = ('spCFrame', 'spFrame', 'spFluxcalib', 'spFluxcorr', 'spArc', 'spFlat')
+        if ftype not in ftypes:
+            raise ValueError('Invalid file type ({}) must be one of: {}.'
+                             .format(ftype, ', '.join(ftypes)))
 
         # Get the science exposure ID number for the requested seqence number 0,1,...
         exposure_info = self.get_info(exposure_index, camera)
-        exposure_id = exposure_info['science']
+        if ftype == 'spArc':
+            exposure_id = exposure_info['arc']
+        elif ftype == 'spFlat':
+            exposure_id = exposure_info['flat']
+        else:
+            exposure_id = exposure_info['science']
 
         name = '{0}-{1}-{2:08d}.fits'.format(ftype, camera, exposure_id)
         if ftype != 'spCFrame':
@@ -333,12 +351,9 @@ class SpecFile(object):
         # Look up the available exposures.
         self.exposures = Exposures(self.header)
         self.num_exposures = len(self.exposures.sequence)
-        # Look up our row from spAll
-        self.info = self.hdulist[2].read()[0]
         # Extract our plate-mjd-fiber values.
-        self.plate = int(self.info['PLATE'])
-        self.mjd = int(self.info['MJD'])
-        self.fiber = int(self.info['FIBERID'])
+        self.plate, self.mjd, self.fiber = (
+            self.hdulist[2]['PLATE', 'MJD', 'FIBERID'][0][0])
         # We don't use bossdata.plate.get_num_fibers here to avoid a circular import.
         num_fibers = 640 if self.plate < 3510 else 1000
         # Calculate the camera (b1/b2/r1/r2) for this target's fiber.
