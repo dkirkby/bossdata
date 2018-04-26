@@ -3,7 +3,7 @@
 
 __author__ = 'bossdata developers'
 __email__ = 'dkirkby@uci.edu'
-__version__ = '0.3.1dev'
+__version__ = '0.3.1'
 
 import bossdata.bits
 import bossdata.meta

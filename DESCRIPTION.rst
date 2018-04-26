@@ -7,4 +7,4 @@ A python package for working with `spectroscopic data <http://www.sdss.org/dr12/
 
 What's new in version 0.3.1:
 
-* Add support for running sites where data is local (e.g., nersc)
+* Add support for running at sites where data is local (e.g., nersc)
