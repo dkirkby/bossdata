@@ -294,7 +294,7 @@ def smooth_sky(hdus, min_valid_frac=0.9, n_pca=20,
             good_pixels[worst] = False
             ngood -= 1
             if ngood < min_valid_frac * npixels:
-                print(f'Not enough valid pixels for weighted PCA in {tag}')
+                print(f'Not enough valid {band} pixels for wPCA in {tag}')
                 return False
 
         if verbose:
@@ -339,4 +339,4 @@ def smooth_sky(hdus, min_valid_frac=0.9, n_pca=20,
         else:
             hdus.append(fits.ImageHDU(eivar_full, name=hdu_name))
 
-        return True
+    return True
