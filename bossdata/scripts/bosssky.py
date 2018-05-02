@@ -49,7 +49,7 @@ def get_sky(plate, mjd, output_path, verbose=False):
     """
     tag = f'PLATE {plate:05d} MJD {mjd:05d} PATH {output_path}'
     if verbose:
-        print('Starting {}'.format(tag))
+        print('Getting {}'.format(tag))
     # Initialize output data.
     last_nexp = None
     plugmaps = []
@@ -225,3 +225,117 @@ def get_sky(plate, mjd, output_path, verbose=False):
     hdus.writeto(name, overwrite=True)
     print('Completed {}'.format(tag))
     return obslist
+
+import wpca
+
+import bossdata.bits
+
+
+def smooth_sky(hdus, min_valid_frac=0.9, n_pca=20,
+               denoise_steps=3, verbose=False):
+    """Smooth variance estimates using weighted PCA.
+    """
+    hdr = hdus[0].header
+    plate = hdr['PLATE']
+    mjd = hdr['MJD']
+    nfibers = hdr['NFIBERS']
+    nexp = hdr['NEXP']
+    tag = f'PLATE {plate:05d} MJD {mjd:05d}'
+    if verbose:
+        print(f'Smoothing {tag} with {nexp} exposures for {nfibers} fibers.')
+
+    pixel_mask = (1<<32) - 1 - bossdata.bits.bitmask_from_text(
+        bossdata.bits.SPPIXMASK, 'BRIGHTSKY|BADSKYCHI|REDMONSTER')
+
+    for j, band in enumerate('BR'):
+
+        # Look up arrays for this band.
+        wlen = hdus[band + 'WLEN'].data
+        rdnoise = hdus[band + 'RDNOISE'].data
+        nelec = hdus[band + 'FLUX'].data * hdus[band + 'FLAT'].data
+        nspectra, npixels = wlen.shape
+
+        # Only use pixels with IVAR>0 and only allowed mask bits set.
+        valid = (
+            (hdus[band + 'IVAR'].data > 0) &
+            (np.bitwise_and(hdus[band + 'MASK'].data, pixel_mask) == 0))
+
+        # Count the number of valid pixels in each spectrum.
+        nvalid = np.count_nonzero(valid, axis=1)
+
+        # Drop any spectra without enough valid pixels.
+        good_spectra = nvalid >= 0.9 * npixels
+        good_spectra_idx = np.where(good_spectra)[0]
+        wlen = wlen[good_spectra]
+        rdnoise = rdnoise[good_spectra]
+        nelec = nelec[good_spectra]
+        valid = valid[good_spectra]
+        if verbose:
+            print('Dropped {} / {} spectra with no good pixels.'
+                .format(np.count_nonzero(~good_spectra), nspectra))
+
+        # Iteratively drop pixels until every element of the
+        # npixels x npixels matrix VALID.T VALID is True.
+        wgt = 1. * valid
+        matrix = np.dot(wgt.T, wgt)
+        good_pixels = np.ones(npixels, bool)
+        ngood = npixels
+        while True:
+            good_pixels_idx = np.where(good_pixels)[0]
+            submatrix = matrix[np.ix_(good_pixels_idx, good_pixels_idx)]
+            if np.all(submatrix > 0):
+                break
+            # Find the pixel responsible for the row with the most zeros.
+            nzeros = np.count_nonzero(submatrix == 0, axis=0)
+            most = np.argmax(nzeros)
+            worst = good_pixels_idx[most]
+            ##print('remove pixel {} with {} zeros.'.format(worst, nzeros[most]))
+            good_pixels[worst] = False
+            ngood -= 1
+            if ngood < min_valid_frac * npixels:
+                print(f'Not enough valid pixels for weighted PCA in {tag}')
+                return False
+
+        if verbose:
+            print('Dropped {} / {} pixels for non-zero weight matrix.'
+                .format(np.count_nonzero(~good_pixels), npixels))
+        wlen = wlen[:, good_pixels]
+        rdnoise = rdnoise[:, good_pixels]
+        nelec = nelec[:, good_pixels]
+        valid = valid[:, good_pixels]
+
+        # Clip nelec to zero.
+        nelec = np.clip(nelec, a_min=0, a_max=None)
+
+        # Iteratively solve for a de-noised shot-noise variance.
+        evar = nelec.copy()
+        niter = 1
+        median_nelec = np.maximum(1, np.median(nelec, axis=0))
+        while niter < denoise_steps:
+            weights = (np.clip(evar, a_min=0, a_max=None) + rdnoise ** 2) ** -0.5
+            weights[~valid] = 0.
+            new_evar = wpca.WPCA(n_components=n_pca).fit_reconstruct(
+                nelec, weights=weights)
+            # Clip estimated shot noise to zero.
+            new_evar = np.clip(new_evar, a_min=0, a_max=None)
+            # Measure the mean squared error between original and new estimates.
+            MSE = np.mean(((new_evar - evar) / median_nelec) ** 2)
+            if verbose:
+                print('niter {} MSE {}'.format(niter, MSE))
+            evar = new_evar
+            niter += 1
+
+        # Build a de-noised ivar in the original indexing.
+        eivar = np.zeros_like(evar)
+        eivar[valid] = (evar[valid] + rdnoise[valid] ** 2) ** -1
+        eivar_full = np.zeros_like(hdus[band + 'IVAR'].data)
+        eivar_full[np.ix_(good_spectra_idx, good_pixels_idx)] = eivar
+
+        # Save or replace this array in the HDU list.
+        hdu_name = band + 'EIVAR'
+        if hdu_name in hdus:
+            hdus[hdu_name].data = eivar_full
+        else:
+            hdus.append(fits.ImageHDU(eivar_full, name=hdu_name))
+
+        return True
