@@ -256,9 +256,10 @@ def smooth_sky(hdus, min_valid_frac=0.9, n_pca=20,
         nspectra, npixels = wlen.shape
 
         # Only use pixels with IVAR>0 and only allowed mask bits set.
-        valid = (
-            (hdus[band + 'IVAR'].data > 0) &
-            (np.bitwise_and(hdus[band + 'MASK'].data, pixel_mask) == 0))
+        ivar = hdus[band + 'IVAR'].data
+        ivar[~np.isfinite(ivar)] = 0
+        valid = (ivar > 0) & (
+            np.bitwise_and(hdus[band + 'MASK'].data, pixel_mask) == 0)
 
         # Count the number of valid pixels in each spectrum.
         nvalid = np.count_nonzero(valid, axis=1)
