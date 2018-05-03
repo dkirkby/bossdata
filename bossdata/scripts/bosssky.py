@@ -9,6 +9,10 @@ import numpy as np
 import astropy.table
 import astropy.io.fits as fits
 
+import wpca
+
+import bossdata.bits
+
 import bossdata
 
 from six import binary_type
@@ -28,7 +32,7 @@ def get_sky(plate, mjd, output_path, verbose=False):
        with shape (NFIBERS * NEXP, NWLEN), with NWLEN=4112(B) or 4128(R).
 
     xFLUX is  in flat-field corrected electrons, with corresponding pipeline
-    inverses variance xIVAR. xFLUX * xFLAT and xRDNOISE are in units of
+    inverse variances xIVAR. xFLUX * xFLAT and xRDNOISE are in units of
     detected electrons.  xWLEN and xWDISP are in angstroms.
 
     Parameters
@@ -61,8 +65,8 @@ def get_sky(plate, mjd, output_path, verbose=False):
     rdnoises = {'b': [], 'r': []}
     masks = {'b': [], 'r': []}
     obskeys = ('EXPOSURE', 'TAI-BEG', 'EXPTIME', 'AZ', 'ALT', 'AIRMASS',
-              'PRESSURE', 'AIRTEMP',
-              'RDNOISE0', 'RDNOISE1', 'RDNOISE2', 'RDNOISE3')
+               'PRESSURE', 'AIRTEMP',
+               'RDNOISE0', 'RDNOISE1', 'RDNOISE2', 'RDNOISE3')
     obsvals = {key: [] for key in obskeys}
     # Size of each amplifier in raw image pixels along (wlen, tracex) axes.
     ampsize = {'b': (2056, 2048), 'r': (2064, 2057)}
@@ -83,14 +87,14 @@ def get_sky(plate, mjd, output_path, verbose=False):
     valid_mask = (1 << 32) - 1
     # Slices of valid data to save. These trim pixels at each end where
     # IVAR=0 or other serious pixel mask bits are often set.
-    valid_slices = {'b': slice(767, 3299), 'r': slice(483, 3668) }
+    valid_slices = {'b': slice(767, 3299), 'r': slice(483, 3668)}
     # Initialize data access.
     finder = bossdata.path.Finder()
     mirror = bossdata.remote.Manager()
     # Loop over spectrographs.
     expected_fibers = []
     for specidx in 1, 2:
-        # Load the list of science exposures used for this spectrograph's coadd.
+        # Load list of science exposures used for this spectrograph's coadd.
         fiber = 500 * (specidx - 1) + 1
         spec_name = finder.get_spec_path(plate, mjd, fiber=fiber, lite=True)
         exposures = bossdata.spec.SpecFile(mirror.get(spec_name)).exposures
@@ -114,8 +118,10 @@ def get_sky(plate, mjd, output_path, verbose=False):
                     spFrame.plug_map['OBJTYPE'] == sky_name)[0]
                 if expidx == 0 and band == 'b':
                     # Save plugmap metadata.
-                    plugmaps.append(spFrame.plug_map[
-                        ['FIBERID','RA','DEC','XFOCAL','YFOCAL']][fiberidx])
+                    plugmaps.append(
+                        spFrame.plug_map[
+                            ['FIBERID', 'RA', 'DEC', 'XFOCAL', 'YFOCAL']
+                            ][fiberidx])
                     if specidx == 2:
                         plugmap = astropy.table.vstack(plugmaps)
                 if specidx == 1 and band == 'b':
@@ -124,7 +130,7 @@ def get_sky(plate, mjd, output_path, verbose=False):
                         try:
                             value = spFrame.header[key]
                         except KeyError:
-                            value = -999 # invalid value for int/float types
+                            value = -999  # invalid value for int/float types
                         obsvals[key].append(value)
                 # Load the sky fiber data.
                 fibers = spFrame.plug_map['FIBERID'][fiberidx].data
@@ -140,8 +146,8 @@ def get_sky(plate, mjd, output_path, verbose=False):
                         print('Did not get expected fibers for {} exp {}'
                               .format(camera, expidx))
                 data = spFrame.get_valid_data(
-                    fibers, include_sky=True, include_wdisp=True, use_ivar=True,
-                    pixel_quality_mask=valid_mask)
+                    fibers, include_sky=True, include_wdisp=True,
+                    use_ivar=True, pixel_quality_mask=valid_mask)
                 if verbose:
                     print('Reading {} for exposure {} / {}...'
                           .format(camera, expidx + 1, nexp))
@@ -226,10 +232,6 @@ def get_sky(plate, mjd, output_path, verbose=False):
     print('Completed {}'.format(tag))
     return obslist
 
-import wpca
-
-import bossdata.bits
-
 
 def smooth_sky(hdus, min_valid_frac=0.9, n_pca=20,
                denoise_steps=3, verbose=False):
@@ -244,7 +246,7 @@ def smooth_sky(hdus, min_valid_frac=0.9, n_pca=20,
     if verbose:
         print(f'Smoothing {tag} with {nexp} exposures for {nfibers} fibers.')
 
-    pixel_mask = (1<<32) - 1 - bossdata.bits.bitmask_from_text(
+    pixel_mask = (1 << 32) - 1 - bossdata.bits.bitmask_from_text(
         bossdata.bits.SPPIXMASK, 'BRIGHTSKY|BADSKYCHI|REDMONSTER')
 
     for j, band in enumerate('BR'):
@@ -273,7 +275,7 @@ def smooth_sky(hdus, min_valid_frac=0.9, n_pca=20,
         valid = valid[good_spectra]
         if verbose:
             print('Dropped {} / {} spectra with no good pixels.'
-                .format(np.count_nonzero(~good_spectra), nspectra))
+                  .format(np.count_nonzero(~good_spectra), nspectra))
 
         # Iteratively drop pixels until every element of the
         # npixels x npixels matrix VALID.T VALID is True.
@@ -290,7 +292,6 @@ def smooth_sky(hdus, min_valid_frac=0.9, n_pca=20,
             nzeros = np.count_nonzero(submatrix == 0, axis=0)
             most = np.argmax(nzeros)
             worst = good_pixels_idx[most]
-            ##print('remove pixel {} with {} zeros.'.format(worst, nzeros[most]))
             good_pixels[worst] = False
             ngood -= 1
             if ngood < min_valid_frac * npixels:
@@ -299,7 +300,7 @@ def smooth_sky(hdus, min_valid_frac=0.9, n_pca=20,
 
         if verbose:
             print('Dropped {} / {} pixels for non-zero weight matrix.'
-                .format(np.count_nonzero(~good_pixels), npixels))
+                  .format(np.count_nonzero(~good_pixels), npixels))
         wlen = wlen[:, good_pixels]
         rdnoise = rdnoise[:, good_pixels]
         nelec = nelec[:, good_pixels]
@@ -312,14 +313,15 @@ def smooth_sky(hdus, min_valid_frac=0.9, n_pca=20,
         evar = nelec.copy()
         niter = 1
         median_nelec = np.maximum(1, np.median(nelec, axis=0))
-        while niter < denoise_steps:
-            weights = (np.clip(evar, a_min=0, a_max=None) + rdnoise ** 2) ** -0.5
+        while niter <= denoise_steps:
+            weights = (
+                np.clip(evar, a_min=0, a_max=None) + rdnoise ** 2) ** -0.5
             weights[~valid] = 0.
             new_evar = wpca.WPCA(n_components=n_pca).fit_reconstruct(
                 nelec, weights=weights)
             # Clip estimated shot noise to zero.
             new_evar = np.clip(new_evar, a_min=0, a_max=None)
-            # Measure the mean squared error between original and new estimates.
+            # Measure mean squared error between original and new estimates.
             MSE = np.mean(((new_evar - evar) / median_nelec) ** 2)
             if verbose:
                 print('niter {} MSE {}'.format(niter, MSE))
