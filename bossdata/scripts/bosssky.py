@@ -8,6 +8,8 @@ import numpy as np
 
 import astropy.table
 import astropy.io.fits as fits
+import astropy.constants
+import astropy.units as u
 
 import wpca
 
@@ -254,7 +256,8 @@ def smooth_sky(hdus, min_valid_frac=0.9, n_pca=20,
         # Look up arrays for this band.
         wlen = hdus[band + 'WLEN'].data
         rdnoise = hdus[band + 'RDNOISE'].data
-        nelec = hdus[band + 'FLUX'].data * hdus[band + 'FLAT'].data
+        flat = hdus[band + 'FLAT'].data
+        nelec = hdus[band + 'FLUX'].data * flat
         nspectra, npixels = wlen.shape
 
         # Only use pixels with IVAR>0 and only allowed mask bits set.
@@ -334,11 +337,77 @@ def smooth_sky(hdus, min_valid_frac=0.9, n_pca=20,
         eivar_full = np.zeros_like(hdus[band + 'IVAR'].data)
         eivar_full[np.ix_(good_spectra_idx, good_pixels_idx)] = eivar
 
+        # Scale by the flat so that xEIVAR is directly comparable to xIVAR.
+        eivar_full *= flat ** 2
+
         # Save or replace this array in the HDU list.
         hdu_name = band + 'EIVAR'
         if hdu_name in hdus:
             hdus[hdu_name].data = eivar_full
         else:
             hdus.append(fits.ImageHDU(eivar_full, name=hdu_name))
+
+    return True
+
+
+def sky_downsample(hdus, verbose=True):
+    """Downsample each spectrum to 100A bands in flux density units.
+
+    Must run sky_smooth() before calling this function.
+    """
+    hdr = hdus[0].header
+    plate = hdr['PLATE']
+    mjd = hdr['MJD']
+    nfibers = hdr['NFIBERS']
+    nexp = hdr['NEXP']
+    tag = f'PLATE {plate:05d} MJD {mjd:05d}'
+    if verbose:
+        print(f'Downsampling {tag}.')
+
+    # Downsample to 100A bands from 3700-10400A.
+    edges = 100. * np.arange(37, 104)
+    nbands = len(edges) - 1
+    dsflux = np.zeros((nexp * nfibers, nbands))
+    dsivar = np.zeros((nexp * nfibers, nbands))
+
+    # Work in units of flat-fielded electrons per Angstrom per second,
+    # converted to 1e-13 ergs assuming each flat-field electron corresponds
+    # to one photon. The multiplier 1e-13 is chosen to give values ~1.
+    hc = (astropy.constants.h * astropy.constants.c).to(
+        1e-13 * u.erg * u.Angstrom).value
+    exposures = astropy.table.Table(hdus['OBSLIST'].data)
+    exptime = np.repeat(exposures['EXPTIME'].data, nfibers).reshape(-1, 1)
+    for band in 'BR':
+        wlen = hdus[band + 'WLEN'].data
+        energy_per_photon = hc / wlen
+        scale = energy_per_photon / (exptime * np.gradient(wlen, axis=1))
+        eflux = hdus[band + 'FLUX'].data * scale
+        eivar = hdus[band + 'EIVAR'].data / scale ** 2
+        eflux_wgtd = eivar * eflux
+        # Downsample each individual spectrum.
+        for i in range(nexp * nfibers):
+            idx = np.searchsorted(wlen[i], edges)
+            for j in range(nbands):
+                if idx[j] == idx[j + 1]:
+                    continue
+                sl = slice(idx[j], idx[j + 1])
+                wsum = eivar[i, sl].sum()
+                if wsum > 0:
+                    dsflux[i, j] += eflux_wgtd[i, sl].sum()
+                    dsivar[i, j] += wsum
+    nonzero = (dsivar > 0)
+    dsflux[nonzero] /= dsivar[nonzero]
+
+    # Save or replace the downsampled arrays in the HDU list.
+    hdu_name = 'DSFLUX'
+    if hdu_name in hdus:
+        hdus[hdu_name].data = dsflux
+    else:
+        hdus.append(fits.ImageHDU(dsflux, name=hdu_name))
+    hdu_name = 'DSIVAR'
+    if hdu_name in hdus:
+        hdus[hdu_name].data = dsivar
+    else:
+        hdus.append(fits.ImageHDU(dsivar, name=hdu_name))
 
     return True
