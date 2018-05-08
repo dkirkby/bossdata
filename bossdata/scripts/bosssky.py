@@ -404,12 +404,12 @@ def downsample(hdus, flatfielded=True, verbose=True):
     dsflux[nonzero] /= dsivar[nonzero]
 
     # Save or replace the downsampled arrays in the HDU list.
-    hdu_name = 'DSFLUX'
+    hdu_name = 'DSFLUX' if flatfielded else 'DSFLUXE'
     if hdu_name in hdus:
         hdus[hdu_name].data = dsflux
     else:
         hdus.append(fits.ImageHDU(dsflux, name=hdu_name))
-    hdu_name = 'DSIVAR'
+    hdu_name = 'DSIVAR' if flatfielded else 'DSIVARE'
     if hdu_name in hdus:
         hdus[hdu_name].data = dsivar
     else:
