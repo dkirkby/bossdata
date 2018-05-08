@@ -235,8 +235,8 @@ def get_sky(plate, mjd, output_path, verbose=False):
     return obslist
 
 
-def smooth_sky(hdus, min_valid_frac=0.9, n_pca=20,
-               denoise_steps=3, verbose=False):
+def smooth_variance(hdus, min_valid_frac=0.9, n_pca=20,
+                    denoise_steps=3, verbose=False):
     """Smooth variance estimates using weighted PCA.
     """
     hdr = hdus[0].header
@@ -350,7 +350,7 @@ def smooth_sky(hdus, min_valid_frac=0.9, n_pca=20,
     return True
 
 
-def sky_downsample(hdus, verbose=True):
+def downsample(hdus, flatfielded=True, verbose=True):
     """Downsample each spectrum to 100A bands in flux density units.
 
     Must run sky_smooth() before calling this function.
@@ -370,8 +370,8 @@ def sky_downsample(hdus, verbose=True):
     dsflux = np.zeros((nexp * nfibers, nbands))
     dsivar = np.zeros((nexp * nfibers, nbands))
 
-    # Work in units of flat-fielded electrons per Angstrom per second,
-    # converted to 1e-13 ergs assuming each flat-field electron corresponds
+    # Work in units of (optionally flat-fielded) electrons per Angstrom per
+    # second, converted to 1e-13 ergs assuming each electron corresponds
     # to one photon. The multiplier 1e-13 is chosen to give values ~1.
     hc = (astropy.constants.h * astropy.constants.c).to(
         1e-13 * u.erg * u.Angstrom).value
@@ -383,6 +383,11 @@ def sky_downsample(hdus, verbose=True):
         scale = energy_per_photon / (exptime * np.gradient(wlen, axis=1))
         eflux = hdus[band + 'FLUX'].data * scale
         eivar = hdus[band + 'EIVAR'].data / scale ** 2
+        if not flatfielded:
+            flat = hdus[band + 'FLAT'].data
+            eflux *= flat
+            nonzero = flat > 0
+            eivar[nonzero] /= flat[nonzero] ** 2
         eflux_wgtd = eivar * eflux
         # Downsample each individual spectrum.
         for i in range(nexp * nfibers):
