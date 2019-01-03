@@ -18,7 +18,7 @@ The default settings of the other environment variables are equivalent to (in ba
 
 However these variables are set, the following unix shell command should always print a valid URL that displays a directory listing in any browser::
 
-    echo $BOSS_DATA_URL/$BOSS_SAS_PATH/boss/spectro/redux/$BOSS_REDUX_VERSION/
+    echo $BOSS_DATA_URL/$BOSS_SAS_PATH/spectro/redux/$BOSS_REDUX_VERSION/
 
 You can optionally define one more environment variable ``BOSS_SPECLOG`` to locate a local checkout
 of the ``speclog`` svn product.  This is only required if you need to access the full plug maps
